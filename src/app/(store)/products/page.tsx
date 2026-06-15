@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, SlidersHorizontal, Heart, MapPin, Star, ShoppingCart } from "lucide-react";
+import { Heart, MapPin, Star, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/store/cart";
 
-const TABS = ["All Products", "Popular", "Recent"];
 const SORT_OPTIONS = ["Newest", "Price: Low to High", "Price: High to Low", "Most Popular"];
 
 function formatPrice(n: number) {
@@ -22,18 +21,17 @@ interface Product {
   total_reviews: number;
   stock_quantity: number;
   status: string;
+  created_at: string;
   categories: { name: string; slug: string } | null;
   sellers: { store_name: string } | null;
 }
 
 export default function ProductsPage() {
   const supabase = createClient();
-  const { addItem, items } = useCartStore();
+  const { addItem } = useCartStore();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("All Products");
-  const [search, setSearch] = useState("");
   const [sort, setSort] = useState("Newest");
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [addedToCart, setAddedToCart] = useState<string[]>([]);
@@ -45,14 +43,14 @@ export default function ProductsPage() {
         .from("products")
         .select(`
           id, title, price, images, avg_rating,
-          total_reviews, stock_quantity, status,
+          total_reviews, stock_quantity, status, created_at,
           categories ( name, slug ),
           sellers ( store_name )
         `)
         .eq("status", "active")
         .order("created_at", { ascending: false });
 
-      if (!error && data) setProducts(data as Product[]);
+      if (!error && data) setProducts(data as unknown as Product[]);
       setLoading(false);
     }
     fetchProducts();
@@ -77,9 +75,13 @@ export default function ProductsPage() {
     setTimeout(() => setAddedToCart(prev => prev.filter(x => x !== product.id)), 2000);
   };
 
-  const filtered = products.filter(p =>
-    p.title.toLowerCase().includes(search.toLowerCase())
-  );
+  // ── Sort filtering ───────────────────────────────────────────────────
+  const filtered = products.slice().sort((a, b) => {
+    if (sort === "Price: Low to High") return a.price - b.price;
+    if (sort === "Price: High to Low") return b.price - a.price;
+    if (sort === "Most Popular") return (b.avg_rating ?? 0) - (a.avg_rating ?? 0);
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Newest
+  });
 
   const ProductCard = ({ product, mobile }: { product: Product; mobile: boolean }) => {
     const inCart = addedToCart.includes(product.id);
@@ -89,64 +91,41 @@ export default function ProductsPage() {
     const storeName = product.sellers?.store_name ?? "Vendor";
 
     return (
-      <Link
-        href={`/products/${product.id}`}
-        className={mobile ? "mob-card" : "desk-card"}
-      >
-        {/* Image area */}
+      <Link href={`/products/${product.id}`} className={mobile ? "mob-card" : "desk-card"}>
         <div className={mobile ? "mob-card-img" : "desk-card-img"}>
           {product.images?.[0] ? (
-            <img
-              src={product.images[0]}
-              alt={product.title}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
+            <img src={product.images[0]} alt={product.title}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
             <span style={{ fontSize: mobile ? 36 : 44 }}>📦</span>
           )}
-
-          {/* Out of stock overlay */}
           {outOfStock && (
             <div style={{
-              position: "absolute", inset: 0,
-              background: "rgba(0,0,0,0.45)",
+              position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <span style={{
                 background: "#ef4444", color: "white",
-                padding: "4px 12px", borderRadius: 999,
-                fontSize: 11, fontWeight: 700,
+                padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700,
               }}>Out of Stock</span>
             </div>
           )}
-
-          {/* Wishlist button */}
-          <button
-            className={mobile ? "mob-wishlist-btn" : "desk-wishlist-btn"}
-            onClick={e => toggleWishlist(product.id, e)}
-          >
-            <Heart
-              size={mobile ? 13 : 15}
+          <button className={mobile ? "mob-wishlist-btn" : "desk-wishlist-btn"}
+            onClick={e => toggleWishlist(product.id, e)}>
+            <Heart size={mobile ? 13 : 15}
               fill={wishlisted ? "#ef4444" : "none"}
-              color={wishlisted ? "#ef4444" : "#9ca3af"}
-            />
+              color={wishlisted ? "#ef4444" : "#9ca3af"} />
           </button>
         </div>
 
-        {/* Body */}
         <div className={mobile ? "mob-card-body" : "desk-card-body"}>
           <div className={mobile ? "mob-card-cat" : "desk-card-cat"}>{categoryName}</div>
           <div className={mobile ? "mob-card-title" : "desk-card-title"}>{product.title}</div>
-
-          {/* Stars */}
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: mobile ? 4 : 6 }}>
             {[1,2,3,4,5].map(i => (
-              <Star
-                key={i}
-                size={mobile ? 10 : 12}
+              <Star key={i} size={mobile ? 10 : 12}
                 fill={i <= Math.round(product.avg_rating ?? 0) ? "#facc15" : "none"}
-                color={i <= Math.round(product.avg_rating ?? 0) ? "#facc15" : "#d1d5db"}
-              />
+                color={i <= Math.round(product.avg_rating ?? 0) ? "#facc15" : "#d1d5db"} />
             ))}
             {product.total_reviews > 0 && (
               <span style={{ fontSize: mobile ? 10 : 11, color: "#9ca3af" }}>
@@ -154,33 +133,25 @@ export default function ProductsPage() {
               </span>
             )}
           </div>
-
           <div className={mobile ? "mob-card-price" : "desk-card-price"}>
             {formatPrice(product.price)}
           </div>
-
           <div className={mobile ? "mob-card-seller" : "desk-card-seller"}>
-            <span className={mobile ? "mob-seller-av" : "desk-seller-av"}>
-              {storeName[0]}
-            </span>
+            <span className={mobile ? "mob-seller-av" : "desk-seller-av"}>{storeName[0]}</span>
             {storeName}
             <span>·</span>
             <MapPin size={mobile ? 9 : 10} />
             Campus
           </div>
-
-          {/* Add to cart button — desktop only */}
           {!mobile && (
-            <button
-              className="desk-cart-btn"
+            <button className="desk-cart-btn"
               style={{
                 background: inCart ? "#22c55e" : outOfStock ? "#e2e8f0" : "#2563eb",
                 color: outOfStock ? "#9ca3af" : "white",
                 cursor: outOfStock ? "not-allowed" : "pointer",
               }}
               disabled={outOfStock}
-              onClick={e => { e.preventDefault(); if (!outOfStock) handleAddToCart(product, e); }}
-            >
+              onClick={e => { e.preventDefault(); if (!outOfStock) handleAddToCart(product, e); }}>
               <ShoppingCart size={14} />
               {inCart ? "Added!" : outOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
@@ -211,30 +182,21 @@ export default function ProductsPage() {
           100% { background-position: -200% 0; }
         }
 
-        /* ── MOBILE STRIP ── */
+        /* ── MOBILE TABS STRIP (no search bar) ── */
         .mob-strip {
-          background: #2563eb; padding: 12px 16px 0;
-          position: sticky; top: 64px; z-index: 40;
+          background: #2563eb;
+          padding: 0 16px;
+          position: sticky;
+          top: 113px;
+          z-index: 30;
         }
-        .mob-search-row { display: flex; gap: 8px; padding-bottom: 12px; }
-        .mob-search-wrap {
-          flex: 1; display: flex; align-items: center;
-          background: white; border-radius: 10px; padding: 0 12px; gap: 8px;
+        .mob-tabs {
+          display: flex; gap: 4px;
+          overflow-x: auto; scrollbar-width: none;
         }
-        .mob-search-wrap input {
-          border: none; outline: none; flex: 1;
-          font-size: 14px; padding: 10px 0; background: transparent; color: #111;
-        }
-        .mob-filter-btn {
-          background: rgba(255,255,255,0.2); border: none;
-          border-radius: 10px; width: 40px; height: 40px;
-          display: flex; align-items: center; justify-content: center;
-          color: white; cursor: pointer;
-        }
-        .mob-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
         .mob-tabs::-webkit-scrollbar { display: none; }
         .mob-tab {
-          white-space: nowrap; padding: 8px 16px;
+          white-space: nowrap; padding: 10px 18px;
           border-radius: 999px 999px 0 0;
           font-size: 13px; border: none; cursor: pointer;
           background: transparent; color: rgba(255,255,255,0.7);
@@ -243,7 +205,10 @@ export default function ProductsPage() {
         .mob-tab.active { background: white; color: #2563eb; font-weight: 600; }
 
         /* ── MOBILE CARDS ── */
-        .mob-products-wrap { padding: 16px; padding-bottom: 88px; background: #f5f7ff; min-height: 100vh; }
+        .mob-products-wrap {
+          padding: 16px; padding-bottom: 88px;
+          background: #f5f7ff; min-height: 100vh;
+        }
         .dark .mob-products-wrap { background: #060d1f; }
         .mob-results-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .mob-results-count { font-size: 13px; color: #6b7280; }
@@ -269,8 +234,7 @@ export default function ProductsPage() {
           width: 28px; height: 28px; border-radius: 50%;
           background: white; border: none;
           display: flex; align-items: center; justify-content: center;
-          cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-          z-index: 2;
+          cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.15); z-index: 2;
         }
         .mob-card-body { padding: 10px; }
         .mob-card-cat { font-size: 10px; color: #2563eb; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
@@ -299,18 +263,6 @@ export default function ProductsPage() {
         .dark .desk-title { color: #f1f5f9; }
         .desk-subtitle { font-size: 14px; color: #6b7280; }
         .dark .desk-subtitle { color: #94a3b8; }
-        .desk-toolbar { display: flex; gap: 12px; margin-bottom: 16px; }
-        .desk-search-wrap {
-          flex: 1; display: flex; align-items: center;
-          background: white; border: 1.5px solid #e2e8f0;
-          border-radius: 10px; padding: 0 14px; gap: 8px;
-        }
-        .dark .desk-search-wrap { background: #0f1a35; border-color: #1e3a5f; }
-        .desk-search-wrap input {
-          border: none; outline: none; flex: 1; font-size: 14px;
-          padding: 11px 0; background: transparent; color: #0f172a;
-        }
-        .dark .desk-search-wrap input { color: #f1f5f9; }
         .desk-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1.5px solid #e2e8f0; }
         .dark .desk-tabs { border-color: #1e3a5f; }
         .desk-tab {
@@ -342,16 +294,14 @@ export default function ProductsPage() {
         .desk-card-img {
           width: 100%; aspect-ratio: 1; position: relative;
           background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
-          display: flex; align-items: center; justify-content: center;
-          overflow: hidden;
+          display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
         .desk-card-img img { transition: transform 0.3s; }
         .desk-card:hover .desk-card-img img { transform: scale(1.05); }
         .desk-wishlist-btn {
           position: absolute; top: 10px; right: 10px;
           width: 32px; height: 32px; border-radius: 50%;
-          background: rgba(255,255,255,0.9);
-          backdrop-filter: blur(4px);
+          background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
           border: none; display: flex; align-items: center; justify-content: center;
           cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
           transition: transform 0.2s; z-index: 2;
@@ -361,8 +311,7 @@ export default function ProductsPage() {
         .desk-card-cat { font-size: 11px; color: #2563eb; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
         .desk-card-title {
           font-size: 14px; font-weight: 600; color: #0f172a; line-height: 1.4; margin-bottom: 6px;
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-          flex: 1;
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: 1;
         }
         .dark .desk-card-title { color: #f1f5f9; }
         .desk-card-price { font-size: 17px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
@@ -387,33 +336,13 @@ export default function ProductsPage() {
 
       {/* ════ MOBILE ════ */}
       <div className="md:hidden">
-        <div className="mob-strip">
-          <div className="mob-search-row">
-            <div className="mob-search-wrap">
-              <Search size={15} color="#9ca3af" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <button className="mob-filter-btn">
-              <SlidersHorizontal size={18} />
-            </button>
-          </div>
-          <div className="mob-tabs">
-            {TABS.map(tab => (
-              <button key={tab} className={`mob-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Tabs removed; showing product list only on mobile */}
 
         <div className="mob-products-wrap">
           <div className="mob-results-row">
-            <span className="mob-results-count">{loading ? "Loading..." : `${filtered.length} products found`}</span>
+            <span className="mob-results-count">
+              {loading ? "Loading..." : `${filtered.length} products found`}
+            </span>
             <select className="mob-sort-select" value={sort} onChange={e => setSort(e.target.value)}>
               {SORT_OPTIONS.map(o => <option key={o}>{o}</option>)}
             </select>
@@ -440,26 +369,11 @@ export default function ProductsPage() {
           <div className="desk-title">All Products</div>
           <div className="desk-subtitle">Browse listings from students on campus</div>
         </div>
-        <div className="desk-toolbar">
-          <div className="desk-search-wrap">
-            <Search size={16} color="#9ca3af" />
-            <input
-              type="text"
-              placeholder="Search for products, sellers or categories"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="desk-tabs">
-          {TABS.map(tab => (
-            <button key={tab} className={`desk-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
-              {tab}
-            </button>
-          ))}
-        </div>
+        {/* Tabs removed; showing product list only on desktop */}
         <div className="desk-results-row">
-          <span className="desk-results-count">{loading ? "Loading..." : `${filtered.length} products found`}</span>
+          <span className="desk-results-count">
+            {loading ? "Loading..." : `${filtered.length} products found`}
+          </span>
           <div className="desk-sort">
             <span>Sort by:</span>
             <select value={sort} onChange={e => setSort(e.target.value)}>
