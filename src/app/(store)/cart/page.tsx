@@ -32,15 +32,15 @@ export default function CartPage() {
 
         /* Mobile header strip */
         .cart-mobile-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px 16px;
-          background: #2563eb;
-          color: white;
-          position: sticky;
-          top: 0;
-          z-index: 40;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        background: #2563eb;
+        color: white;
+        position: sticky;
+        top: 57px;
+        z-index: 30;
         }
         @media (min-width: 768px) {
           .cart-mobile-header { display: none; }
