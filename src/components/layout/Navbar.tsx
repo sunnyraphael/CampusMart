@@ -25,28 +25,25 @@ export function Navbar() {
   const supabase = createClient()
 
   async function resolveVendorState(userId: string) {
-    // 1. Check the user's role in the users table
-    const { data: userData } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', userId)
-      .single()
+  // 1. Get role directly from the authenticated user's metadata
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  const role = authUser?.user_metadata?.role
 
-    if (!userData || userData.role === 'buyer') {
-      setVendorState('buyer')
-      return
-    }
-
-    // 2. They're a vendor — check if they've completed onboarding
-    const { data: seller } = await supabase
-      .from('sellers')
-      .select('store_name')
-      .eq('user_id', userId)
-      .single()
-
-    if (seller?.store_name) setVendorState('active')
-    else setVendorState('onboarding')
+  if (!authUser || role !== 'vendor') {
+    setVendorState('buyer')
+    return
   }
+
+  // 2. They're a vendor — check if they've completed onboarding
+  const { data: seller } = await supabase
+    .from('sellers')
+    .select('store_name')
+    .eq('user_id', userId)
+    .single()
+
+  if (seller?.store_name) setVendorState('active')
+  else setVendorState('onboarding')
+}
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {

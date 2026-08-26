@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
     // Rule 2: Logged in but NOT a seller → send to homepage
     // We read role from user_metadata (set during registration)
     const role = user.user_metadata?.role
-    if (role !== 'seller') {
+    if (role !== 'vendor') {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
