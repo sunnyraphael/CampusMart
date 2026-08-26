@@ -25,60 +25,62 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  // ── Real auth state ──────────────────────────────────────────────
-  // These two state slots start empty and get filled once the
-  // Supabase session is read from the browser's cached cookie
   const [vendorName, setVendorName] = useState('')
   const [vendorInitials, setVendorInitials] = useState('--')
 
+  // Auth — load vendor name from session
   useEffect(() => {
     const supabase = createClient()
-
-    // getUser() reads the JWT from the browser cookie — no DB call
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-
-      // full_name is stored in user_metadata during registration
-      // If somehow it's missing, fall back to the email prefix
       const fullName =
         user.user_metadata?.full_name ??
         user.email?.split('@')[0] ??
         'Vendor'
-
       setVendorName(fullName)
-
-      // Build initials: "Raphael Ifeoluwa" → "RI"
-      // If single word: "Raphael" → "RA"
       const parts = fullName.trim().split(' ')
       const initials =
         parts.length >= 2
           ? parts[0][0] + parts[1][0]
           : parts[0].slice(0, 2)
-
       setVendorInitials(initials.toUpperCase())
     })
-  }, []) // Runs once when the layout first mounts
+  }, [])
 
-  // ── Sign out ─────────────────────────────────────────────────────
-  // Signs the user out of Supabase, clears the session cookie,
-  // then sends them to the login page
-  async function handleSignOut() {
+  // ✅ FIXED: This useEffect was previously OUTSIDE the component (after the closing brace)
+  // It must be INSIDE the function body — moved here where it belongs
+  useEffect(() => {
     const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: seller } = await supabase
+        .from('sellers')
+        .select('store_name')
+        .eq('user_id', user.id)
+        .single()
 
-  // ── Sidebar & scroll lock ────────────────────────────────────────
+      if (!seller?.store_name) {
+        router.push('/vendor/onboarding')
+      }
+    })
+  }, [])
+
+  // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
+  // Lock body scroll when mobile sidebar is open
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [sidebarOpen])
 
-  // First name only for the topbar — "Raphael Ifeoluwa" → "Raphael"
   const firstName = vendorName.split(' ')[0]
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   return (
     <>
@@ -292,7 +294,6 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
             <Link href="/help" className="vs-bottom-link">
               <HelpCircle size={16} /> Help & Support
             </Link>
-            {/* handleSignOut clears the Supabase session and redirects to /login */}
             <button className="vs-bottom-link danger" onClick={handleSignOut}>
               <LogOut size={16} /> Log out
             </button>
@@ -316,7 +317,6 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
                 <span className="vs-notif-dot">3</span>
               </button>
 
-              {/* Real name and initials from Supabase auth */}
               <div className="vs-avatar-info">
                 <span className="name">{firstName || '...'}</span>
                 <Link href="/" className="sub">View Store ↗</Link>

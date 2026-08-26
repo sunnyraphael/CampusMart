@@ -9,22 +9,58 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import {
   ShoppingCart, Bell, Heart, MessageCircle,
   Search, ShoppingBag, ChevronDown,
-  User, Settings, LogOut, Package
+  User, Settings, LogOut, Package, Store
 } from 'lucide-react'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
+
+type VendorState = 'loading' | 'none' | 'buyer' | 'onboarding' | 'active'
 
 export function Navbar() {
   const router = useRouter()
   const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [vendorState, setVendorState] = useState<VendorState>('loading')
   const [profileOpen, setProfileOpen] = useState(false)
   const { items } = useCartStore()
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const supabase = createClient()
 
+  async function resolveVendorState(userId: string) {
+    // 1. Check the user's role in the users table
+    const { data: userData } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .single()
+
+    if (!userData || userData.role === 'buyer') {
+      setVendorState('buyer')
+      return
+    }
+
+    // 2. They're a vendor — check if they've completed onboarding
+    const { data: seller } = await supabase
+      .from('sellers')
+      .select('store_name')
+      .eq('user_id', userId)
+      .single()
+
+    if (seller?.store_name) setVendorState('active')
+    else setVendorState('onboarding')
+  }
+
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    supabase.auth.getUser().then(({ data }) => {
+      const u = data.user
+      setUser(u)
+      if (u) resolveVendorState(u.id)
+      else setVendorState('none')
+    })
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
+      const u = session?.user ?? null
+      setUser(u)
+      if (u) resolveVendorState(u.id)
+      else setVendorState('none')
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -42,12 +78,19 @@ export function Navbar() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     setProfileOpen(false)
+    setVendorState('none')
     router.push('/')
   }
 
+  // Button is hidden for buyers. Visible for signed-out users and vendors only.
+  const showVendorBtn = vendorState === 'none' || vendorState === 'onboarding' || vendorState === 'active'
+  const vendorBtn = vendorState === 'active'
+    ? { label: 'Enter Dashboard', href: '/vendor/dashboard' }
+    : vendorState === 'onboarding'
+    ? { label: 'Open Your Store', href: '/vendor/onboarding' }
+    : { label: 'Open Your Store', href: '/register?role=vendor' }
+
   return (
-    // ✅ Removed backdrop-blur-sm — that was making it transparent
-    // ✅ Added solid background via CSS variable (light blue / dark navy)
     <header
       className="sticky top-0 z-50 w-full"
       style={{
@@ -124,6 +167,19 @@ export function Navbar() {
             )}
           </Link>
 
+          {/* Smart vendor CTA — hidden for buyers */}
+          {showVendorBtn && (
+            <Link
+              href={vendorBtn.href}
+              className="ml-2 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
+              style={{ fontFamily: 'var(--font-sora), Sora, sans-serif' }}
+            >
+              <Store size={15} />
+              {vendorBtn.label}
+            </Link>
+          )}
+
           {/* Auth */}
           {user ? (
             <div className="relative ml-1 profile-dropdown-wrap">
@@ -178,8 +234,8 @@ export function Navbar() {
                 Log in
               </Link>
               <Link href="/register"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600
-                  hover:bg-blue-700 rounded-xl transition-colors">
+                className="px-4 py-2 text-sm font-medium text-white bg-gray-800 dark:bg-gray-700
+                  hover:bg-gray-900 rounded-xl transition-colors">
                 Sign up
               </Link>
             </div>
@@ -209,8 +265,6 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile search row removed — duplicate of desktop/mobile search above */}
-
       {/* ── Desktop second nav bar ── */}
       <div
         className="hidden md:block"
@@ -223,7 +277,6 @@ export function Navbar() {
 }
 
 import { usePathname } from 'next/navigation'
-import { ShoppingBag as Orders } from 'lucide-react'
 
 const desktopLinks = [
   { label: 'Home', href: '/' },
