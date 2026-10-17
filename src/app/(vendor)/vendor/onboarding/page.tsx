@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { CheckCircle2, ArrowRight, ArrowLeft, Store, User, Building2, FileCheck } from 'lucide-react'
+import {
+  CheckCircle2, ArrowRight, ArrowLeft, Store, User, Building2, FileCheck,
+  ShieldCheck, CreditCard, AlertCircle,
+} from 'lucide-react'
 
 const NIGERIAN_BANKS = [
   'Access Bank', 'Citibank', 'Ecobank', 'Fidelity Bank',
@@ -40,10 +43,10 @@ const NIGERIAN_STATES = [
 ]
 
 const steps = [
-  { number: 1, label: 'Store Info',    icon: Store },
-  { number: 2, label: 'Your Identity', icon: User },
-  { number: 3, label: 'Bank Details',  icon: Building2 },
-  { number: 4, label: 'Agreement',     icon: FileCheck },
+  { number: 1, label: 'Store Info',   icon: Store },
+  { number: 2, label: 'Contact',      icon: User },
+  { number: 3, label: 'Bank Details', icon: Building2 },
+  { number: 4, label: 'Agreement',    icon: FileCheck },
 ]
 
 interface FormData {
@@ -55,8 +58,6 @@ interface FormData {
   phone: string
   state: string
   campus: string
-  nin: string
-  bvn: string
   // Step 3
   bank_name: string
   account_number: string
@@ -74,11 +75,10 @@ export default function VendorOnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [fetchingAccount, setFetchingAccount] = useState(false)
 
   const [form, setForm] = useState<FormData>({
     store_name: '', description: '', category: '',
-    phone: '', state: '', campus: '', nin: '', bvn: '',
+    phone: '', state: '', campus: '',
     bank_name: '', account_number: '', account_name: '',
     is_18: false, items_genuine: false, agree_terms: false,
     agree_commission: false, signature: '',
@@ -103,14 +103,11 @@ export default function VendorOnboardingPage() {
       if (!/^(\+234|0)[789][01]\d{8}$/.test(form.phone.trim())) return 'Enter a valid Nigerian phone number'
       if (!form.state) return 'Please select your state'
       if (!form.campus.trim()) return 'Campus or location is required'
-      // NIN and BVN are optional at this stage
-      if (form.nin && !/^\d{11}$/.test(form.nin)) return 'NIN must be exactly 11 digits'
-      if (form.bvn && !/^\d{11}$/.test(form.bvn)) return 'BVN must be exactly 11 digits'
     }
     if (currentStep === 3) {
       if (!form.bank_name) return 'Please select your bank'
       if (!/^\d{10}$/.test(form.account_number)) return 'Account number must be exactly 10 digits'
-      if (!form.account_name.trim()) return 'Account name is required — verify your account number first'
+      if (form.account_name.trim().length < 3) return 'Enter the account name exactly as your bank has it'
     }
     if (currentStep === 4) {
       if (!form.is_18) return 'You must confirm you are 18 years or older'
@@ -132,32 +129,6 @@ export default function VendorOnboardingPage() {
   function handleBack() {
     setCurrentStep(s => s - 1)
     setError('')
-  }
-
-  // Simulates Paystack account name lookup
-  // In production: call your own API route which calls Paystack
-  async function fetchAccountName() {
-    if (!/^\d{10}$/.test(form.account_number)) {
-      setError('Enter a valid 10-digit account number first')
-      return
-    }
-    if (!form.bank_name) {
-      setError('Please select your bank first')
-      return
-    }
-    setFetchingAccount(true)
-    setError('')
-    try {
-      // TODO: Replace with real Paystack account resolution API call
-      // POST /api/vendor/verify-account { account_number, bank_name }
-      await new Promise(r => setTimeout(r, 1500)) // simulated delay
-      // For now we set a placeholder — real integration comes when Paystack is wired up
-      update('account_name', 'Account verified — name will appear here')
-    } catch {
-      setError('Could not verify account. Check the number and try again.')
-    } finally {
-      setFetchingAccount(false)
-    }
   }
 
   async function handleSubmit() {
@@ -190,12 +161,9 @@ export default function VendorOnboardingPage() {
             phone: form.phone.trim(),
             state: form.state,
             campus: form.campus.trim(),
-            nin: form.nin.trim() || null,
-            bvn: form.bvn.trim() || null,
             bank_name: form.bank_name,
             account_number: form.account_number,
             account_name: form.account_name.trim(),
-            is_kyc_verified: !!(form.nin || form.bvn),
           })
           .eq('user_id', user.id)
 
@@ -212,12 +180,9 @@ export default function VendorOnboardingPage() {
             phone: form.phone.trim(),
             state: form.state,
             campus: form.campus.trim(),
-            nin: form.nin.trim() || null,
-            bvn: form.bvn.trim() || null,
             bank_name: form.bank_name,
             account_number: form.account_number,
             account_name: form.account_name.trim(),
-            is_kyc_verified: !!(form.nin || form.bvn),
           })
 
         if (insertError) throw insertError
@@ -232,8 +197,6 @@ export default function VendorOnboardingPage() {
       setLoading(false)
     }
   }
-
-  const progressPercent = ((currentStep - 1) / (steps.length - 1)) * 100
 
   return (
     <>
@@ -301,7 +264,6 @@ export default function VendorOnboardingPage() {
           color: var(--ob-heading, #fff); margin-bottom: 6px;
         }
         .ob-label span { color: #ef4444; margin-left: 2px; }
-        .ob-label .ob-optional { color: var(--ob-muted, #64748b); font-weight: 400; font-size: 0.75rem; margin-left: 4px; }
         .ob-input, .ob-select, .ob-textarea {
           width: 100%; padding: 10px 14px; border-radius: 8px;
           background: var(--ob-input-bg, #060d1f);
@@ -316,18 +278,6 @@ export default function VendorOnboardingPage() {
         .ob-textarea { resize: vertical; min-height: 90px; }
         .ob-hint { font-size: 0.75rem; color: var(--ob-muted, #64748b); margin-top: 5px; }
         .ob-hint a { color: #2563eb; }
-
-        /* Account verify row */
-        .ob-verify-row { display: flex; gap: 8px; }
-        .ob-verify-row .ob-input { flex: 1; }
-        .ob-verify-btn {
-          padding: 10px 14px; border-radius: 8px; border: 1.5px solid #2563eb;
-          background: transparent; color: #2563eb; font-family: var(--font-dm-sans);
-          font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-          transition: all 0.2s; flex-shrink: 0;
-        }
-        .ob-verify-btn:hover { background: #2563eb; color: white; }
-        .ob-verify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Checkbox rows */
         .ob-check-row {
@@ -350,19 +300,23 @@ export default function VendorOnboardingPage() {
         .ob-check-label { font-size: 0.85rem; color: var(--ob-heading, #fff); line-height: 1.5; }
         .ob-check-label strong { color: #2563eb; }
 
-        /* KYC info box */
+        /* Info box */
         .ob-info-box {
           background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.2);
           border-radius: 10px; padding: 14px; margin-bottom: 18px;
         }
-        .ob-info-box p { font-size: 0.8rem; color: #93c5fd; margin: 0; line-height: 1.6; }
+        .ob-info-row { display: flex; align-items: flex-start; gap: 10px; }
+        .ob-info-row svg { flex-shrink: 0; margin-top: 2px; color: #93c5fd; }
+        .ob-info-row p { font-size: 0.8rem; color: #93c5fd; margin: 0; line-height: 1.6; }
 
         /* Error */
         .ob-error {
+          display: flex; align-items: center; gap: 8px;
           background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
           border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
           font-size: 0.82rem; color: #fca5a5;
         }
+        .ob-error svg { flex-shrink: 0; }
 
         /* Buttons */
         .ob-btn-row { display: flex; gap: 10px; margin-top: 24px; }
@@ -477,18 +431,21 @@ export default function VendorOnboardingPage() {
             </>
           )}
 
-          {/* ── Step 2: Identity ── */}
+          {/* ── Step 2: Contact ── */}
           {currentStep === 2 && (
             <>
-              <h2 className="ob-card-title">Your contact & identity</h2>
-              <p className="ob-card-sub">Required for account security and order communication.</p>
+              <h2 className="ob-card-title">Your contact details</h2>
+              <p className="ob-card-sub">Buyers and order updates reach you through these.</p>
 
               <div className="ob-info-box">
-                <p>
-                  🔒 Your NIN and BVN are encrypted and never shared publicly.
-                  They are only used to verify your identity for withdrawals above ₦50,000,
-                  as required by CBN KYC regulations. You can skip these now and add them later.
-                </p>
+                <div className="ob-info-row">
+                  <ShieldCheck size={16} />
+                  <p>
+                    Nothing else is needed to open your store. To withdraw more than ₦50,000,
+                    you will verify your identity later from your dashboard with a selfie
+                    and a photo of your school ID card.
+                  </p>
+                </div>
               </div>
 
               <div className="ob-field">
@@ -528,36 +485,6 @@ export default function VendorOnboardingPage() {
                   />
                 </div>
               </div>
-
-              <div className="ob-field">
-                <label className="ob-label">
-                  NIN <span className="ob-optional">(optional — required for withdrawals above ₦50k)</span>
-                </label>
-                <input
-                  className="ob-input"
-                  placeholder="11-digit National Identification Number"
-                  value={form.nin}
-                  onChange={e => update('nin', e.target.value.replace(/\D/g, ''))}
-                  maxLength={11}
-                  type="tel"
-                />
-                <p className="ob-hint">Forgot your NIN? Dial <strong>*346#</strong> on your registered phone.</p>
-              </div>
-
-              <div className="ob-field">
-                <label className="ob-label">
-                  BVN <span className="ob-optional">(optional — required for withdrawals above ₦50k)</span>
-                </label>
-                <input
-                  className="ob-input"
-                  placeholder="11-digit Bank Verification Number"
-                  value={form.bvn}
-                  onChange={e => update('bvn', e.target.value.replace(/\D/g, ''))}
-                  maxLength={11}
-                  type="tel"
-                />
-                <p className="ob-hint">Forgot your BVN? Dial <strong>*565*0#</strong> on your bank-linked phone.</p>
-              </div>
             </>
           )}
 
@@ -568,11 +495,14 @@ export default function VendorOnboardingPage() {
               <p className="ob-card-sub">Where your earnings will be sent when you request a withdrawal.</p>
 
               <div className="ob-info-box">
-                <p>
-                  💳 Your earnings are held securely in your CampusMart wallet after each sale.
-                  You request a withdrawal anytime and money arrives in your bank within 24 hours.
-                  CampusMart charges a <strong style={{ color: '#93c5fd' }}>5% commission</strong> on each sale — you receive 95%.
-                </p>
+                <div className="ob-info-row">
+                  <CreditCard size={16} />
+                  <p>
+                    Each sale is added to your CampusMart wallet once the buyer confirms delivery,
+                    or 3 days after you mark the item delivered if they do not respond.
+                    CampusMart charges a <strong style={{ color: '#bfdbfe' }}>5% commission</strong> on each sale, so you receive 95%.
+                  </p>
+                </div>
               </div>
 
               <div className="ob-field">
@@ -591,39 +521,27 @@ export default function VendorOnboardingPage() {
 
               <div className="ob-field">
                 <label className="ob-label">Account number <span>*</span></label>
-                <div className="ob-verify-row">
-                  <input
-                    className="ob-input"
-                    placeholder="10-digit account number"
-                    value={form.account_number}
-                    onChange={e => {
-                      update('account_number', e.target.value.replace(/\D/g, ''))
-                      update('account_name', '') // reset name when number changes
-                    }}
-                    maxLength={10}
-                    type="tel"
-                  />
-                  <button
-                    className="ob-verify-btn"
-                    onClick={fetchAccountName}
-                    disabled={fetchingAccount}
-                  >
-                    {fetchingAccount ? 'Checking...' : 'Verify'}
-                  </button>
-                </div>
-                <p className="ob-hint">Click Verify to auto-fetch your account name from your bank.</p>
+                <input
+                  className="ob-input"
+                  placeholder="10-digit account number"
+                  value={form.account_number}
+                  onChange={e => update('account_number', e.target.value.replace(/\D/g, ''))}
+                  maxLength={10}
+                  type="tel"
+                />
               </div>
 
               <div className="ob-field">
                 <label className="ob-label">Account name <span>*</span></label>
                 <input
                   className="ob-input"
-                  placeholder="Auto-filled after verification"
+                  placeholder="Exactly as it appears on your bank account"
                   value={form.account_name}
                   onChange={e => update('account_name', e.target.value)}
-                  style={{ background: form.account_name ? 'rgba(34,197,94,0.08)' : undefined }}
                 />
-                <p className="ob-hint">Make sure this matches your bank records exactly.</p>
+                <p className="ob-hint">
+                  This should match the name on your school ID. We check this when you verify your identity.
+                </p>
               </div>
             </>
           )}
@@ -686,7 +604,12 @@ export default function VendorOnboardingPage() {
           )}
 
           {/* Error message */}
-          {error && <div className="ob-error">⚠️ {error}</div>}
+          {error && (
+            <div className="ob-error">
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
 
           {/* Navigation buttons */}
           <div className="ob-btn-row">
@@ -705,7 +628,7 @@ export default function VendorOnboardingPage() {
                 onClick={handleSubmit}
                 disabled={loading}
               >
-                {loading ? 'Setting up your store...' : 'Launch My Store 🚀'}
+                {loading ? 'Setting up your store...' : 'Launch my store'}
               </button>
             )}
           </div>
