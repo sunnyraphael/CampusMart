@@ -66,6 +66,28 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     })
   }, [])
 
+    // Count items that need the vendor's action. Re-runs on every page change,
+  // so the number drops after you update an order.
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: seller } = await supabase
+        .from('sellers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+      if (!seller) return
+      const { count } = await supabase
+        .from('order_items')
+        .select('id, orders!inner(payment_status)', { count: 'exact', head: true })
+        .eq('seller_id', seller.id)
+        .in('fulfillment_status', ['pending', 'confirmed', 'shipped'])
+        .eq('orders.payment_status', 'paid')
+      setTodoCount(count ?? 0)
+    })
+  }, [pathname])
+  
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 

@@ -35,9 +35,13 @@ export default function CheckoutPage() {
     }).format(amount)
 
   const handleProceedToPayment = () => {
-    if (deliveryMethod === "delivery") {
-      if (!form.address.trim()) { setError("Please enter your delivery address."); return }
-      if (!form.phone.trim()) { setError("Please enter your phone number."); return }
+        if (deliveryMethod === "delivery" && !form.address.trim()) {
+      setError("Please enter your delivery address.")
+      return
+    }
+    if (form.phone.trim().length < 10) {
+      setError("Please enter a phone number the seller can reach you on.")
+      return
     }
     setError("")
     setStep("payment")
