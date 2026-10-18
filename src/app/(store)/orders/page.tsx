@@ -4,8 +4,9 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import {
   ShoppingBag, Package, Truck, CheckCircle2,
-  XCircle, Clock, ArrowLeft, ReceiptText, MapPin
+  XCircle, Clock, ArrowLeft, ReceiptText, MapPin, ShieldAlert, PackageCheck
 } from "lucide-react"
+import ItemActions from "./ItemActions"
 
 async function getOrders(userId: string) {
   const supabase = await createClient()
@@ -19,6 +20,9 @@ async function getOrders(userId: string) {
         unit_price,
         subtotal,
         product_id,
+        fulfillment_status,
+        auto_release_at,
+        dispute_reason,
         products (
           title,
           images
@@ -30,23 +34,26 @@ async function getOrders(userId: string) {
   return (data as any[]) ?? []
 }
 
-function getStatusConfig(status: string) {
-  switch (status) {
-    case "pending":
-      return { label: "Pending", color: "#d97706", bg: "#fffbeb", Icon: Clock }
-    case "confirmed":
-      return { label: "Confirmed", color: "#2563eb", bg: "#eff6ff", Icon: CheckCircle2 }
-    case "processing":
-      return { label: "Processing", color: "#9333ea", bg: "#faf5ff", Icon: Package }
-    case "shipped":
-      return { label: "Shipped", color: "#0891b2", bg: "#ecfeff", Icon: Truck }
-    case "delivered":
-      return { label: "Delivered", color: "#16a34a", bg: "#f0fdf4", Icon: CheckCircle2 }
-    case "cancelled":
-      return { label: "Cancelled", color: "#dc2626", bg: "#fef2f2", Icon: XCircle }
-    default:
-      return { label: status, color: "#6b7280", bg: "#f9fafb", Icon: Clock }
-  }
+// One config table for every stage an item (or a whole order) can be in
+const STAGES: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
+  pending:   { label: "Waiting for seller", color: "#d97706", bg: "#fffbeb", Icon: Clock },
+  confirmed: { label: "Seller confirmed",   color: "#2563eb", bg: "#eff6ff", Icon: CheckCircle2 },
+  shipped:   { label: "On the way",         color: "#0891b2", bg: "#ecfeff", Icon: Truck },
+  delivered: { label: "Confirm receipt",    color: "#7c3aed", bg: "#f5f3ff", Icon: Package },
+  received:  { label: "Completed",          color: "#16a34a", bg: "#f0fdf4", Icon: PackageCheck },
+  disputed:  { label: "Disputed",           color: "#b42318", bg: "#fef2f2", Icon: ShieldAlert },
+  cancelled: { label: "Cancelled",          color: "#dc2626", bg: "#fef2f2", Icon: XCircle },
+}
+
+const RANK = ["pending", "confirmed", "shipped", "delivered", "received"]
+
+// An order's stage comes from its items. Disputes win; otherwise the least advanced item decides.
+function orderStage(order: any): string {
+  if (order.status === "cancelled") return "cancelled"
+  const stages: string[] = (order.order_items ?? []).map((i: any) => i.fulfillment_status)
+  if (stages.length === 0) return "pending"
+  if (stages.includes("disputed")) return "disputed"
+  return RANK[Math.min(...stages.map((s) => Math.max(RANK.indexOf(s), 0)))]
 }
 
 function getPaymentConfig(status: string) {
@@ -54,6 +61,7 @@ function getPaymentConfig(status: string) {
     case "paid":
       return { label: "Paid", color: "#16a34a", bg: "#f0fdf4" }
     case "pending":
+    case "unpaid":
       return { label: "Payment Pending", color: "#d97706", bg: "#fffbeb" }
     case "failed":
       return { label: "Payment Failed", color: "#dc2626", bg: "#fef2f2" }
@@ -64,18 +72,22 @@ function getPaymentConfig(status: string) {
   }
 }
 
+const shortDate = (d: string) =>
+  new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "short" })
+
 export default async function OrdersPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
   const orders = await getOrders(user.id)
+  const stages = orders.map(orderStage)
 
-  const activeCount = orders.filter(o =>
-    ["pending","confirmed","processing","shipped"].includes(o.status)
-  ).length
-  const deliveredCount = orders.filter(o => o.status === "delivered").length
-  const cancelledCount = orders.filter(o => o.status === "cancelled").length
+  const activeCount = stages.filter((s) => ["pending", "confirmed", "shipped"].includes(s)).length
+  const actionCount = stages.filter((s) => s === "delivered").length
+  const completedCount = stages.filter((s) => s === "received").length
+  const disputedCount = stages.filter((s) => s === "disputed").length
+  const cancelledCount = stages.filter((s) => s === "cancelled").length
 
   return (
     <>
@@ -109,7 +121,9 @@ export default async function OrdersPage() {
         .pay-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:100px; font-size:11px; font-weight:600; }
         .oc-date { font-size:12px; color:#9ca3af; white-space:nowrap; }
 
-        .oc-items { padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+        .oc-items { padding:8px 20px; display:flex; flex-direction:column; }
+        .oi { padding:14px 0; }
+        .oi + .oi { border-top:1.5px solid #f8faff; }
         .oi-row { display:flex; align-items:center; gap:14px; }
         .oi-img { width:56px; height:56px; border-radius:12px; overflow:hidden; background:linear-gradient(135deg,#f8faff,#eff2ff); flex-shrink:0; display:flex; align-items:center; justify-content:center; border:1px solid #f1f5f9; }
         .oi-img img { width:100%; height:100%; object-fit:cover; }
@@ -117,8 +131,9 @@ export default async function OrdersPage() {
         .oi-title { font-size:14px; font-weight:600; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
         .oi-meta { font-size:12px; color:#9ca3af; }
         .oi-subtotal { font-family:'Sora',sans-serif; font-size:14px; font-weight:700; color:#0a0f2e; flex-shrink:0; }
-
-        .oc-more { font-size:12px; color:#9ca3af; padding:0 20px 12px; font-style:italic; }
+        .oi-status { margin-top:10px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+        .oi-note { font-size:12.5px; line-height:1.5; color:#6b7280; }
+        .oi-reason { margin-top:8px; padding:10px 12px; border-radius:10px; background:#fef2f2; font-size:13px; color:#b42318; }
 
         .oc-foot { padding:14px 20px; display:flex; align-items:center; justify-content:space-between; border-top:1.5px solid #f8faff; background:#fdfdff; flex-wrap:wrap; gap:10px; }
         .oc-delivery { display:flex; align-items:center; gap:6px; font-size:12px; color:#6b7280; max-width:55%; }
@@ -152,16 +167,28 @@ export default async function OrdersPage() {
 
           {orders.length > 0 && (
             <div className="op-pills">
+              {actionCount > 0 && (
+                <div className="op-pill">
+                  <span className="op-pill-dot" style={{ background: "#7c3aed" }} />
+                  {actionCount} Awaiting your confirmation
+                </div>
+              )}
               {activeCount > 0 && (
                 <div className="op-pill">
                   <span className="op-pill-dot" style={{ background: "#2563eb" }} />
                   {activeCount} Active
                 </div>
               )}
-              {deliveredCount > 0 && (
+              {completedCount > 0 && (
                 <div className="op-pill">
                   <span className="op-pill-dot" style={{ background: "#16a34a" }} />
-                  {deliveredCount} Delivered
+                  {completedCount} Completed
+                </div>
+              )}
+              {disputedCount > 0 && (
+                <div className="op-pill">
+                  <span className="op-pill-dot" style={{ background: "#b42318" }} />
+                  {disputedCount} Disputed
                 </div>
               )}
               {cancelledCount > 0 && (
@@ -190,11 +217,9 @@ export default async function OrdersPage() {
             </div>
           ) : (
             orders.map((order: any) => {
-              const { label: statusLabel, color: statusColor, bg: statusBg, Icon: StatusIcon } = getStatusConfig(order.status)
+              const stage = STAGES[orderStage(order)] ?? STAGES.pending
               const { label: payLabel, color: payColor, bg: payBg } = getPaymentConfig(order.payment_status)
               const items: any[] = order.order_items ?? []
-              const visible = items.slice(0, 3)
-              const hiddenCount = items.length - visible.length
 
               return (
                 <div key={order.id} className="oc">
@@ -209,9 +234,9 @@ export default async function OrdersPage() {
                       </div>
                     </div>
                     <div className="oc-head-right">
-                      <span className="status-badge" style={{ color: statusColor, background: statusBg }}>
-                        <StatusIcon size={12} />
-                        {statusLabel}
+                      <span className="status-badge" style={{ color: stage.color, background: stage.bg }}>
+                        <stage.Icon size={12} />
+                        {stage.label}
                       </span>
                       <span className="pay-badge" style={{ color: payColor, background: payBg }}>
                         {payLabel}
@@ -220,27 +245,54 @@ export default async function OrdersPage() {
                     </div>
                   </div>
 
+                  {/* Every item is shown, because each one has its own status and buttons */}
                   <div className="oc-items">
-                    {visible.map((item: any) => (
-                      <div key={item.id} className="oi-row">
-                        <div className="oi-img">
-                          {item.products?.images?.[0]
-                            ? <img src={item.products.images[0]} alt={item.products?.title} />
-                            : <Package size={22} color="#cbd5e1" />
-                          }
-                        </div>
-                        <div className="oi-info">
-                          <div className="oi-title">{item.products?.title ?? "Product"}</div>
-                          <div className="oi-meta">Qty: {item.quantity} × {formatPrice(item.unit_price)}</div>
-                        </div>
-                        <div className="oi-subtotal">{formatPrice(item.subtotal)}</div>
-                      </div>
-                    ))}
-                  </div>
+                    {items.map((item: any) => {
+                      const s = STAGES[item.fulfillment_status] ?? STAGES.pending
+                      return (
+                        <div key={item.id} className="oi">
+                          <div className="oi-row">
+                            <div className="oi-img">
+                              {item.products?.images?.[0]
+                                ? <img src={item.products.images[0]} alt={item.products?.title} />
+                                : <Package size={22} color="#cbd5e1" />
+                              }
+                            </div>
+                            <div className="oi-info">
+                              <div className="oi-title">{item.products?.title ?? "Product"}</div>
+                              <div className="oi-meta">Qty: {item.quantity} × {formatPrice(item.unit_price)}</div>
+                            </div>
+                            <div className="oi-subtotal">{formatPrice(item.subtotal)}</div>
+                          </div>
 
-                  {hiddenCount > 0 && (
-                    <div className="oc-more">+{hiddenCount} more item{hiddenCount !== 1 ? "s" : ""}</div>
-                  )}
+                          <div className="oi-status">
+                            <span className="status-badge" style={{ color: s.color, background: s.bg }}>
+                              <s.Icon size={12} />
+                              {s.label}
+                            </span>
+                            {item.fulfillment_status === "delivered" && item.auto_release_at && (
+                              <span className="oi-note">
+                                Payment goes to the seller automatically on {shortDate(item.auto_release_at)} unless you
+                                confirm sooner or report a problem.
+                              </span>
+                            )}
+                            {item.fulfillment_status === "shipped" && (
+                              <span className="oi-note">Item not arrived after a long wait? You can report it.</span>
+                            )}
+                          </div>
+
+                          {item.fulfillment_status === "disputed" && (
+                            <div className="oi-reason">
+                              Your report: {item.dispute_reason || "No reason provided"}. The seller's payment is on hold
+                              while this is reviewed.
+                            </div>
+                          )}
+
+                          <ItemActions itemId={item.id} status={item.fulfillment_status} />
+                        </div>
+                      )
+                    })}
+                  </div>
 
                   <div className="oc-foot">
                     <div className="oc-delivery">
