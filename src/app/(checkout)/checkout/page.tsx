@@ -63,7 +63,7 @@ export default function CheckoutPage() {
         p_items: items.map((item) => ({ product_id: item.id, quantity: item.quantity })),
         p_delivery_method: deliveryMethod,
         p_delivery_address: deliveryMethod === "delivery" ? form.address : null,
-        p_phone_number: deliveryMethod === "delivery" ? form.phone : null,
+        p_phone_number: form.phone.trim(),
         p_note: form.note || null,
         p_delivery_fee: deliveryFee,
       })
@@ -307,29 +307,27 @@ export default function CheckoutPage() {
                   </div>
 
                   {deliveryMethod === "delivery" && (
-                    <>
-                      <div className="checkout-field">
-                        <label className="checkout-label">Delivery Address</label>
-                        <input
-                          className="checkout-input"
-                          type="text"
-                          placeholder="e.g. Block C, Room 14, Hostel 3"
-                          value={form.address}
-                          onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-                        />
-                      </div>
-                      <div className="checkout-field">
-                        <label className="checkout-label">Phone Number</label>
-                        <input
-                          className="checkout-input"
-                          type="tel"
-                          placeholder="e.g. 08012345678"
-                          value={form.phone}
-                          onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                        />
-                      </div>
-                    </>
+                    <div className="checkout-field">
+                      <label className="checkout-label">Delivery Address</label>
+                      <input
+                        className="checkout-input"
+                        type="text"
+                        placeholder="e.g. Block C, Room 14, Hostel 3"
+                        value={form.address}
+                        onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                      />
+                    </div>
                   )}
+                  <div className="checkout-field">
+                    <label className="checkout-label">Phone Number (so the seller can reach you)</label>
+                    <input
+                      className="checkout-input"
+                      type="tel"
+                      placeholder="e.g. 08012345678"
+                      value={form.phone}
+                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                    />
+                  </div>
 
                   <div className="checkout-field" style={{ marginBottom: 0 }}>
                     <label className="checkout-label">Order Note (optional)</label>

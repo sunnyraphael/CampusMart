@@ -22,6 +22,8 @@ const statusColors: Record<string, { bg: string; color: string }> = {
   pending:    { bg: '#fef9c3', color: '#ca8a04' },
   confirmed:  { bg: '#dbeafe', color: '#2563eb' },
   cancelled:  { bg: '#fee2e2', color: '#dc2626' },
+  received:   { bg: '#dcfce7', color: '#16a34a' },
+  disputed:   { bg: '#fee2e2', color: '#b42318' },
 }
 
 const setupSteps = [
@@ -32,7 +34,7 @@ const setupSteps = [
 ]
 
 interface Props {
-  stats: { totalSales: number; totalOrders: number; totalProductsSold: number; storeViews: number } | null
+    stats: { totalSales: number; totalOrders: number; totalProductsSold: number; storeViews: number; paidOut: number; pending: number } | null
   recentOrders: any[]
   topProducts: any[]
   chartData: { date: string; sales: number }[]
@@ -136,7 +138,7 @@ export default function VendorDashboardClient({ stats, recentOrders, topProducts
       {/* Greeting */}
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ fontFamily: 'var(--font-sora)', fontSize: '1.3rem', fontWeight: 700, color: 'var(--vendor-heading, #fff)', margin: '0 0 4px' }}>
-          Good {getHour()}, {firstName} 👋
+          Good {getHour()}, {firstName}
         </h2>
         <p style={{ fontFamily: 'var(--font-dm-sans)', fontSize: '0.85rem', color: 'var(--vendor-muted, #64748b)', margin: 0 }}>
           {hasData ? "Here's what's happening with your store." : "Your store is set up. Start adding products to make your first sale!"}
@@ -146,7 +148,7 @@ export default function VendorDashboardClient({ stats, recentOrders, topProducts
       {/* Stat cards */}
       <div className="vd-grid vd-stat-grid" style={{ marginBottom: '20px' }}>
         {[
-          { label: 'Total Sales',     value: fmt(stats?.totalSales ?? 0),         sub: hasData ? 'All time revenue' : 'No sales yet',          icon: <ShoppingBag size={20} />, live: hasData },
+          { label: 'Total Sales',     value: fmt(stats?.totalSales ?? 0),         sub: hasData ? `${fmt(stats?.paidOut ?? 0)} paid out · ${fmt(stats?.pending ?? 0)} pending` : 'No sales yet', icon: <ShoppingBag size={20} />, live: hasData },
           { label: 'Total Orders',    value: String(stats?.totalOrders ?? 0),      sub: hasData ? 'Across all products' : 'No orders yet',      icon: <Tag size={20} />,         live: hasData },
           { label: 'Products Sold',   value: String(stats?.totalProductsSold ?? 0),sub: hasData ? 'Total units sold' : 'No units sold yet',     icon: <TrendingUp size={20} />,  live: hasData },
           { label: 'Your Listings',   value: String(productCount),                 sub: productCount > 0 ? 'Active products' : 'Add products to start selling', icon: <Eye size={20} />, live: productCount > 0 },

@@ -13,7 +13,7 @@ import {
 const navItems = [
   { label: 'Overview',       href: '/vendor/dashboard', icon: LayoutDashboard },
   { label: 'Products',       href: '/vendor/listings',  icon: Package },
-  { label: 'Orders',         href: '/vendor/orders',    icon: ShoppingBag, badge: 12 },
+  { label: 'Orders',         href: '/vendor/orders',    icon: ShoppingBag, badge: 'todo' },
   { label: 'Earnings',       href: '/vendor/earnings',  icon: DollarSign },
   { label: 'Payouts',        href: '/vendor/payouts',   icon: CreditCard },
   { label: 'Customers',      href: '/vendor/customers', icon: Users },
@@ -27,6 +27,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [vendorName, setVendorName] = useState('')
   const [vendorInitials, setVendorInitials] = useState('--')
+  const [todoCount, setTodoCount] = useState(0)
 
   // Auth — load vendor name from session
   useEffect(() => {
@@ -275,7 +276,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
                 <Link key={href} href={href} className={`vs-nav-link${active ? ' active' : ''}`}>
                   <Icon size={17} />
                   {label}
-                  {badge && <span className="vs-badge">{badge}</span>}
+                  {badge === 'todo' && todoCount > 0 && <span className="vs-badge">{todoCount}</span>}
                 </Link>
               )
             })}
@@ -309,12 +310,12 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
             <p className="vs-topbar-title">Vendor Dashboard</p>
 
             <div className="vs-topbar-right">
-              <button className="vs-notif-btn" aria-label="Notifications">
+              <button className="vs-notif-btn" aria-label="Orders needing action" onClick={() => router.push('/vendor/orders')}>
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
-                <span className="vs-notif-dot">3</span>
+                {todoCount > 0 && <span className="vs-notif-dot">{todoCount}</span>}
               </button>
 
               <div className="vs-avatar-info">
