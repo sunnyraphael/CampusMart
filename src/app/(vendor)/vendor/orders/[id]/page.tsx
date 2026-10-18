@@ -30,7 +30,7 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
   const ref = String(order.id).slice(0, 8).toUpperCase()
 
   const buyer = pick(order, ['full_name', 'buyer_name', 'customer_name', 'name'])
-  const phone = pick(order, ['phone', 'buyer_phone', 'delivery_phone', 'contact_phone'])
+  const phone = pick(order, ['phone_number', 'phone', 'buyer_phone', 'delivery_phone', 'contact_phone'])
   const method = pick(order, ['delivery_method', 'fulfillment_method', 'delivery_type'])
   const address = pick(order, ['delivery_address', 'address', 'shipping_address'])
   const notes = pick(order, ['delivery_notes', 'notes', 'note'])

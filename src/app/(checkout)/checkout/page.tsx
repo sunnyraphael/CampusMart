@@ -43,12 +43,12 @@ export default function CheckoutPage() {
     setStep("payment")
   }
 
-  const handlePayWithPaystack = async () => {
+    const handlePayWithPaystack = async () => {
     setLoading(true)
     setError("")
 
     try {
-      // 1. Get the logged-in user
+      // 1. Make sure someone is logged in
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         setError("You must be logged in to place an order.")
@@ -56,56 +56,29 @@ export default function CheckoutPage() {
         return
       }
 
-      // 2. Create the order record in Supabase
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          buyer_id: user.id,
-          total_amount: total,
-          delivery_fee: deliveryFee,
-          service_fee: serviceFee,
-          delivery_method: deliveryMethod,
-          delivery_address: deliveryMethod === "delivery" ? form.address : null,
-          phone_number: deliveryMethod === "delivery" ? form.phone : null,
-          note: form.note || null,
-          status: "pending",
-          payment_status: "paid", // simulated — will be set by Paystack webhook later
-        })
-        .select()
-        .single()
+      // 2. One call creates the order AND its items together.
+      // We send only product ids and quantities. The database looks up the
+      // real prices and sellers itself, so the browser can't set its own price.
+      const { data: newOrderId, error: orderError } = await supabase.rpc("create_order", {
+        p_items: items.map((item) => ({ product_id: item.id, quantity: item.quantity })),
+        p_delivery_method: deliveryMethod,
+        p_delivery_address: deliveryMethod === "delivery" ? form.address : null,
+        p_phone_number: deliveryMethod === "delivery" ? form.phone : null,
+        p_note: form.note || null,
+        p_delivery_fee: deliveryFee,
+      })
 
-      if (orderError || !order) {
+      if (orderError || !newOrderId) {
         console.error("Order error:", orderError)
-        setError("Failed to create order. Please try again.")
+        setError(orderError?.message || "Failed to create order. Please try again.")
         setLoading(false)
         return
       }
 
-      // 3. Create one order_item row per cart item
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity,
-      }))
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems)
-
-      if (itemsError) {
-        console.error("Order items error:", itemsError)
-        setError("Order created but items failed to save. Contact support.")
-        setLoading(false)
-        return
-      }
-
-      // 4. All good — clear cart and show success
-      setOrderId(order.id)
+      // 3. All good: clear the cart and show success
+      setOrderId(newOrderId)
       clearCart()
       setStep("success")
-
     } catch (err) {
       console.error("Unexpected error:", err)
       setError("Something went wrong. Please try again.")
