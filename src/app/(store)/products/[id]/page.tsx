@@ -9,6 +9,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import type { ProductFull, Review } from "@/types"
 import AddToCartButton from "./AddToCartButton"
+import ProductGallery from "./ProductGallery"
 
 async function getProduct(id: string) {
   const supabase = await createClient()
@@ -261,24 +262,7 @@ export default async function ProductDetailPage({
           <div className="pd-main">
 
             {/* Gallery */}
-            <div className="gallery">
-              <div className="gallery-main">
-                {product.images && product.images.length > 0 ? (
-                  <img src={product.images[0]} alt={product.title} />
-                ) : (
-                  <Package size={80} color="#cbd5e1" />
-                )}
-              </div>
-              {product.images && product.images.length > 1 && (
-                <div className="gallery-thumbs">
-                  {product.images.slice(0, 5).map((img, i) => (
-                    <div key={i} className={`gallery-thumb ${i === 0 ? "active" : ""}`}>
-                      <img src={img} alt={`${product.title} ${i + 1}`} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ProductGallery images={product.images} title={product.title} />
 
             {/* Info panel */}
             <div className="pd-info">

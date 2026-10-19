@@ -201,7 +201,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         .vs-bottom-link.danger { color: #ef4444; }
         .vs-bottom-link.danger:hover { background: rgba(239,68,68,0.08); }
 
-        .vs-main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+        .vs-main { margin-left: 220px; flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
 
         .vs-topbar {
           height: 56px;
@@ -242,7 +242,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         .vs-avatar-info .name { font-family: var(--font-sora); font-size: 0.8rem; font-weight: 600; color: var(--vs-heading, #fff); }
         .vs-avatar-info .sub { font-family: var(--font-dm-sans); font-size: 0.7rem; color: #2563eb; text-decoration: none; display: block; }
 
-        .vs-content { flex: 1; padding: 20px; overflow-y: auto; }
+        .vs-content { flex: 1; min-width: 0; padding: 20px; overflow-y: auto; }
 
         @media (max-width: 768px) {
           .vs-sidebar { transform: translateX(-100%); }

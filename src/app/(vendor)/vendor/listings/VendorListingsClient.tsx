@@ -291,8 +291,8 @@ export default function VendorListingsClient({ products }: { products: Product[]
 
         .listings-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-          gap: 18px;
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+          gap: 12px;
         }
 
         .listing-card {
@@ -320,7 +320,7 @@ export default function VendorListingsClient({ products }: { products: Product[]
         .listing-image-wrap {
           position: relative;
           width: 100%;
-          aspect-ratio: 1 / 1;
+          aspect-ratio: 4 / 3;
           background: #0a1428;
         }
 
@@ -365,7 +365,7 @@ export default function VendorListingsClient({ products }: { products: Product[]
         }
 
         .listing-body {
-          padding: 14px 14px 16px;
+          padding: 10px 10px 12px;
         }
 
         .listing-title {
