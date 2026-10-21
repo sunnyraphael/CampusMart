@@ -17,7 +17,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-sm text-gray-500 max-w-xs">
-              The #1 marketplace for Nigerian university students. Buy and sell anything on campus.
+              The online marketplace for Nigerian university students. Buy and sell anything on campus.
             </p>
           </div>
 

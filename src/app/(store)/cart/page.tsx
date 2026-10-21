@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { calcServiceFee } from "@/lib/fees";
+import ServiceFeeNote from "@/components/ServiceFeeNote";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore();
@@ -13,9 +15,8 @@ export default function CartPage() {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const deliveryFee = items.length > 0 ? 500 : 0;
-  const serviceFee = items.length > 0 ? Math.round(subtotal * 0.02) : 0;
-  const total = subtotal + deliveryFee + serviceFee;
+    const serviceFee = items.length > 0 ? calcServiceFee(subtotal) : 0;
+  const total = subtotal + serviceFee;
 
   const formatPrice = (amount: number) =>
     new Intl.NumberFormat("en-NG", {
@@ -380,14 +381,15 @@ export default function CartPage() {
                     {formatPrice(subtotal)}
                   </span>
                 </div>
-                <div className="summary-row">
-                  <span>Delivery fee</span>
-                  <span>{formatPrice(deliveryFee)}</span>
+                                <div className="summary-row">
+                  <span>Delivery</span>
+                  <span>Added at checkout</span>
                 </div>
                 <div className="summary-row">
-                  <span>Service fee (2%)</span>
+                  <span>Service fee{serviceFee === 0 ? " (waived)" : " (2%)"}</span>
                   <span>{formatPrice(serviceFee)}</span>
                 </div>
+                <ServiceFeeNote subtotal={subtotal} />
 
                 <hr className="summary-divider" />
 

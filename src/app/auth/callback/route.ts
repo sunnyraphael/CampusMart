@@ -23,7 +23,8 @@ export async function GET(request: Request) {
 
       if (!existingUser) {
         // Read the role from user_metadata — set during signup via signUp({ data: { role } })
-        const role = user.user_metadata?.role ?? "buyer"
+        // Only "vendor" is allowed to come from sign-up data. Everything else becomes "buyer".
+        const role = user.user_metadata?.role === "vendor" ? "vendor" : "buyer"
 
         await supabase.from("users").insert({
           id: user.id,

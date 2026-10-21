@@ -191,6 +191,8 @@ export default async function ProductDetailPage({
           font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; color: #fff;
         }
         .vendor-name { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: #0a0f2e; }
+        .vendor-avatar { overflow: hidden; }
+        .vendor-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .vendor-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #16a34a; margin-top: 2px; }
         .vendor-arrow { margin-left: auto; color: #9ca3af; }
 
@@ -334,7 +336,15 @@ export default async function ProductDetailPage({
               {product.sellers && (
                 <Link href={`/vendors/${(product.sellers as any).id}`} className="vendor-card">
                   <div className="vendor-avatar">
-                    {(product.sellers as any).store_name?.[0]?.toUpperCase() ?? "V"}
+                    {(product.sellers as any).logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={(product.sellers as any).logo_url}
+                        alt={`${(product.sellers as any).store_name} logo`}
+                      />
+                    ) : (
+                      (product.sellers as any).store_name?.[0]?.toUpperCase() ?? "V"
+                    )}
                   </div>
                   <div>
                     <div className="vendor-name">{(product.sellers as any).store_name}</div>

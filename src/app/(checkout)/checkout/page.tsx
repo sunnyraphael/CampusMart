@@ -5,7 +5,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCartStore } from "@/store/cart"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, MapPin, Package, CreditCard, CheckCircle2, Loader2 } from "lucide-react"
+import { calcServiceFee } from "@/lib/fees"
+import ServiceFeeNote from "@/components/ServiceFeeNote"
+import { ArrowLeft, MapPin, Package, CreditCard, CheckCircle2, Loader2, Lock } from "lucide-react"
 
 type DeliveryMethod = "pickup" | "delivery"
 type CheckoutStep = "details" | "payment" | "success"
@@ -24,7 +26,7 @@ export default function CheckoutPage() {
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const deliveryFee = deliveryMethod === "delivery" ? 500 : 0
-  const serviceFee = Math.round(subtotal * 0.02)
+  const serviceFee = calcServiceFee(subtotal)
   const total = subtotal + deliveryFee + serviceFee
 
   const formatPrice = (amount: number) =>
@@ -201,7 +203,8 @@ export default function CheckoutPage() {
         .dark .summary-panel { background: #0f1a35; border-color: #1e3a5f; }
         @media (min-width: 1024px) { .summary-panel { width: 300px; flex-shrink: 0; position: sticky; top: 90px; } }
         .summary-row { display: flex; justify-content: space-between; font-size: 0.875rem; color: #475569; margin-bottom: 10px; }
-        .dark .summary-row { color: #94a3b8; }
+        .summary-strong { color: #0f172a; font-weight: 600; }
+        .dark .summary-strong { color: #f1f5f9; }
         .summary-divider { border: none; border-top: 1px solid #e2e8f0; margin: 14px 0; }
         .dark .summary-divider { border-color: #1e3a5f; }
         .summary-total { display: flex; justify-content: space-between; font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 20px; }
@@ -367,9 +370,9 @@ export default function CheckoutPage() {
 
               <div className="summary-panel">
                 <div className="panel-title" style={{ marginBottom: 16 }}>Order Summary</div>
-                <div className="summary-row"><span>Subtotal</span><span style={{ color: "#0f172a", fontWeight: 600 }}>{formatPrice(subtotal)}</span></div>
+                <div className="summary-row"><span>Subtotal</span><span className="summary-strong">{formatPrice(subtotal)}</span></div>
                 <div className="summary-row"><span>Delivery fee</span><span>{formatPrice(deliveryFee)}</span></div>
-                <div className="summary-row"><span>Service fee (2%)</span><span>{formatPrice(serviceFee)}</span></div>
+                <div className="summary-row"><span>Service fee{serviceFee === 0 ? " (waived)" : " (2%)"}</span><span>{formatPrice(serviceFee)}</span></div><ServiceFeeNote subtotal={subtotal} />
                 <hr className="summary-divider" />
                 <div className="summary-total"><span>Total</span><span style={{ color: "#2563eb" }}>{formatPrice(total)}</span></div>
 
@@ -425,13 +428,14 @@ export default function CheckoutPage() {
 
               <div className="summary-panel">
                 <div className="panel-title" style={{ marginBottom: 16 }}>Order Summary</div>
-                <div className="summary-row"><span>Subtotal</span><span style={{ color: "#0f172a", fontWeight: 600 }}>{formatPrice(subtotal)}</span></div>
+                <div className="summary-row"><span>Subtotal</span><span className="summary-strong">{formatPrice(subtotal)}</span></div>
                 <div className="summary-row"><span>Delivery fee</span><span>{formatPrice(deliveryFee)}</span></div>
-                <div className="summary-row"><span>Service fee (2%)</span><span>{formatPrice(serviceFee)}</span></div>
+                <div className="summary-row"><span>Service fee{serviceFee === 0 ? " (waived)" : " (2%)"}</span><span>{formatPrice(serviceFee)}</span></div><ServiceFeeNote subtotal={subtotal} />
                 <hr className="summary-divider" />
                 <div className="summary-total"><span>Total</span><span style={{ color: "#2563eb" }}>{formatPrice(total)}</span></div>
-                <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 12, lineHeight: 1.5 }}>
-                  🔒 Payments are secured by Paystack. CampusMart does not store your card details.
+                <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: 12, lineHeight: 1.5, display: "flex", gap: 6, alignItems: "flex-start" }}>
+                  <Lock size={13} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
+                  <span>Payments are secured by Paystack. CampusMart does not store your card details.</span>
                 </div>
               </div>
             </div>
