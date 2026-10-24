@@ -325,7 +325,7 @@ const css = `
 .vo-btn:disabled{opacity:.6;cursor:not-allowed}
 .vo-badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:.75rem;text-transform:capitalize;background:#1e3a5f;color:#cfe0ff}
 .vo-badge.disputed{background:#b42318;color:#fff}
-.vo-badge.received{background:#0e4d2f;color:#7ee2a8}
+.vo-badge.refunded{background:#4a3a0a;color:#ffd978}h
 .vo-foot{display:flex;gap:20px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid #1e3a5f;background:#0b1530;font-size:.82rem;opacity:.85}
 .vo-foot span{display:inline-flex;align-items:center;gap:6px}
 .vo-spin{animation:vo-spin .8s linear infinite}

@@ -89,8 +89,14 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
                   <div className="od-main">
                     <h3>{p?.title ?? 'Product'}</h3>
                     <p className="od-meta">
-                      Qty {it.quantity} · {naira(sub)} · Platform fee {naira(sub - payout)} · You receive{' '}
-                      <strong>{naira(payout)}</strong>
+                      {status === 'refunded' ? (
+                        <>Qty {it.quantity} · {naira(sub)} · Refunded to the buyer. No payout for this item.</>
+                      ) : (
+                        <>
+                          Qty {it.quantity} · {naira(sub)} · Platform fee {naira(sub - payout)} · You receive{' '}
+                          <strong>{naira(payout)}</strong>
+                        </>
+                      )}
                     </p>
                     <span className={`od-badge ${status}`}>{status}</span>
                   </div>
@@ -164,7 +170,7 @@ const css = `
 .od-meta strong{color:#7fb0ff}
 .od-badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.74rem;text-transform:capitalize;background:#1e3a5f;color:#cfe0ff}
 .od-badge.disputed{background:#b42318;color:#fff}
-.od-badge.received{background:#0e4d2f;color:#7ee2a8}
+.od-badge.refunded{background:#4a3a0a;color:#ffd978}
 .od-release{display:flex;gap:6px;margin:14px 0 0;font-size:.82rem;opacity:.8;line-height:1.4}
 .od-release svg{flex:none;margin-top:2px}
 .od-act{margin-top:16px;padding-top:16px;border-top:1px solid #1e3a5f}

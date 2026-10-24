@@ -10,7 +10,10 @@ const RANK = ['pending', 'confirmed', 'shipped', 'delivered', 'received']
 // otherwise the least advanced item decides.
 function orderStatus(statuses: string[]) {
   if (statuses.includes('disputed')) return 'disputed'
-  return RANK[Math.min(...statuses.map((s) => Math.max(RANK.indexOf(s), 0)))]
+  // Refunded items are ignored so they don't drag the order back to "pending"
+  const active = statuses.filter((s) => s !== 'refunded')
+  if (active.length === 0) return 'refunded'
+  return RANK[Math.min(...active.map((s) => Math.max(RANK.indexOf(s), 0)))]
 }
 
 async function getVendorStats(sellerId: string) {
@@ -38,12 +41,15 @@ async function getVendorStats(sellerId: string) {
   const productById = new Map(products.map((p) => [p.id, p]))
 
   // Money: paid out = already released to the wallet, pending = still on its way
-  const totalSales = items.reduce((s, i) => s + Number(i.subtotal ?? 0), 0)
+  // A refunded item was never a sale, so it is left out of the totals
+  const totalSales = items
+    .filter((i) => i.fulfillment_status !== 'refunded')
+    .reduce((s, i) => s + Number(i.subtotal ?? 0), 0)
   const paidOut = items
     .filter((i) => i.released_at)
     .reduce((s, i) => s + Number(i.payout_amount ?? 0), 0)
   const pending = items
-    .filter((i) => !i.released_at && i.fulfillment_status !== 'disputed')
+    .filter((i) => !i.released_at && !['disputed', 'refunded'].includes(i.fulfillment_status))
     .reduce((s, i) => s + Math.round(Number(i.subtotal ?? 0) * 0.95), 0)
 
   // Recent orders: group this vendor's items by order
