@@ -116,7 +116,7 @@ export function Navbar() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search for items, categories or sellers"
+              placeholder="Search for items, categories or vendors"
               className="w-full pl-10 pr-4 py-2.5 rounded-full text-sm
                 bg-white dark:bg-gray-800
                 border border-transparent focus:border-blue-400 dark:focus:border-blue-500

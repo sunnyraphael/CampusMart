@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import {
   ShoppingBag, Package, Truck, CheckCircle2,
-  XCircle, Clock, ArrowLeft, ReceiptText, MapPin, ShieldAlert, PackageCheck
+  XCircle, Clock, ArrowLeft, ReceiptText, MapPin, ShieldAlert, PackageCheck, Undo2
 } from "lucide-react"
 import ItemActions from "./ItemActions"
 
@@ -36,24 +36,28 @@ async function getOrders(userId: string) {
 
 // One config table for every stage an item (or a whole order) can be in
 const STAGES: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
-  pending:   { label: "Waiting for seller", color: "#d97706", bg: "#fffbeb", Icon: Clock },
-  confirmed: { label: "Seller confirmed",   color: "#2563eb", bg: "#eff6ff", Icon: CheckCircle2 },
+  pending:   { label: "Waiting for vendor", color: "#d97706", bg: "#fffbeb", Icon: Clock },
+  confirmed: { label: "Vendor confirmed",   color: "#2563eb", bg: "#eff6ff", Icon: CheckCircle2 },
   shipped:   { label: "On the way",         color: "#0891b2", bg: "#ecfeff", Icon: Truck },
   delivered: { label: "Confirm receipt",    color: "#7c3aed", bg: "#f5f3ff", Icon: Package },
   received:  { label: "Completed",          color: "#16a34a", bg: "#f0fdf4", Icon: PackageCheck },
   disputed:  { label: "Disputed",           color: "#b42318", bg: "#fef2f2", Icon: ShieldAlert },
+  refunded:  { label: "Refund approved",    color: "#b45309", bg: "#fffbeb", Icon: Undo2 },
   cancelled: { label: "Cancelled",          color: "#dc2626", bg: "#fef2f2", Icon: XCircle },
 }
 
 const RANK = ["pending", "confirmed", "shipped", "delivered", "received"]
 
 // An order's stage comes from its items. Disputes win; otherwise the least advanced item decides.
+// Refunded items are ignored, so one refund does not pull the whole order back to "pending".
 function orderStage(order: any): string {
   if (order.status === "cancelled") return "cancelled"
   const stages: string[] = (order.order_items ?? []).map((i: any) => i.fulfillment_status)
   if (stages.length === 0) return "pending"
   if (stages.includes("disputed")) return "disputed"
-  return RANK[Math.min(...stages.map((s) => Math.max(RANK.indexOf(s), 0)))]
+  const active = stages.filter((s) => s !== "refunded")
+  if (active.length === 0) return "refunded"
+  return RANK[Math.min(...active.map((s) => Math.max(RANK.indexOf(s), 0)))]
 }
 
 function getPaymentConfig(status: string) {
@@ -272,7 +276,7 @@ export default async function OrdersPage() {
                             </span>
                             {item.fulfillment_status === "delivered" && item.auto_release_at && (
                               <span className="oi-note">
-                                Payment goes to the seller automatically on {shortDate(item.auto_release_at)} unless you
+                                Payment goes to the vendor automatically on {shortDate(item.auto_release_at)} unless you
                                 confirm sooner or report a problem.
                               </span>
                             )}
@@ -283,7 +287,7 @@ export default async function OrdersPage() {
 
                           {item.fulfillment_status === "disputed" && (
                             <div className="oi-reason">
-                              Your report: {item.dispute_reason || "No reason provided"}. The seller's payment is on hold
+                              Your report: {item.dispute_reason || "No reason provided"}. The vendor's payment is on hold
                               while this is reviewed.
                             </div>
                           )}

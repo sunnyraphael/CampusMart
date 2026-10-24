@@ -94,7 +94,7 @@ export default function ItemActions({
         <div className="ia-panel">
           <p>
             Only confirm if the item is in your hands and as described. This releases your payment to the
-            seller and cannot be undone.
+            vendor and cannot be undone.
           </p>
           <div className="ia-row">
             <button className="ia-btn ia-primary" disabled={busy} onClick={() => submit("received")}>
@@ -111,7 +111,7 @@ export default function ItemActions({
       {mode === "dispute" && (
         <div className="ia-panel">
           <p>
-            Tell us what went wrong. The seller's payment is frozen right away while we review.
+            Tell us what went wrong. The vendor's payment is frozen right away while we review.
           </p>
           <textarea
             value={reason}

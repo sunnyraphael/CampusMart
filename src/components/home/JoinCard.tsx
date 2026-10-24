@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { CheckCircle2 } from "lucide-react"
 
 const whyCampusMart = [
-  'Student verified sellers',
+  'Student verified vendors',
   'Meet on campus or local pickup',
   'Safe & secure transactions',
   'Support your campus community',

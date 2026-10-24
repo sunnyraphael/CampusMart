@@ -283,7 +283,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
               <div className="vs-logo-icon">C</div>
               <div>
                 CampusMart
-                <div className="vs-label">Seller Dashboard</div>
+                <div className="vs-label">Vendor Dashboard</div>
               </div>
             </Link>
             <button className="vs-close-btn" onClick={() => setSidebarOpen(false)}>

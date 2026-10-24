@@ -57,7 +57,7 @@ export function MobileTabBar() {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search for products or sellers..."
+            placeholder="Search for products or vendors..."
             className="w-full pl-9 pr-4 py-2 rounded-full text-sm
               bg-white dark:bg-gray-800
               border border-transparent focus:border-blue-400

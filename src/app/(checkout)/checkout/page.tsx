@@ -42,7 +42,7 @@ export default function CheckoutPage() {
       return
     }
     if (form.phone.trim().length < 10) {
-      setError("Please enter a phone number the seller can reach you on.")
+      setError("Please enter a phone number the vendor can reach you on.")
       return
     }
     setError("")
@@ -293,7 +293,7 @@ export default function CheckoutPage() {
                       </div>
                       <div>
                         <div className="delivery-option-title">Campus Pickup</div>
-                        <div className="delivery-option-desc">Meet the seller on campus to collect your item</div>
+                        <div className="delivery-option-desc">Meet the vendor on campus to collect your item</div>
                       </div>
                       <div className="delivery-option-fee">Free</div>
                     </div>
@@ -306,8 +306,8 @@ export default function CheckoutPage() {
                         {deliveryMethod === "delivery" && <div className="delivery-radio-dot" />}
                       </div>
                       <div>
-                        <div className="delivery-option-title">Seller Delivers</div>
-                        <div className="delivery-option-desc">Seller brings the item to your location</div>
+                        <div className="delivery-option-title">Vendor Delivers</div>
+                        <div className="delivery-option-desc">Vendor brings the item to your location</div>
                       </div>
                       <div className="delivery-option-fee">+₦500</div>
                     </div>
@@ -326,7 +326,7 @@ export default function CheckoutPage() {
                     </div>
                   )}
                   <div className="checkout-field">
-                    <label className="checkout-label">Phone Number (so the seller can reach you)</label>
+                    <label className="checkout-label">Phone Number (so the vendor can reach you)</label>
                     <input
                       className="checkout-input"
                       type="tel"
@@ -340,7 +340,7 @@ export default function CheckoutPage() {
                     <label className="checkout-label">Order Note (optional)</label>
                     <textarea
                       className="checkout-input"
-                      placeholder="Any special instructions for the seller..."
+                      placeholder="Any special instructions for the vendor..."
                       value={form.note}
                       onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
                     />
@@ -452,8 +452,8 @@ export default function CheckoutPage() {
                 <div className="success-sub">
                   Your payment was successful and your order has been confirmed.
                   {deliveryMethod === "delivery"
-                    ? " The seller will contact you to arrange delivery."
-                    : " The seller will contact you to arrange a pickup time."}
+                    ? " The vendor will contact you to arrange delivery."
+                    : " The vendor will contact you to arrange a pickup time."}
                 </div>
                 <Link href="/orders">
                   <button className="checkout-btn" style={{ marginBottom: 10 }}>View My Orders</button>

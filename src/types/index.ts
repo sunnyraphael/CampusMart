@@ -22,7 +22,7 @@ export type NewReview = Database["public"]["Tables"]["reviews"]["Insert"]
 export type NewCartItem = Database["public"]["Tables"]["cart_items"]["Insert"]
 
 // ─── Enums ───
-export type UserRole = "buyer" | "seller" | "admin"
+export type UserRole = "buyer" | "vendor" | "admin"
 export type OrderStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"
 export type PaymentStatus = "unpaid" | "paid" | "refunded"
 export type ProductStatus = "active" | "inactive" | "sold_out"
