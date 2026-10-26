@@ -74,6 +74,10 @@ export default function ProductGallery({
           .pg-thumb { width: 56px; height: 56px; border-radius: 10px; }
           .pg-nav { width: 34px; height: 34px; }
         }
+        .dark .pg-main { background: #0f1a35; border-color: #1e3a5f; }
+        .dark .pg-thumb { background: #0f1a35; }
+        .dark .pg-nav { background: rgba(15,26,53,.92); color: #e6ecff; }
+        .dark .pg-nav:hover { background: #142347; }
         @media (prefers-reduced-motion: reduce) { .pg-main img { animation: none; } }
       `}</style>
 

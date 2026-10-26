@@ -152,6 +152,24 @@ export default async function OrdersPage() {
         .empty-sub { font-size:14px; color:#9ca3af; margin-bottom:28px; line-height:1.6; }
         .btn-shop { display:inline-flex; align-items:center; gap:8px; padding:12px 28px; border-radius:12px; background:linear-gradient(135deg,#2563eb,#4f46e5); color:#fff; font-size:14px; font-weight:600; text-decoration:none; transition:all .2s; box-shadow:0 4px 16px rgba(37,99,235,.3); }
         .btn-shop:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(37,99,235,.4); }
+        .dark .op { background: transparent; }
+        .dark .op-back { color: #94a3b8; }
+        .dark .op-title, .dark .oc-id-val, .dark .oi-subtotal, .dark .oc-total-val, .dark .empty-title { color: #f1f5f9; }
+        .dark .oi-title { color: #e6ecff; }
+        .dark .op-sub, .dark .oi-meta, .dark .oc-date, .dark .oc-id-label, .dark .oc-total-lbl, .dark .empty-sub { color: #94a3b8; }
+        .dark .oi-note, .dark .oc-delivery { color: #94a3b8; }
+        .dark .op-pill { background: #0f1a35; border-color: #1e3a5f; color: #cfe0ff; box-shadow: none; }
+        .dark .oc { background: #0f1a35; border-color: #1e3a5f; box-shadow: none; }
+        .dark .oc:hover { border-color: #2563eb; box-shadow: none; }
+        .dark .oc-head, .dark .oc-foot { background: #0b1530; border-color: #1e3a5f; }
+        .dark .oi + .oi { border-color: #1e3a5f; }
+        .dark .oc-id-icon { background: #142347; }
+        .dark .oi-img { background: #142347; border-color: #1e3a5f; }
+        .dark .oi-reason { background: #2a1414; color: #ffb4ab; }
+        .dark .empty-state { background: #0f1a35; border-color: #1e3a5f; }
+        .dark .empty-icon { background: #142347; }
+        /* Status chips set their colours inline, so !important is needed to override them */
+        .dark .status-badge, .dark .pay-badge { background: rgba(255,255,255,.08) !important; filter: brightness(1.3); }
       `}</style>
 
       <div className="op">

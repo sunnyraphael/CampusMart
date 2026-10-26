@@ -52,7 +52,7 @@ export default function AddToCartButton({ product }: { product: ProductFull }) {
       {/* Show quantity selector for in-cart items too (but cap by remaining stock) */}
       {!isOutOfStock && (
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#374151" }}>Qty:</span>
+          <span className="qty-label" style={{ fontSize: "0.875rem", fontWeight: 600 }}>Qty:</span>
           <div className="pd-qty">
             <button
               className="qty-btn"

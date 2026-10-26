@@ -255,6 +255,16 @@ export default function LoginPage() {
           margin-top: 6px;
         }
         .forgot-link:hover { text-decoration: underline; }
+        .dark .auth-wrap { background: #060d1f; }
+        .dark .auth-title { color: #f1f5f9; }
+        .dark .auth-subtitle { color: #94a3b8; }
+        .dark .auth-subtitle a, .dark .forgot-link { color: #60a5fa; }
+        .dark .google-btn { background: #0a1628; border-color: #1e3a5f; color: #f1f5f9; }
+        .dark .google-btn:hover { border-color: #2563eb; box-shadow: none; }
+        .dark .divider-line { background: #1e3a5f; }
+        .dark .field-label { color: #94a3b8; }
+        .dark .field-input { background: #0a1628; border-color: #1e3a5f; color: #f1f5f9; }
+        .dark .field-icon-btn:hover { color: #e6ecff; }
 
         .submit-btn {
           width: 100%;

@@ -3,7 +3,7 @@ import { siteConfig } from "@/config/site"
 
 export function Footer() {
   return (
-    <footer className="border-t bg-gray-50">
+    <footer className="border-t bg-gray-50 dark:bg-[#060d1f]">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
 
@@ -12,21 +12,21 @@ export function Footer() {
               <div className="brand-gradient flex h-8 w-8 items-center justify-center rounded-lg">
                 <span className="text-sm font-bold text-white">C</span>
               </div>
-              <span className="text-lg font-bold text-gray-900">
+              <span className="text-lg font-bold text-gray-900 dark:text-white">
                 {siteConfig.name}
               </span>
             </div>
-            <p className="text-sm text-gray-500 max-w-xs">
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
               The online marketplace for Nigerian university students. Buy and sell anything on campus.
             </p>
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Shop</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Shop</h3>
             <ul className="space-y-3">
               {["All Products", "Electronics", "Books", "Food", "Fashion"].map((item) => (
                 <li key={item}>
-                  <Link href="/products" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                  <Link href="/products" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                     {item}
                   </Link>
                 </li>
@@ -35,7 +35,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Sell</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Sell</h3>
             <ul className="space-y-3">
               {[
                 { label: "Start Selling", href: "/vendor/onboarding" },
@@ -43,7 +43,7 @@ export function Footer() {
                 { label: "How it works", href: "/how-it-works" },
               ].map((item) => (
                 <li key={item.label}>
-                  <Link href={item.href} className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                  <Link href={item.href} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                     {item.label}
                   </Link>
                 </li>
@@ -52,7 +52,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Support</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Support</h3>
             <ul className="space-y-3">
               {[
                 { label: "Help Center", href: "/help" },
@@ -61,7 +61,7 @@ export function Footer() {
                 { label: "Terms of Service", href: "/terms" },
               ].map((item) => (
                 <li key={item.label}>
-                  <Link href={item.href} className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                  <Link href={item.href} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                     {item.label}
                   </Link>
                 </li>
@@ -71,10 +71,10 @@ export function Footer() {
         </div>
 
         <div className="mt-12 border-t pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Developed by Sunny Raphael Inc.
           </p>
         </div>
