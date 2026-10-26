@@ -6,18 +6,16 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard, Package, ShoppingBag, DollarSign,
-  CreditCard, Users, Star, Settings, Store, LogOut,
-  HelpCircle, Menu, X,
+  Settings, Store, LogOut, HelpCircle, Menu, X, Bell, ArrowUpRight,
 } from 'lucide-react'
 
+// To add a page later (Customers, Reviews), build its page.tsx first,
+// then add one line here. Never link to a page that does not exist yet.
 const navItems = [
   { label: 'Overview',       href: '/vendor/dashboard', icon: LayoutDashboard },
   { label: 'Products',       href: '/vendor/listings',  icon: Package },
   { label: 'Orders',         href: '/vendor/orders',    icon: ShoppingBag, badge: 'todo' },
   { label: 'Earnings',       href: '/vendor/earnings',  icon: DollarSign },
-  { label: 'Payouts',        href: '/vendor/payouts',   icon: CreditCard },
-  { label: 'Customers',      href: '/vendor/customers', icon: Users },
-  { label: 'Reviews',        href: '/vendor/reviews',   icon: Star },
   { label: 'Store Settings', href: '/vendor/settings',  icon: Settings },
 ]
 
@@ -27,71 +25,61 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [vendorName, setVendorName] = useState('')
   const [vendorInitials, setVendorInitials] = useState('--')
+  const [sellerId, setSellerId] = useState<string | null>(null)
   const [todoCount, setTodoCount] = useState(0)
 
-  // Auth — load vendor name from session
+  // One effect loads the user, their name and their vendor row together.
+  // It re-tries on navigation only while sellerId is still empty, so a vendor
+  // who just finished onboarding gets their badge without a page refresh.
   useEffect(() => {
+    if (sellerId) return
+    let cancelled = false
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
+
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || cancelled) return
+
       const fullName =
-        user.user_metadata?.full_name ??
-        user.email?.split('@')[0] ??
-        'Vendor'
+        user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Vendor'
       setVendorName(fullName)
       const parts = fullName.trim().split(' ')
-      const initials =
-        parts.length >= 2
-          ? parts[0][0] + parts[1][0]
-          : parts[0].slice(0, 2)
+      const initials = parts.length >= 2 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2)
       setVendorInitials(initials.toUpperCase())
-    })
-  }, [])
 
-  // ✅ FIXED: This useEffect was previously OUTSIDE the component (after the closing brace)
-  // It must be INSIDE the function body — moved here where it belongs
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
       const { data: seller } = await supabase
         .from('sellers')
-        .select('store_name')
+        .select('id, store_name')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
+      if (cancelled) return
 
       if (!seller?.store_name) {
-        router.push('/vendor/onboarding')
+        if (pathname !== '/vendor/onboarding') router.push('/vendor/onboarding')
+        return
       }
-    })
-  }, [])
+      setSellerId(seller.id)
+    }
 
-    // Count items that need the vendor's action. Re-runs on every page change,
-  // so the number drops after you update an order.
+    load()
+    return () => { cancelled = true }
+  }, [pathname, sellerId, router])
+
+  // Count items that need the vendor's action. Re-runs on every page change.
   useEffect(() => {
+    if (!sellerId) return
     const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data: seller } = await supabase
-        .from('sellers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-      if (!seller) return
-      const { count } = await supabase
-        .from('order_items')
-        .select('id, orders!inner(payment_status)', { count: 'exact', head: true })
-        .eq('seller_id', seller.id)
-        .in('fulfillment_status', ['pending', 'confirmed', 'shipped'])
-        .eq('orders.payment_status', 'paid')
-      setTodoCount(count ?? 0)
-    })
-  }, [pathname])
-  
-  // Close sidebar on route change
+    supabase
+      .from('order_items')
+      .select('id, orders!inner(payment_status)', { count: 'exact', head: true })
+      .eq('seller_id', sellerId)
+      .in('fulfillment_status', ['pending', 'confirmed', 'shipped'])
+      .eq('orders.payment_status', 'paid')
+      .then(({ count }) => setTodoCount(count ?? 0))
+  }, [pathname, sellerId])
+
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
-  // Lock body scroll when mobile sidebar is open
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
@@ -162,7 +150,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
           padding: 9px 12px; border-radius: 8px; text-decoration: none;
           font-family: var(--font-dm-sans); font-size: 0.85rem;
           color: var(--vs-nav-color, #94a3b8);
-          transition: all 0.15s; position: relative;
+          transition: background 0.15s, color 0.15s; position: relative;
         }
         .vs-nav-link:hover { background: rgba(37,99,235,0.08); color: #cbd5e1; }
         .vs-nav-link.active { background: #2563eb; color: #fff; font-weight: 600; }
@@ -172,16 +160,9 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         }
         .vs-nav-link.active .vs-badge { background: rgba(255,255,255,0.3); }
 
-        .vs-boost {
-          margin: 12px 8px; background: linear-gradient(135deg,#1e40af,#2563eb);
-          border-radius: 10px; padding: 14px;
-        }
-        .vs-boost h4 { font-family: var(--font-sora); font-size: 0.8rem; font-weight: 700; color: #fff; margin: 0 0 4px; }
-        .vs-boost p { font-family: var(--font-dm-sans); font-size: 0.72rem; color: rgba(255,255,255,.8); margin: 0 0 10px; line-height: 1.4; }
-        .vs-boost-btn {
-          background: white; color: #1e40af; border: none; border-radius: 6px;
-          padding: 6px 12px; font-family: var(--font-dm-sans); font-size: 0.75rem;
-          font-weight: 600; cursor: pointer; width: 100%; text-align: center;
+        .vs-nav-link:focus-visible, .vs-bottom-link:focus-visible,
+        .vs-hamburger:focus-visible, .vs-notif-btn:focus-visible, .vs-close-btn:focus-visible {
+          outline: 2px solid #2563eb; outline-offset: 2px;
         }
 
         .vs-bottom {
@@ -195,7 +176,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
           font-family: var(--font-dm-sans); font-size: 0.82rem;
           color: var(--vs-muted, #64748b);
           background: none; border: none; cursor: pointer; width: 100%;
-          transition: all 0.15s;
+          transition: background 0.15s, color 0.15s;
         }
         .vs-bottom-link:hover { color: #cbd5e1; background: rgba(37,99,235,0.08); }
         .vs-bottom-link.danger { color: #ef4444; }
@@ -224,11 +205,12 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         .vs-notif-btn {
           position: relative; background: none; border: none; cursor: pointer;
           color: var(--vs-muted, #94a3b8); padding: 6px; border-radius: 8px;
+          display: flex; align-items: center;
         }
         .vs-notif-btn:hover { background: rgba(37,99,235,0.08); }
         .vs-notif-dot {
-          position: absolute; top: 3px; right: 3px;
-          width: 15px; height: 15px; background: #ef4444; border-radius: 50%;
+          position: absolute; top: 1px; right: 1px;
+          min-width: 15px; height: 15px; padding: 0 3px; background: #ef4444; border-radius: 99px;
           font-size: 0.55rem; color: white; font-weight: 700;
           display: flex; align-items: center; justify-content: center;
         }
@@ -236,11 +218,14 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
           width: 32px; height: 32px; border-radius: 50%;
           background: #2563eb; color: white; font-weight: 700;
           font-size: 0.8rem; font-family: var(--font-sora);
-          display: flex; align-items: center; justify-content: center; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
         }
         .vs-avatar-info { text-align: right; }
-        .vs-avatar-info .name { font-family: var(--font-sora); font-size: 0.8rem; font-weight: 600; color: var(--vs-heading, #fff); }
-        .vs-avatar-info .sub { font-family: var(--font-dm-sans); font-size: 0.7rem; color: #2563eb; text-decoration: none; display: block; }
+        .vs-avatar-info .name { font-family: var(--font-sora); font-size: 0.8rem; font-weight: 600; color: var(--vs-heading, #fff); display: block; }
+        .vs-avatar-info .sub {
+          font-family: var(--font-dm-sans); font-size: 0.7rem; color: #2563eb;
+          text-decoration: none; display: inline-flex; align-items: center; gap: 2px;
+        }
 
         .vs-content { flex: 1; min-width: 0; padding: 20px; overflow-y: auto; }
 
@@ -258,10 +243,13 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         html.light .vs-sidebar, html[data-theme="light"] .vs-sidebar { background: #ffffff; border-right-color: #e2e8f0; }
         html.light .vs-logo-area, html[data-theme="light"] .vs-logo-area { border-bottom-color: #e2e8f0; }
         html.light .vs-nav-link, html[data-theme="light"] .vs-nav-link { color: #64748b; }
+        html.light .vs-nav-link.active, html[data-theme="light"] .vs-nav-link.active { background: #2563eb; color: #fff; }
         html.light .vs-nav-link:hover, html[data-theme="light"] .vs-nav-link:hover { background: #f1f5f9; color: #1e293b; }
+        html.light .vs-nav-link.active:hover, html[data-theme="light"] .vs-nav-link.active:hover { background: #2563eb; color: #fff; }
         html.light .vs-bottom, html[data-theme="light"] .vs-bottom { border-top-color: #e2e8f0; }
         html.light .vs-bottom-link, html[data-theme="light"] .vs-bottom-link { color: #94a3b8; }
         html.light .vs-bottom-link:hover, html[data-theme="light"] .vs-bottom-link:hover { background: #f1f5f9; color: #1e293b; }
+        html.light .vs-bottom-link.danger, html[data-theme="light"] .vs-bottom-link.danger { color: #ef4444; }
         html.light .vs-label, html[data-theme="light"] .vs-label { color: #94a3b8; }
         html.light .vs-topbar, html[data-theme="light"] .vs-topbar { background: #ffffff; border-bottom-color: #e2e8f0; }
         html.light .vs-topbar-title, html[data-theme="light"] .vs-topbar-title { color: #0f172a; }
@@ -271,7 +259,6 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       `}</style>
 
       <div className="vs-shell">
-
         <div
           className={`vs-overlay${sidebarOpen ? ' open' : ''}`}
           onClick={() => setSidebarOpen(false)}
@@ -286,16 +273,22 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
                 <div className="vs-label">Vendor Dashboard</div>
               </div>
             </Link>
-            <button className="vs-close-btn" onClick={() => setSidebarOpen(false)}>
+            <button className="vs-close-btn" onClick={() => setSidebarOpen(false)} aria-label="Close menu">
               <X size={18} />
             </button>
           </div>
 
-          <nav className="vs-nav">
+          <nav className="vs-nav" aria-label="Vendor navigation">
             {navItems.map(({ label, href, icon: Icon, badge }) => {
-              const active = pathname === href
+              // startsWith keeps "Orders" lit up on /vendor/orders/123 too
+              const active = pathname === href || pathname.startsWith(href + '/')
               return (
-                <Link key={href} href={href} className={`vs-nav-link${active ? ' active' : ''}`}>
+                <Link
+                  key={href}
+                  href={href}
+                  className={`vs-nav-link${active ? ' active' : ''}`}
+                  aria-current={active ? 'page' : undefined}
+                >
                   <Icon size={17} />
                   {label}
                   {badge === 'todo' && todoCount > 0 && <span className="vs-badge">{todoCount}</span>}
@@ -304,18 +297,12 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
             })}
           </nav>
 
-          <div className="vs-boost">
-            <h4>Grow your sales</h4>
-            <p>Boost your products and get more visibility on CampusMart.</p>
-            <button className="vs-boost-btn">↑ Boost Products</button>
-          </div>
-
           <div className="vs-bottom">
             <Link href="/" className="vs-bottom-link">
               <Store size={16} /> My Store
             </Link>
             <Link href="/help" className="vs-bottom-link">
-              <HelpCircle size={16} /> Help & Support
+              <HelpCircle size={16} /> Help &amp; Support
             </Link>
             <button className="vs-bottom-link danger" onClick={handleSignOut}>
               <LogOut size={16} /> Log out
@@ -332,27 +319,25 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
             <p className="vs-topbar-title">Vendor Dashboard</p>
 
             <div className="vs-topbar-right">
-              <button className="vs-notif-btn" aria-label="Orders needing action" onClick={() => router.push('/vendor/orders')}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                </svg>
+              <button
+                className="vs-notif-btn"
+                aria-label={todoCount > 0 ? `${todoCount} orders need action` : 'Orders'}
+                onClick={() => router.push('/vendor/orders')}
+              >
+                <Bell size={19} />
                 {todoCount > 0 && <span className="vs-notif-dot">{todoCount}</span>}
               </button>
 
               <div className="vs-avatar-info">
                 <span className="name">{firstName || '...'}</span>
-                <Link href="/" className="sub">View Store ↗</Link>
+                <Link href="/" className="sub">View Store <ArrowUpRight size={12} /></Link>
               </div>
               <div className="vs-avatar">{vendorInitials}</div>
             </div>
           </header>
 
-          <main className="vs-content">
-            {children}
-          </main>
+          <main className="vs-content">{children}</main>
         </div>
-
       </div>
     </>
   )
