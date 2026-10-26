@@ -45,7 +45,7 @@ export default function ProductsPage() {
           id, title, price, images, avg_rating,
           total_reviews, stock_quantity, status, created_at,
           categories ( name, slug ),
-          sellers ( store_name )
+          sellers:public_vendors ( store_name )
         `)
         .eq("status", "active")
         .order("created_at", { ascending: false });

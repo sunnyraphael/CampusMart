@@ -15,7 +15,7 @@ async function getProduct(id: string) {
   const supabase = await createClient()
   const { data } = await supabase
     .from("products")
-    .select("*, sellers(id, store_name, logo_url, is_verified, description), categories(name, slug)")
+    .select("*, sellers:public_vendors(id, store_name, logo_url, is_verified, description), categories(name, slug)")
     .eq("id", id)
     .eq("status", "active")
     .single()
@@ -38,7 +38,7 @@ async function getRelatedProducts(categoryId: string | null, currentId: string) 
   const supabase = await createClient()
   const { data } = await supabase
     .from("products")
-    .select("*, sellers(store_name)")
+    .select("*, sellers:public_vendors(store_name)")
     .eq("category_id", categoryId)
     .eq("status", "active")
     .neq("id", currentId)
@@ -223,6 +223,45 @@ export default async function ProductDetailPage({
         .related-title { font-size: 13px; font-weight: 500; color: #111827; line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .related-price { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: #0a0f2e; }
 
+        /* Classes that replaced inline colours (light mode defaults) */
+        .breadcrumb-current { color: #111827; }
+        .pd-band { background: #fff; }
+        .pd-no-reviews { background: #fff; border: 2px dashed #e0e7ff; }
+        .pd-no-reviews-title { color: #0a0f2e; }
+        .qty-label { color: #374151; }
+
+        /* Dark mode */
+        .dark .pd-page { background: transparent; }
+        .dark .pd-band { background: transparent; }
+        .dark .breadcrumb { color: #6f8bbf; }
+        .dark .breadcrumb a { color: #94a3b8; }
+        .dark .breadcrumb-sep { color: #475569; }
+        .dark .breadcrumb-current { color: #f1f5f9; }
+        .dark .gallery-main { background: #0f1a35; border-color: #1e3a5f; }
+        .dark .gallery-thumb { background: #0f1a35; }
+        .dark .pd-title, .dark .pd-price, .dark .vendor-name, .dark .pd-section-title,
+        .dark .review-big-score, .dark .related-price, .dark .pd-no-reviews-title { color: #f1f5f9; }
+        .dark .pd-desc, .dark .review-text { color: #b6c4de; }
+        .dark .pd-rating-count, .dark .trust-item { color: #94a3b8; }
+        .dark .qty-label { color: #cfe0ff; }
+        .dark .pd-stock.in { background: rgba(22,163,74,.16); color: #4ade80; }
+        .dark .pd-stock.low { background: rgba(217,119,6,.16); color: #fbbf24; }
+        .dark .pd-stock.out { background: rgba(220,38,38,.16); color: #f87171; }
+        .dark .pd-divider { background: #1e3a5f; }
+        .dark .pd-qty { border-color: #1e3a5f; }
+        .dark .qty-btn { background: #0f1a35; color: #cfe0ff; }
+        .dark .qty-btn:hover { background: #142347; color: #7fb0ff; }
+        .dark .qty-val { background: #0a1628; color: #f1f5f9; }
+        .dark .btn-wish, .dark .btn-share { background: #0f1a35; border-color: #1e3a5f; color: #94a3b8; }
+        .dark .btn-wish:hover { background: #2a1420; border-color: #f43f5e; color: #f43f5e; }
+        .dark .btn-share:hover { background: #142347; border-color: #2563eb; color: #7fb0ff; }
+        .dark .vendor-card, .dark .review-card, .dark .related-card { background: #0f1a35; border-color: #1e3a5f; box-shadow: none; }
+        .dark .vendor-card:hover, .dark .related-card:hover { border-color: #2563eb; }
+        .dark .related-img { background: #142347; }
+        .dark .related-title, .dark .reviewer-name { color: #e6ecff; }
+        .dark .reviewer-avatar { background: #142347; }
+        .dark .pd-no-reviews { background: #0f1a35; border-color: #1e3a5f; }
+
         /* ── Mobile compact overrides ── */
         @media (max-width: 639px) {
           .breadcrumb { padding: 10px 0; font-size: 11px; }
@@ -257,7 +296,7 @@ export default async function ProductDetailPage({
               </>
             )}
             <ChevronRight size={14} className="breadcrumb-sep" />
-            <span style={{ color: "#111827" }}>{product.title}</span>
+            <span className="breadcrumb-current">{product.title}</span>
           </nav>
 
           {/* Main product section */}
@@ -363,7 +402,7 @@ export default async function ProductDetailPage({
 
         {/* Description */}
         {product.description && (
-          <div style={{ background: "#fff", padding: "1px 0" }}>
+          <div className="pd-band" style={{ padding: "1px 0" }}>
             <div className="pd-wrap pd-desc-section">
               <div className="pd-section-title">Product Description</div>
               <p className="pd-desc">{product.description}</p>
@@ -413,9 +452,9 @@ export default async function ProductDetailPage({
               ))}
             </>
           ) : (
-            <div style={{ background: "#fff", borderRadius: 16, border: "2px dashed #e0e7ff", padding: "40px 24px", textAlign: "center" }}>
+            <div className="pd-no-reviews" style={{ borderRadius: 16, padding: "40px 24px", textAlign: "center" }}>
               <Star size={32} color="#cbd5e1" style={{ margin: "0 auto 12px" }} />
-              <div style={{ fontFamily: "Sora, sans-serif", fontWeight: 700, color: "#0a0f2e", marginBottom: 6 }}>No reviews yet</div>
+              <div className="pd-no-reviews-title" style={{ fontFamily: "Sora, sans-serif", fontWeight: 700, marginBottom: 6 }}>No reviews yet</div>
               <div style={{ fontSize: 14, color: "#9ca3af" }}>Be the first to review this product</div>
             </div>
           )}
@@ -423,7 +462,7 @@ export default async function ProductDetailPage({
 
         {/* Related products */}
         {related.length > 0 && (
-          <div style={{ background: "#fff", padding: "48px 0 64px" }}>
+          <div className="pd-band" style={{ padding: "48px 0 64px" }}>
             <div className="pd-wrap">
               <div className="pd-section-title">You might also like</div>
               <div className="related-grid">
