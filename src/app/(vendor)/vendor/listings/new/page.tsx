@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import NewListingClient from './NewListingClient'
+import ListingForm from '../ListingForm'
 
 export default async function NewListingPage() {
   const supabase = await createClient()
@@ -9,7 +9,7 @@ export default async function NewListingPage() {
 
   const { data: seller } = await supabase
     .from('sellers')
-    .select('id, store_name')
+    .select('id')
     .eq('user_id', user.id)
     .single()
 
@@ -20,10 +20,5 @@ export default async function NewListingPage() {
     .select('id, name')
     .order('name', { ascending: true })
 
-  return (
-    <NewListingClient
-      sellerId={seller.id}
-      categories={categories ?? []}
-    />
-  )
+  return <ListingForm mode="create" sellerId={seller.id} categories={categories ?? []} />
 }

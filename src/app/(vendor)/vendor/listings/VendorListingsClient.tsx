@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
-  Plus, Package, Trash2, Loader2, ImageOff, X,
+  Plus, Package, Trash2, Loader2, ImageOff, X, Pencil, CheckCircle2,
 } from 'lucide-react'
 
 type Product = {
@@ -15,16 +16,50 @@ type Product = {
   status: string
   stock_quantity: number
   created_at: string
+  compare_at_price: number | null
+  sale_ends_at: string | null
 }
 
 type Filter = 'all' | 'active' | 'draft'
+type Notice = 'created' | 'updated' | null
 
-export default function VendorListingsClient({ products }: { products: Product[] }) {
+// Turns a stock number into the label buyers and vendors read.
+function stockInfo(qty: number) {
+  if (qty <= 0) return { label: 'Out of stock', tone: 'out' }
+  if (qty <= 3) return { label: `Only ${qty} left`, tone: 'low' }
+  return { label: `${qty} in stock`, tone: 'ok' }
+}
+
+// A promo counts only while the original price is higher and the sale has not ended.
+function isOnSale(p: Product) {
+  if (p.compare_at_price == null || p.compare_at_price <= p.price) return false
+  return !p.sale_ends_at || new Date(p.sale_ends_at) > new Date()
+}
+
+export default function VendorListingsClient({
+  products,
+  notice: noticeFromUrl,
+}: {
+  products: Product[]
+  notice: Notice
+}) {
   const supabase = createClient()
+  const router = useRouter()
   const [items, setItems] = useState(products)
   const [filter, setFilter] = useState<Filter>('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Remember the notice in state, then clean it out of the address bar.
+  const [notice, setNotice] = useState<Notice>(noticeFromUrl)
+  useEffect(() => {
+    if (!noticeFromUrl) return
+    router.replace('/vendor/listings', { scroll: false })
+    const timer = setTimeout(() => setNotice(null), 5000)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const counts = useMemo(() => ({
     all: items.length,
@@ -37,14 +72,24 @@ export default function VendorListingsClient({ products }: { products: Product[]
     return items.filter(p => p.status === filter)
   }, [items, filter])
 
+  function closeModal() {
+    setConfirmId(null)
+    setDeleteError(null)
+  }
+
   async function handleDelete(id: string) {
     setDeletingId(id)
+    setDeleteError(null)
     const { error } = await supabase.from('products').delete().eq('id', id)
-    if (!error) {
-      setItems(prev => prev.filter(p => p.id !== id))
-    }
     setDeletingId(null)
-    setConfirmId(null)
+    if (error) {
+      setDeleteError(
+        "We couldn't delete this listing. If it already has orders, unpublish it from the edit page instead."
+      )
+      return
+    }
+    setItems(prev => prev.filter(p => p.id !== id))
+    closeModal()
   }
 
   return (
@@ -59,6 +104,16 @@ export default function VendorListingsClient({ products }: { products: Product[]
           New Listing
         </Link>
       </div>
+
+      {notice && (
+        <div className="notice" role="status">
+          <CheckCircle2 size={18} strokeWidth={2} />
+          <span>{notice === 'created' ? 'Listing created.' : 'Changes saved.'}</span>
+          <button onClick={() => setNotice(null)} aria-label="Dismiss message">
+            <X size={16} strokeWidth={2} />
+          </button>
+        </div>
+      )}
 
       <div className="filter-tabs" role="tablist" aria-label="Filter listings">
         {(['all', 'active', 'draft'] as Filter[]).map((f) => (
@@ -95,56 +150,80 @@ export default function VendorListingsClient({ products }: { products: Product[]
         </div>
       ) : (
         <div className="listings-grid">
-          {filtered.map((product) => (
-            <div
-              key={product.id}
-              className={`listing-card ${product.status === 'draft' ? 'listing-card-draft' : ''}`}
-            >
-              <div className="listing-image-wrap">
-                {product.images && product.images.length > 0 ? (
-                  <img
-                    src={product.images[0]}
-                    alt={product.title}
-                    className="listing-image"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <div className="listing-image-placeholder">
-                    <ImageOff size={22} strokeWidth={1.5} />
-                  </div>
-                )}
-                <span className={`status-badge status-${product.status}`}>
-                  {product.status === 'active' ? 'Active' : 'Draft'}
-                </span>
-              </div>
+          {filtered.map((product) => {
+            const onSale = isOnSale(product)
+            const percentOff = onSale
+              ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100)
+              : 0
+            const stock = stockInfo(product.stock_quantity)
 
-              <div className="listing-body">
-                <h3 className="listing-title">{product.title}</h3>
-                <div className="listing-meta">
-                  <span className="listing-price">₦{product.price.toLocaleString()}</span>
-                  <span className="listing-stock">{product.stock_quantity} in stock</span>
+            return (
+              <div
+                key={product.id}
+                className={`listing-card ${product.status === 'draft' ? 'listing-card-draft' : ''}`}
+              >
+                <div className="listing-image-wrap">
+                  {product.images && product.images.length > 0 ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.title}
+                      className="listing-image"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <div className="listing-image-placeholder">
+                      <ImageOff size={22} strokeWidth={1.5} />
+                    </div>
+                  )}
+                  <span className={`status-badge status-${product.status}`}>
+                    {product.status === 'active' ? 'Active' : 'Draft'}
+                  </span>
+                  {onSale && <span className="promo-badge">{percentOff}% off</span>}
+                </div>
+
+                <div className="listing-body">
+                  <h3 className="listing-title">{product.title}</h3>
+                  <div className="listing-meta">
+                    <div className="listing-pricing">
+                      <span className="listing-price">₦{product.price.toLocaleString()}</span>
+                      {onSale && (
+                        <span className="listing-old">₦{product.compare_at_price!.toLocaleString()}</span>
+                      )}
+                    </div>
+                    <span className={`listing-stock stock-${stock.tone}`}>{stock.label}</span>
+                  </div>
+                </div>
+
+                <div className="listing-actions">
+                  <Link
+                    href={`/vendor/listings/${product.id}/edit`}
+                    className="edit-trigger"
+                    aria-label={`Edit ${product.title}`}
+                  >
+                    <Pencil size={15} strokeWidth={2} />
+                    Edit
+                  </Link>
+                  <button
+                    className="delete-trigger"
+                    onClick={() => setConfirmId(product.id)}
+                    aria-label={`Delete ${product.title}`}
+                  >
+                    <Trash2 size={16} strokeWidth={2} />
+                  </button>
                 </div>
               </div>
-
-              <button
-                className="delete-trigger"
-                onClick={() => setConfirmId(product.id)}
-                aria-label={`Delete ${product.title}`}
-              >
-                <Trash2 size={16} strokeWidth={2} />
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       {confirmId && (
-        <div className="modal-overlay" onClick={() => setConfirmId(null)}>
+        <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <button
               className="modal-close"
-              onClick={() => setConfirmId(null)}
+              onClick={closeModal}
               aria-label="Close"
             >
               <X size={18} strokeWidth={2} />
@@ -152,12 +231,14 @@ export default function VendorListingsClient({ products }: { products: Product[]
             <h3 className="modal-title">Delete this listing?</h3>
             <p className="modal-text">
               This can&apos;t be undone. The listing will be permanently
-              removed from your store.
+              removed from your store. To change a price or photo instead,
+              use Edit.
             </p>
+            {deleteError && <p className="modal-error" role="alert">{deleteError}</p>}
             <div className="modal-actions">
               <button
                 className="modal-cancel"
-                onClick={() => setConfirmId(null)}
+                onClick={closeModal}
                 disabled={deletingId === confirmId}
               >
                 Cancel
@@ -232,10 +313,38 @@ export default function VendorListingsClient({ products }: { products: Product[]
         .new-listing-btn:hover { background: #1d4ed8; transform: translateY(-2px); }
         .new-listing-btn:focus-visible,
         .filter-tab:focus-visible,
+        .edit-trigger:focus-visible,
         .delete-trigger:focus-visible,
+        .notice button:focus-visible,
         .empty-cta:focus-visible {
           outline: 2px solid #60a5fa;
           outline-offset: 2px;
+        }
+
+        /* ---------- Saved notice ---------- */
+        .notice {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 16px;
+          padding: 10px 14px;
+          background: #052e16;
+          border: 1px solid #166534;
+          border-radius: 10px;
+          color: #86efac;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13.5px;
+          font-weight: 500;
+        }
+        .notice span { flex: 1; }
+        .notice button {
+          display: flex;
+          padding: 4px;
+          background: transparent;
+          border: none;
+          border-radius: 6px;
+          color: inherit;
+          cursor: pointer;
         }
 
         /* ---------- Filter tabs ---------- */
@@ -299,6 +408,8 @@ export default function VendorListingsClient({ products }: { products: Product[]
         /* ---------- Card ---------- */
         .listing-card {
           position: relative;
+          display: flex;
+          flex-direction: column;
           min-width: 0;
           background: #0f1a35;
           border: 1px solid #1e3a5f;
@@ -321,24 +432,25 @@ export default function VendorListingsClient({ products }: { products: Product[]
           color: #3a5480;
         }
 
-        /* Solid backing so the badge stays readable on any photo */
-        .status-badge {
+        /* Solid backing so the badges stay readable on any photo */
+        .status-badge,
+        .promo-badge {
           position: absolute;
           top: clamp(6px, 2vw, 10px);
-          left: clamp(6px, 2vw, 10px);
           font-family: 'DM Sans', sans-serif;
           font-size: 10.5px;
           font-weight: 700;
           padding: 3px 8px;
           border-radius: 999px;
-          text-transform: uppercase;
           letter-spacing: 0.04em;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
         }
+        .status-badge { left: clamp(6px, 2vw, 10px); text-transform: uppercase; }
         .status-active { background: #052e16; color: #86efac; border: 1px solid #166534; }
         .status-draft { background: #1e293b; color: #cbd5e1; border: 1px solid #475569; }
+        .promo-badge { right: clamp(6px, 2vw, 10px); background: #2563eb; color: #ffffff; }
 
-        .listing-body { padding: clamp(8px, 2.4vw, 12px); }
+        .listing-body { flex: 1; padding: clamp(8px, 2.4vw, 12px); }
 
         .listing-title {
           font-family: 'DM Sans', sans-serif;
@@ -356,53 +468,77 @@ export default function VendorListingsClient({ products }: { products: Product[]
           display: flex;
           flex-wrap: wrap;
           justify-content: space-between;
-          align-items: baseline;
+          align-items: flex-end;
           gap: 2px 8px;
         }
+        .listing-pricing { display: flex; flex-direction: column; }
         .listing-price {
           font-family: 'Sora', sans-serif;
           font-size: clamp(13px, 3.6vw, 15px);
           font-weight: 600;
           color: #60a5fa;
         }
+        .listing-old {
+          font-family: 'DM Sans', sans-serif;
+          font-size: clamp(11px, 2.9vw, 12px);
+          color: #8fa3c4;
+          text-decoration: line-through;
+        }
         .listing-stock {
           font-family: 'DM Sans', sans-serif;
           font-size: clamp(11px, 2.9vw, 12px);
           color: #8fa3c4;
         }
+        .stock-low { color: #fbbf24; font-weight: 600; }
+        .stock-out { color: #f87171; font-weight: 600; }
 
-        /* Delete button: always visible by default (touch screens have no hover).
-           Only hidden-until-hover on devices that really have a mouse. */
+        /* Action row: always visible, so phones and laptops get the same buttons */
+        .listing-actions {
+          display: flex;
+          gap: 8px;
+          padding: 0 clamp(8px, 2.4vw, 12px) clamp(8px, 2.4vw, 12px);
+        }
+        .edit-trigger {
+          flex: 1;
+          min-width: 0;
+          height: 38px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          color: #d8e2f5;
+          background: transparent;
+          border: 1px solid #1e3a5f;
+          border-radius: 8px;
+          text-decoration: none;
+          transition: background 200ms ease-out, border-color 200ms ease-out, color 200ms ease-out;
+        }
+        .edit-trigger:hover { background: #2563eb; border-color: #2563eb; color: #ffffff; }
         .delete-trigger {
-          position: absolute;
-          top: clamp(6px, 2vw, 10px);
-          right: clamp(6px, 2vw, 10px);
-          width: 32px;
-          height: 32px;
+          flex: none;
+          width: 38px;
+          height: 38px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(10, 20, 40, 0.9);
+          background: transparent;
           border: 1px solid #1e3a5f;
           border-radius: 8px;
-          color: #cbd5e1;
+          color: #8fa3c4;
           cursor: pointer;
-          transition: opacity 200ms ease-out, background 200ms ease-out, color 200ms ease-out;
+          transition: background 200ms ease-out, color 200ms ease-out, border-color 200ms ease-out;
         }
         .delete-trigger:hover {
-          background: rgba(239, 68, 68, 0.2);
+          background: rgba(239, 68, 68, 0.15);
           color: #fca5a5;
           border-color: rgba(248, 113, 113, 0.4);
-        }
-        @media (pointer: coarse) {
-          .delete-trigger { width: 38px; height: 38px; }
         }
         @media (hover: hover) {
           .listing-card:hover { transform: translateY(-4px); border-color: #2563eb; }
           .listing-card-draft:hover { opacity: 0.9; }
-          .delete-trigger { opacity: 0; }
-          .listing-card:hover .delete-trigger,
-          .listing-card:focus-within .delete-trigger { opacity: 1; }
         }
 
         /* ---------- Empty state ---------- */
@@ -501,6 +637,17 @@ export default function VendorListingsClient({ products }: { products: Product[]
           color: #8fa3c4;
           margin: 0 0 22px;
         }
+        .modal-error {
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px;
+          line-height: 1.45;
+          color: #fca5a5;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 8px;
+          padding: 10px 12px;
+          margin: -8px 0 16px;
+        }
         .modal-actions { display: flex; gap: 10px; }
         .modal-cancel {
           flex: 1;
@@ -549,6 +696,8 @@ export default function VendorListingsClient({ products }: { products: Product[]
         :is(html.light, html[data-theme="light"]) .listings-title { color: #0f172a; }
         :is(html.light, html[data-theme="light"]) .listings-subtitle { color: #64748b; }
 
+        :is(html.light, html[data-theme="light"]) .notice { background: #dcfce7; border-color: #86efac; color: #14532d; }
+
         :is(html.light, html[data-theme="light"]) .filter-tabs { background: #ffffff; border-color: #e2e8f0; }
         :is(html.light, html[data-theme="light"]) .filter-tab { color: #64748b; }
         :is(html.light, html[data-theme="light"]) .filter-tab:hover { color: #0f172a; }
@@ -565,14 +714,15 @@ export default function VendorListingsClient({ products }: { products: Product[]
         :is(html.light, html[data-theme="light"]) .listing-image-placeholder { color: #94a3b8; }
         :is(html.light, html[data-theme="light"]) .listing-title { color: #0f172a; }
         :is(html.light, html[data-theme="light"]) .listing-price { color: #2563eb; }
+        :is(html.light, html[data-theme="light"]) .listing-old { color: #64748b; }
         :is(html.light, html[data-theme="light"]) .listing-stock { color: #64748b; }
+        :is(html.light, html[data-theme="light"]) .stock-low { color: #b45309; }
+        :is(html.light, html[data-theme="light"]) .stock-out { color: #b91c1c; }
         :is(html.light, html[data-theme="light"]) .status-active { background: #dcfce7; color: #14532d; border-color: #86efac; }
         :is(html.light, html[data-theme="light"]) .status-draft { background: #f1f5f9; color: #334155; border-color: #cbd5e1; }
-        :is(html.light, html[data-theme="light"]) .delete-trigger {
-          background: rgba(255, 255, 255, 0.95);
-          border-color: #e2e8f0;
-          color: #475569;
-        }
+        :is(html.light, html[data-theme="light"]) .edit-trigger { color: #334155; border-color: #cbd5e1; }
+        :is(html.light, html[data-theme="light"]) .edit-trigger:hover { background: #2563eb; border-color: #2563eb; color: #ffffff; }
+        :is(html.light, html[data-theme="light"]) .delete-trigger { color: #64748b; border-color: #cbd5e1; }
         :is(html.light, html[data-theme="light"]) .delete-trigger:hover {
           background: #fee2e2;
           color: #b91c1c;
@@ -588,6 +738,7 @@ export default function VendorListingsClient({ products }: { products: Product[]
         :is(html.light, html[data-theme="light"]) .modal-card { background: #ffffff; border-color: #e2e8f0; }
         :is(html.light, html[data-theme="light"]) .modal-title { color: #0f172a; }
         :is(html.light, html[data-theme="light"]) .modal-text { color: #475569; }
+        :is(html.light, html[data-theme="light"]) .modal-error { color: #b91c1c; background: #fee2e2; border-color: #fca5a5; }
         :is(html.light, html[data-theme="light"]) .modal-close { color: #64748b; }
         :is(html.light, html[data-theme="light"]) .modal-close:hover { background: rgba(15, 23, 42, 0.06); color: #0f172a; }
         :is(html.light, html[data-theme="light"]) .modal-cancel { color: #334155; border-color: #cbd5e1; }

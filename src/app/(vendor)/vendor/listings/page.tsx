@@ -2,7 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import VendorListingsClient from './VendorListingsClient'
 
-export default async function VendorListingsPage() {
+export default async function VendorListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string; updated?: string }>
+}) {
+  const { created, updated } = await searchParams // Next.js 16: also a Promise
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -17,9 +23,14 @@ export default async function VendorListingsPage() {
 
   const { data: products } = await supabase
     .from('products')
-    .select('id, title, price, images, status, stock_quantity, created_at')
+    .select('id, title, price, images, status, stock_quantity, created_at, compare_at_price, sale_ends_at')
     .eq('seller_id', seller.id)
     .order('created_at', { ascending: false })
 
-  return <VendorListingsClient products={products ?? []} />
+  return (
+    <VendorListingsClient
+      products={products ?? []}
+      notice={created ? 'created' : updated ? 'updated' : null}
+    />
+  )
 }
