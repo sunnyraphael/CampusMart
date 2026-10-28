@@ -33,13 +33,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement
 
     const applyTheme = (dark: boolean) => {
-      if (dark) {
-        root.classList.add('dark')
-        setResolvedTheme('dark')
-      } else {
-        root.classList.remove('dark')
-        setResolvedTheme('light')
-      }
+      // The app has two styling systems, so <html> carries both signals:
+      // "dark" for Tailwind and shadcn pages, "light" for pages that use html.light rules.
+      root.classList.toggle('dark', dark)
+      root.classList.toggle('light', !dark)
+      root.dataset.theme = dark ? 'dark' : 'light'
+      setResolvedTheme(dark ? 'dark' : 'light')
     }
 
     if (theme === 'system') {

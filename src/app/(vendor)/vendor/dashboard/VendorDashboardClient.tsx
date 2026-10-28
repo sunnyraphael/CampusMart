@@ -230,7 +230,7 @@ export default function VendorDashboardClient({ stats, recentOrders, topProducts
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,116,139,0.15)" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b', fontFamily: 'var(--font-dm-sans)' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: '#64748b', fontFamily: 'var(--font-dm-sans)' }} axisLine={false} tickLine={false} tickFormatter={(v) => compact(Number(v))} />
-                  <Tooltip formatter={(v) => [fmt(Number(v ?? 0)), 'Sales']} contentStyle={{ background: '#0f1a35', border: '1px solid #1e3a5f', borderRadius: 8, fontFamily: 'var(--font-dm-sans)', fontSize: 12 }} />
+                  <Tooltip formatter={(v) => [fmt(Number(v ?? 0)), 'Sales']} contentStyle={{ background: 'var(--vendor-card-bg, #0f1a35)', border: '1px solid var(--vendor-card-border, #1e3a5f)', borderRadius: 8, fontFamily: 'var(--font-dm-sans)', fontSize: 12 }} />
                   <Line type="monotone" dataKey="sales" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4, fill: '#2563eb', strokeWidth: 0 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>

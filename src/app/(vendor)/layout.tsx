@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import {
   LayoutDashboard, Package, ShoppingBag, DollarSign,
   Settings, Store, LogOut, HelpCircle, Menu, X, Bell, ArrowUpRight,
@@ -319,6 +320,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
             <p className="vs-topbar-title">Vendor Dashboard</p>
 
             <div className="vs-topbar-right">
+              <ThemeToggle />
               <button
                 className="vs-notif-btn"
                 aria-label={todoCount > 0 ? `${todoCount} orders need action` : 'Orders'}

@@ -23,7 +23,7 @@ export default async function VendorListingsPage({
 
   const { data: products } = await supabase
     .from('products')
-    .select('id, title, price, images, status, stock_quantity, created_at, compare_at_price, sale_ends_at')
+    .select('id, title, price, images, status, stock_quantity, created_at, compare_at_price, sale_ends_at, availability')
     .eq('seller_id', seller.id)
     .order('created_at', { ascending: false })
 

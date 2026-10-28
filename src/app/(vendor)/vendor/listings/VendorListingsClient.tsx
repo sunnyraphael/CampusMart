@@ -18,6 +18,7 @@ type Product = {
   created_at: string
   compare_at_price: number | null
   sale_ends_at: string | null
+  availability: string | null
 }
 
 type Filter = 'all' | 'active' | 'draft'
@@ -184,6 +185,9 @@ export default function VendorListingsClient({
 
                 <div className="listing-body">
                   <h3 className="listing-title">{product.title}</h3>
+                  {product.availability === 'pre_order' && (
+                    <span className="listing-stock">Pre-order</span>
+                  )}
                   <div className="listing-meta">
                     <div className="listing-pricing">
                       <span className="listing-price">₦{product.price.toLocaleString()}</span>
