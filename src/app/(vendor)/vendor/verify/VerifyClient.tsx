@@ -230,43 +230,43 @@ export default function VerifyClient({ userId, verified, status: initialStatus, 
 }
 
 const css = `
-.vf-page{max-width:680px;margin:0 auto;padding:32px 20px 96px;color:var(--text-primary,#e6ecff);font-family:'DM Sans',sans-serif}
+.vf-page{max-width:680px;margin:0 auto;padding:32px 20px 96px;color:var(--vx-text);font-family:'DM Sans',sans-serif}
 .vf-head h1{font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 .vf-head p{margin:0 0 24px;opacity:.7;font-size:.95rem;max-width:56ch}
-.vf-banner{display:flex;gap:14px;align-items:flex-start;padding:18px;margin-bottom:16px;background:#0f1a35;border:1px solid #1e3a5f;border-radius:16px;color:#e6ecff}
-.vf-banner>svg{flex:none;color:#7fb0ff;margin-top:2px}
+.vf-banner{display:flex;gap:14px;align-items:flex-start;padding:18px;margin-bottom:16px;background:var(--vx-card);border:1px solid var(--vx-border);border-radius:16px;color:var(--vx-text)}
+.vf-banner>svg{flex:none;color:var(--vx-link);margin-top:2px}
 .vf-banner h2{margin:0 0 4px;font-family:'Sora',sans-serif;font-size:1rem}
 .vf-banner p{margin:0 0 12px;font-size:.88rem;opacity:.78;line-height:1.5}
-.vf-banner.is-ok{border-color:#14532d}
-.vf-banner.is-ok>svg{color:#7ee2a8}
+.vf-banner.is-ok{border-color:var(--vx-ok-border)}
+.vf-banner.is-ok>svg{color:var(--vx-ok)}
 .vf-banner.is-bad{border-color:#b42318}
-.vf-banner.is-bad>svg{color:#ffb4ab}
-.vf-card{background:#0f1a35;border:1px solid #1e3a5f;border-radius:16px;padding:20px;color:#e6ecff;min-width:0}
+.vf-banner.is-bad>svg{color:var(--vx-err)}
+.vf-card{background:var(--vx-card);border:1px solid var(--vx-border);border-radius:16px;padding:20px;color:var(--vx-text);min-width:0}
 .vf-title{margin:0 0 16px;font-family:'Sora',sans-serif;font-size:1rem;font-weight:600}
 .vf-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:18px}
-.vf-tile{position:relative;display:block;aspect-ratio:4/3;border:1.5px dashed #2c4f80;border-radius:14px;background:#0b1530;overflow:hidden;cursor:pointer;transition:border-color .15s,background .15s}
-.vf-tile:hover{border-color:#2563eb;background:#0e1b3a}
+.vf-tile{position:relative;display:block;aspect-ratio:4/3;border:1.5px dashed var(--vx-dash);border-radius:14px;background:var(--vx-input);overflow:hidden;cursor:pointer;transition:border-color .15s,background .15s}
+.vf-tile:hover{border-color:#2563eb;background:var(--vx-hover)}
 .vf-tile:focus-within{outline:2px solid #2563eb;outline-offset:2px}
-.vf-tile.has-file{border-style:solid;border-color:#1e3a5f}
+.vf-tile.has-file{border-style:solid;border-color:var(--vx-border)}
 .vf-tile img{width:100%;height:100%;object-fit:cover;display:block}
-.vf-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px;text-align:center;color:#8fb1e8}
-.vf-empty strong{color:#e6ecff;font-size:.9rem}
+.vf-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px;text-align:center;color:var(--vx-link-soft)}
+.vf-empty strong{color:var(--vx-text);font-size:.9rem}
 .vf-empty em{font-style:normal;font-size:.75rem;opacity:.75}
 .vf-sr{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
-.vf-remove{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:4px 0;background:none;border:0;color:#7fb0ff;font:inherit;font-size:.8rem;cursor:pointer;text-decoration:underline}
+.vf-remove{display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:4px 0;background:none;border:0;color:var(--vx-link);font:inherit;font-size:.8rem;cursor:pointer;text-decoration:underline}
 .vf-tips{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px}
 .vf-tips li{display:flex;gap:8px;align-items:flex-start;font-size:.85rem;opacity:.85;line-height:1.45}
-.vf-tips svg{flex:none;margin-top:2px;color:#7ee2a8}
-.vf-privacy{display:flex;gap:8px;align-items:flex-start;padding:12px 14px;margin-bottom:16px;border-radius:10px;background:#0b1530;border:1px solid #1e3a5f;font-size:.82rem;opacity:.9;line-height:1.45}
-.vf-privacy svg{flex:none;margin-top:2px;color:#7fb0ff}
-.vf-err{display:flex;gap:8px;align-items:flex-start;margin-bottom:14px;padding:12px 14px;border-radius:10px;background:#3a1212;border:1px solid #7a2222;color:#ffd5d5;font-size:.86rem}
+.vf-tips svg{flex:none;margin-top:2px;color:var(--vx-ok)}
+.vf-privacy{display:flex;gap:8px;align-items:flex-start;padding:12px 14px;margin-bottom:16px;border-radius:10px;background:var(--vx-input);border:1px solid var(--vx-border);font-size:.82rem;opacity:.9;line-height:1.45}
+.vf-privacy svg{flex:none;margin-top:2px;color:var(--vx-link)}
+.vf-err{display:flex;gap:8px;align-items:flex-start;margin-bottom:14px;padding:12px 14px;border-radius:10px;background:var(--vx-err-bg);border:1px solid var(--vx-err-border);color:var(--vx-err-strong);font-size:.86rem}
 .vf-err svg{flex:none;margin-top:2px}
 .vf-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px 18px;background:#2563eb;color:#fff;border:0;border-radius:12px;font:inherit;font-weight:600;font-size:.95rem;cursor:pointer;transition:background .15s}
 .vf-btn:hover:not(:disabled){background:#1d4ed8}
 .vf-btn:disabled{opacity:.45;cursor:not-allowed}
 .vf-btn:focus-visible,.vf-btn-ghost:focus-visible,.vf-remove:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
-.vf-btn-ghost{display:inline-flex;padding:9px 14px;border:1px solid #1e3a5f;border-radius:10px;color:#cfe0ff;font-size:.86rem;font-weight:600;text-decoration:none}
-.vf-btn-ghost:hover{background:#142347;border-color:#2563eb}
+.vf-btn-ghost{display:inline-flex;padding:9px 14px;border:1px solid var(--vx-border);border-radius:10px;color:var(--vx-text-soft);font-size:.86rem;font-weight:600;text-decoration:none}
+.vf-btn-ghost:hover{background:var(--vx-surface);border-color:#2563eb}
 .vf-spin{animation:vf-spin .8s linear infinite}
 @keyframes vf-spin{to{transform:rotate(360deg)}}
 @media(max-width:480px){.vf-page{padding:20px 0 96px}.vf-card,.vf-banner{padding:16px}.vf-tiles{gap:10px}.vf-empty strong{font-size:.82rem}.vf-empty em{font-size:.7rem}}

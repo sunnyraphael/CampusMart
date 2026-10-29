@@ -93,3 +93,100 @@
   }
   .text-balance { text-wrap: balance; }
 }
+/* Vendor page tokens. Light is the default, html.dark overrides it.
+   Dark values are the exact colours the pages used before, so dark mode looks unchanged. */
+:root {
+  --vx-text: #0f1a35;
+  --vx-card: #ffffff;
+  --vx-input: #f5f8fe;
+  --vx-surface: #eef3fc;
+  --vx-hover: #eaf1fd;
+  --vx-hero: #e8f0ff;
+  --vx-border: #d3dcf0;
+  --vx-dash: #9fb3d9;
+  --vx-text-soft: #243b66;
+  --vx-link: #1d4ed8;
+  --vx-link-soft: #3a5ca8;
+  --vx-muted: #566a91;
+  --vx-ok: #166534;
+  --vx-ok-bg: #dcf5e7;
+  --vx-ok-border: #9bd8b5;
+  --vx-warn: #8a5a00;
+  --vx-warn-bg: #fff6dc;
+  --vx-warn-bg2: #fdefc4;
+  --vx-warn-border: #e6cd86;
+  --vx-err: #b42318;
+  --vx-err-strong: #8a1c1c;
+  --vx-err-bg: #fdecea;
+  --vx-err-border: #f1b4ad;
+  --vx-orange: #9a4a12;
+  --vx-orange-bg: #fdeee3;
+  --vx-inset: rgba(15,26,53,.05);
+  --vx-scheme: light;
+}
+html.dark {
+  --vx-text: #e6ecff;
+  --vx-card: #0f1a35;
+  --vx-input: #0b1530;
+  --vx-surface: #142347;
+  --vx-hover: #0e1b3a;
+  --vx-hero: #13224a;
+  --vx-border: #1e3a5f;
+  --vx-dash: #2c4f80;
+  --vx-text-soft: #cfe0ff;
+  --vx-link: #7fb0ff;
+  --vx-link-soft: #8fb1e8;
+  --vx-muted: #6f8bbf;
+  --vx-ok: #7ee2a8;
+  --vx-ok-bg: #0e4d2f;
+  --vx-ok-border: #14532d;
+  --vx-warn: #ffd978;
+  --vx-warn-bg: #3a2a0a;
+  --vx-warn-bg2: #4a3a0a;
+  --vx-warn-border: #6b4e12;
+  --vx-err: #ffb4ab;
+  --vx-err-strong: #ffd5d5;
+  --vx-err-bg: #3a1212;
+  --vx-err-border: #7a2222;
+  --vx-orange: #ffb98a;
+  --vx-orange-bg: #3a1d12;
+  --vx-inset: rgba(0,0,0,.25);
+  --vx-scheme: dark;
+}
+/* Listing display (buyer side). Uses the --vx-* tokens, so light and dark follow the toggle. */
+.ld-price { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.ld-top { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.ld-now { font-variant-numeric: tabular-nums; }
+.ld-was-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+.ld-was { font-size: max(12px, .62em); color: var(--vx-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.ld-end { font-size: max(12px, .5em); color: var(--vx-muted); }
+
+.ld-corner {
+  position: absolute; top: 8px; left: 8px; z-index: 1;
+  padding: 3px 8px; border-radius: 999px;
+  background: #b42318; color: #fff;
+  font: 700 11px/1.2 'DM Sans', sans-serif; letter-spacing: .01em;
+}
+.ld-badge {
+  display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px;
+  background: var(--vx-err-bg); color: var(--vx-err); border: 1px solid var(--vx-err-border);
+  font: 700 12px/1.2 'DM Sans', sans-serif; letter-spacing: .01em;
+}
+
+.ld-chips { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0 0 5px; min-width: 0; }
+.ld-chip {
+  display: inline-flex; align-items: center; max-width: 100%; padding: 2px 8px; border-radius: 999px;
+  background: var(--vx-surface); color: var(--vx-text-soft); border: 1px solid var(--vx-border);
+  font: 600 11px/1.4 'DM Sans', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ld-chip.is-low { background: var(--vx-warn-bg); color: var(--vx-warn); border-color: var(--vx-warn-border); }
+
+.ld-delivery {
+  display: flex; align-items: center; gap: 6px; min-width: 0; margin: 0 0 5px;
+  color: var(--vx-text-soft); font: 500 11px/1.4 'DM Sans', sans-serif;
+}
+.ld-delivery svg { flex: none; }
+.ld-delivery.is-long { font-size: 14px; margin: 0; }
+
+.ld-facts { display: grid; gap: 10px; margin: -8px 0 24px; }
+.ld-facts:empty { display: none; }

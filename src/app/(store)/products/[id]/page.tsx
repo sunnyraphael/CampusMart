@@ -10,6 +10,7 @@ import { notFound } from "next/navigation"
 import type { ProductFull, Review } from "@/types"
 import AddToCartButton from "./AddToCartButton"
 import ProductGallery from "./ProductGallery"
+import { PriceBlock, ListingChips, DeliveryLine } from "@/components/store/ListingBits"
 
 async function getProduct(id: string) {
   const supabase = await createClient()

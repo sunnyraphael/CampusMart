@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Heart, MapPin, Star, ShoppingCart } from "lucide-react";
+import { Heart, MapPin, Package, Star, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/store/cart";
+import { PriceBlock, PromoCorner, ListingChips, DeliveryLine } from "@/components/store/ListingBits";
 
 const SORT_OPTIONS = ["Newest", "Price: Low to High", "Price: High to Low", "Most Popular"];
-
-function formatPrice(n: number) {
-  return "₦" + n.toLocaleString("en-NG");
-}
 
 interface Product {
   id: string;
@@ -20,6 +17,11 @@ interface Product {
   avg_rating: number;
   total_reviews: number;
   stock_quantity: number;
+  compare_at_price: number | null;
+  sale_ends_at: string | null;
+  condition: string | null;
+  availability: string | null;
+  delivery_days: number | null;
   status: string;
   created_at: string;
   categories: { name: string; slug: string } | null;
@@ -44,6 +46,7 @@ export default function ProductsPage() {
         .select(`
           id, title, price, images, avg_rating,
           total_reviews, stock_quantity, status, created_at,
+          compare_at_price, sale_ends_at, condition, availability, delivery_days,
           categories ( name, slug ),
           sellers:public_vendors ( store_name )
         `)
@@ -92,13 +95,14 @@ export default function ProductsPage() {
 
     return (
       <Link href={`/products/${product.id}`} className={mobile ? "mob-card" : "desk-card"}>
-        <div className={mobile ? "mob-card-img" : "desk-card-img"}>
+                <div className={mobile ? "mob-card-img" : "desk-card-img"}>
           {product.images?.[0] ? (
             <img src={product.images[0]} alt={product.title}
               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
-            <span style={{ fontSize: mobile ? 36 : 44 }}>📦</span>
+            <Package size={mobile ? 32 : 40} strokeWidth={1.5} color="#94a3b8" aria-hidden="true" />
           )}
+          <PromoCorner product={product} />
           {outOfStock && (
             <div style={{
               position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)",
@@ -134,8 +138,10 @@ export default function ProductsPage() {
             )}
           </div>
           <div className={mobile ? "mob-card-price" : "desk-card-price"}>
-            {formatPrice(product.price)}
+            <PriceBlock product={product} />
           </div>
+          <ListingChips product={product} />
+          <DeliveryLine product={product} />
           <div className={mobile ? "mob-card-seller" : "desk-card-seller"}>
             <span className={mobile ? "mob-seller-av" : "desk-seller-av"}>{storeName[0]}</span>
             {storeName}
