@@ -69,7 +69,7 @@ export default async function ProductDetailPage({
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-        .pd-page { font-family: 'DM Sans', sans-serif; background: #f8faff; min-height: 100vh; }
+        .pd-page { font-family: 'DM Sans', sans-serif; background: var(--page-bg); min-height: 100vh; }
         .pd-wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
         @media(min-width:640px) { .pd-wrap { padding: 0 32px; } }
         @media(min-width:1024px) { .pd-wrap { padding: 0 48px; } }
@@ -77,7 +77,7 @@ export default async function ProductDetailPage({
         /* Breadcrumb */
         .breadcrumb {
           display: flex; align-items: center; gap: 8px;
-          padding: 20px 0; font-size: 13px; color: #9ca3af; flex-wrap: wrap;
+          padding: 20px 0; font-size: 13px; color: var(--vx-muted); flex-wrap: wrap;
         }
         .breadcrumb a { color: #6b7280; text-decoration: none; transition: color 0.2s; }
         .breadcrumb a:hover { color: #2563eb; }
@@ -94,7 +94,7 @@ export default async function ProductDetailPage({
         .gallery { display: flex; flex-direction: column; gap: 12px; }
         .gallery-main {
           aspect-ratio: 1; border-radius: 24px; overflow: hidden;
-          background: linear-gradient(135deg, #f8faff, #eff2ff);
+          background: var(--vx-surface);
           border: 1px solid #f1f5f9;
           display: flex; align-items: center; justify-content: center;
         }
@@ -151,12 +151,12 @@ export default async function ProductDetailPage({
         .btn-cart {
           flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
           padding: 14px 24px; border-radius: 12px;
-          background: linear-gradient(135deg, #2563eb, #4f46e5);
+          background: #2563eb;
           color: #fff; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
           border: none; cursor: pointer; transition: all 0.2s;
-          box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+          box-shadow: 0 1px 2px rgba(15,23,42,0.12);
         }
-        .btn-cart:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(37,99,235,0.45); filter: brightness(1.06); }
+        .btn-cart:hover { background: #1d4ed8; }
         .btn-wish {
           width: 48px; height: 48px; border-radius: 12px;
           border: 1.5px solid #e5e7eb; background: #fff;
@@ -187,7 +187,7 @@ export default async function ProductDetailPage({
         .vendor-card:hover { border-color: #e0e7ff; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
         .vendor-avatar {
           width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
-          background: linear-gradient(135deg, #2563eb, #4f46e5);
+          background: #2563eb;
           display: flex; align-items: center; justify-content: center;
           font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; color: #fff;
         }
@@ -195,7 +195,7 @@ export default async function ProductDetailPage({
         .vendor-avatar { overflow: hidden; }
         .vendor-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .vendor-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #16a34a; margin-top: 2px; }
-        .vendor-arrow { margin-left: auto; color: #9ca3af; }
+        .vendor-arrow { margin-left: auto; color: var(--vx-muted); }
 
         /* Description */
         .pd-desc-section { padding: 48px 0; }
@@ -208,9 +208,9 @@ export default async function ProductDetailPage({
         .review-big-score { font-family: 'Sora', sans-serif; font-size: 4rem; font-weight: 800; color: #0a0f2e; line-height: 1; }
         .review-card { background: #fff; border-radius: 16px; border: 1px solid #f1f5f9; padding: 20px; margin-bottom: 12px; }
         .review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-        .reviewer-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #eff6ff, #e0e7ff); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #2563eb; flex-shrink: 0; }
+        .reviewer-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--vx-surface); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #2563eb; flex-shrink: 0; }
         .reviewer-name { font-size: 14px; font-weight: 600; color: #111827; }
-        .review-date { font-size: 12px; color: #9ca3af; margin-left: auto; }
+        .review-date { font-size: 12px; color: var(--vx-muted); margin-left: auto; }
         .review-text { font-size: 14px; color: #4b5563; line-height: 1.6; }
 
         /* Related */
@@ -218,7 +218,7 @@ export default async function ProductDetailPage({
         @media(min-width:640px) { .related-grid { grid-template-columns: repeat(4, 1fr); } }
         .related-card { background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #f1f5f9; text-decoration: none; transition: all 0.25s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .related-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); border-color: #e0e7ff; }
-        .related-img { position: relative; aspect-ratio: 1; background: linear-gradient(135deg, #f8faff, #eff2ff); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .related-img { position: relative; aspect-ratio: 1; background: var(--vx-surface); overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .related-img img { width: 100%; height: 100%; object-fit: cover; }
         .related-body { padding: 12px; }
         .related-title { font-size: 13px; font-weight: 500; color: #111827; line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

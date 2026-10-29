@@ -64,7 +64,7 @@ export default async function VendorStorefrontPage({ params }: { params: Promise
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
-        .vs-page { font-family: 'DM Sans', sans-serif; background: #f8faff; min-height: 100vh; overflow-x: hidden; }
+        .vs-page { font-family: 'DM Sans', sans-serif; background: var(--page-bg); min-height: 100vh; overflow-x: hidden; }
         .dark .vs-page { background: #0a1226; }
         .vs-wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
         @media(min-width:640px) { .vs-wrap { padding: 0 32px; } }
@@ -132,7 +132,7 @@ export default async function VendorStorefrontPage({ params }: { params: Promise
         }
         .vs-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
         .dark .vs-card { background: #0f1a35; border-color: #1e3a5f; }
-        .vs-card-img { position: relative; aspect-ratio: 1; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #94a3b8; }
+        .vs-card-img { position: relative; aspect-ratio: 1; background: var(--vx-surface); display: flex; align-items: center; justify-content: center; color: var(--vx-muted); }
         .dark .vs-card-img { background: #14223f; color: #475569; }
         .vs-card-img img { width: 100%; height: 100%; object-fit: cover; }
         .vs-out {

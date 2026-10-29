@@ -68,7 +68,7 @@ export default function ItemActions({
         .ia-panel { margin-top: 10px; padding: 14px; border-radius: 12px; background: #f8faff; border: 1.5px solid #e0e7ff; }
         .ia-panel p { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: #374151; }
         .ia-panel textarea { width: 100%; min-height: 84px; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #fff; color: #111827; caret-color: #111827; font: 14px 'DM Sans', sans-serif; resize: vertical; box-sizing: border-box; }
-        .ia-panel textarea::placeholder { color: #9ca3af; }
+        .ia-panel textarea::placeholder { color: var(--vx-muted); }
         .ia-panel textarea:focus { outline: none; border-color: #2563eb; }
         .dark .ia-panel { background: #0f1a35; border-color: #1e3a5f; }
         .dark .ia-panel p { color: #cfe0ff; }

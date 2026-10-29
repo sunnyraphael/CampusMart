@@ -91,8 +91,8 @@ export function Navbar() {
     <header
       className="sticky top-0 z-50 w-full"
       style={{
-        background: 'var(--navbar-bg, #e0eaff)',
-        borderBottom: '1px solid var(--navbar-border, #c7d7f9)',
+        background: 'var(--navbar-bg)',
+        borderBottom: '1px solid var(--navbar-border)',
       }}
     >
       {/* ── Top bar ── */}
@@ -105,7 +105,7 @@ export function Navbar() {
           </div>
           <span className="text-xl font-bold tracking-tight"
             style={{ fontFamily: 'var(--font-sora), Sora, sans-serif' }}>
-            <span className="text-gray-900 dark:text-white" style={{ WebkitTextStroke: '0.3px #93c5fd' }}>Campus</span>
+            <span className="text-gray-900 dark:text-white">Campus</span>
             <span className="text-blue-600">Mart</span>
           </span>
         </Link>
@@ -118,7 +118,7 @@ export function Navbar() {
               type="text"
               placeholder="Search for items, categories or vendors"
               className="w-full pl-10 pr-4 py-2.5 rounded-full text-sm
-                bg-white dark:bg-gray-800
+                bg-slate-100 focus:bg-white dark:bg-gray-800 dark:focus:bg-gray-800
                 border border-transparent focus:border-blue-400 dark:focus:border-blue-500
                 text-gray-900 dark:text-gray-100
                 placeholder:text-gray-400 dark:placeholder:text-gray-500
@@ -265,7 +265,7 @@ export function Navbar() {
       {/* ── Desktop second nav bar ── */}
       <div
         className="hidden md:block"
-        style={{ background: 'var(--navbar-bg, #ccd9ff)', borderTop: '1px solid #c7d7f9' }}
+        style={{ background: 'var(--navbar-bg)', borderTop: '1px solid var(--navbar-border)' }}
       >
         <SecondNav />
       </div>

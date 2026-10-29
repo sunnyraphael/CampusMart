@@ -58,9 +58,9 @@ export default async function HomePage() {
     <>
       <style>{`
         /* ── Light mode tokens ── */
-        .cm-page { background: #f5f7ff; }
+        .cm-page { background: var(--page-bg); }
         .cm-hero {
-          background: #eef2ff;
+          background: #eaf1fe;
           border-radius: 20px;
           margin: 16px;
           overflow: hidden;
@@ -79,7 +79,7 @@ export default async function HomePage() {
           margin-bottom: 10px;
         }
         .cm-hero-h1 span { color: #2563eb; }
-        .cm-hero-sub { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 20px; max-width: 220px; }
+        .cm-hero-sub { font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 20px; max-width: 220px; }
         .cm-hero-btns { display: flex; gap: 10px; flex-wrap: wrap; }
         .cm-btn-primary {
           background: #2563eb; color: white;
@@ -111,7 +111,7 @@ export default async function HomePage() {
         .cm-hero-photo::before {
           content: '';
           position: absolute; left: 0; top: 0; bottom: 0; width: 60%;
-          background: linear-gradient(to right, #eef2ff 20%, transparent 100%);
+          background: linear-gradient(to right, #eaf1fe 20%, transparent 100%);
           z-index: 1;
         }
         /* Decorative scribble */
@@ -140,7 +140,7 @@ export default async function HomePage() {
         }
         .cm-cat-item:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
         .cm-cat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        .cm-cat-label { font-size: 11px; font-weight: 500; color: #475569; text-align: center; line-height: 1.3; }
+        .cm-cat-label { font-size: 12px; font-weight: 500; color: #475569; text-align: center; line-height: 1.3; }
 
         /* ── Listing cards (mobile: horizontal scroll) ── */
         .cm-listings-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x mandatory; scrollbar-width: none; }
@@ -161,7 +161,7 @@ export default async function HomePage() {
         .cm-card-title { font-size: 13px; font-weight: 600; color: #0f172a; line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .cm-card-price { font-size: 14px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
         .cm-card-meta { display: flex; align-items: center; justify-content: space-between; }
-        .cm-card-rating { display: flex; align-items: center; gap: 2px; font-size: 11px; color: #64748b; }
+        .cm-card-rating { display: flex; align-items: center; gap: 2px; font-size: 12px; color: #64748b; }
 
         /* ── Join card (mobile) ── */
         .cm-join-card {
@@ -172,7 +172,7 @@ export default async function HomePage() {
         }
         .cm-join-icon { width: 56px; height: 56px; flex-shrink: 0; }
         .cm-join-text h3 { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; font-family: var(--font-sora), Sora, sans-serif; }
-        .cm-join-text p { font-size: 12px; color: #64748b; line-height: 1.4; }
+        .cm-join-text p { font-size: 13px; color: #64748b; line-height: 1.4; }
         .cm-join-actions { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
         .cm-join-login { font-size: 12px; color: #64748b; }
         .cm-join-login a { color: #2563eb; font-weight: 600; text-decoration: none; }
@@ -181,8 +181,8 @@ export default async function HomePage() {
         .cm-trust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 16px 24px; }
         .cm-trust-item { display: flex; align-items: center; gap: 10px; background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 12px; }
         .cm-trust-icon { width: 36px; height: 36px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .cm-trust-title { font-size: 11px; font-weight: 600; color: #0f172a; }
-        .cm-trust-sub { font-size: 10px; color: #64748b; }
+        .cm-trust-title { font-size: 13px; font-weight: 600; color: #0f172a; }
+        .cm-trust-sub { font-size: 12px; color: #64748b; }
 
         /* ── DARK MODE ── */
         .dark .cm-page { background: #060d1f; }

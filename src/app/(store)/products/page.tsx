@@ -170,7 +170,7 @@ export default function ProductsPage() {
   const SkeletonCard = ({ mobile }: { mobile: boolean }) => (
     <div className={mobile ? "mob-card" : "desk-card"} style={{ pointerEvents: "none" }}>
       <div className={mobile ? "mob-card-img" : "desk-card-img"}
-        style={{ background: "linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+        style={{ background: "linear-gradient(90deg, var(--vx-surface) 25%, var(--vx-hover) 50%, var(--vx-surface) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
       <div className={mobile ? "mob-card-body" : "desk-card-body"}>
         <div style={{ height: 10, width: "40%", background: "#e2e8f0", borderRadius: 4, marginBottom: 8 }} />
         <div style={{ height: 14, width: "90%", background: "#e2e8f0", borderRadius: 4, marginBottom: 6 }} />
@@ -213,7 +213,7 @@ export default function ProductsPage() {
         /* ── MOBILE CARDS ── */
         .mob-products-wrap {
           padding: 16px; padding-bottom: 88px;
-          background: #f5f7ff; min-height: 100vh;
+          background: var(--page-bg); min-height: 100vh;
         }
         .dark .mob-products-wrap { background: #060d1f; }
         .mob-results-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -232,7 +232,7 @@ export default function ProductsPage() {
         .dark .mob-card { background: #0f1a35; border-color: #1e3a5f; }
         .mob-card-img {
           width: 100%; aspect-ratio: 1; position: relative;
-          background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+          background: var(--vx-surface);
           display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
         .mob-wishlist-btn {
@@ -262,7 +262,7 @@ export default function ProductsPage() {
         .dark .mob-seller-av { background: #1e3a5f; color: #60a5fa; }
 
         /* ── DESKTOP ── */
-        .desk-wrap { padding: 24px; background: #f5f7ff; min-height: 100vh; }
+        .desk-wrap { padding: 24px; background: var(--page-bg); min-height: 100vh; }
         .dark .desk-wrap { background: #060d1f; }
         .desk-header { margin-bottom: 20px; }
         .desk-title { font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 2px; font-family: var(--font-sora), Sora, sans-serif; }
@@ -299,7 +299,7 @@ export default function ProductsPage() {
         .dark .desk-card { background: #0f1a35; border-color: #1e3a5f; }
         .desk-card-img {
           width: 100%; aspect-ratio: 1; position: relative;
-          background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
+          background: var(--vx-surface);
           display: flex; align-items: center; justify-content: center; overflow: hidden;
         }
         .desk-card-img img { transition: transform 0.3s; }

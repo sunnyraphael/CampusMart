@@ -88,7 +88,7 @@ export default function AddToCartButton({ product }: { product: ProductFull }) {
         ) : isInCart ? (
           <button
             className="btn-cart"
-            style={{ flex: 1, background: "linear-gradient(135deg, #16a34a, #15803d)" }}
+            style={{ flex: 1, background: "#15803d" }}
             onClick={handleAddToCart}
             disabled={maxAddable <= 0}
           >

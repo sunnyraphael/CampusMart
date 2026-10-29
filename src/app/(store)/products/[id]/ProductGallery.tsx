@@ -37,7 +37,7 @@ export default function ProductGallery({
         .pg { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
         .pg-main {
           position: relative; aspect-ratio: 1; border-radius: 24px; overflow: hidden;
-          background: linear-gradient(135deg, #f8faff, #eff2ff); border: 1px solid #f1f5f9;
+          background: var(--vx-surface); border: 1px solid var(--vx-border);
           display: flex; align-items: center; justify-content: center;
           touch-action: pan-y; outline: none;
         }

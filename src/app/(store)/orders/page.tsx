@@ -97,7 +97,7 @@ export default async function OrdersPage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-        .op { font-family: 'DM Sans', sans-serif; background: #f8faff; min-height: 100vh; padding-bottom: 80px; }
+        .op { font-family: 'DM Sans', sans-serif; background: var(--page-bg); min-height: 100vh; padding-bottom: 80px; }
         .ow { max-width: 900px; margin: 0 auto; padding: 0 20px; }
         @media(min-width:640px){ .ow { padding: 0 32px; } }
 
@@ -105,7 +105,7 @@ export default async function OrdersPage() {
         .op-back { display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:#6b7280; text-decoration:none; margin-bottom:12px; transition:color .2s; }
         .op-back:hover { color:#2563eb; }
         .op-title { font-family:'Sora',sans-serif; font-size:clamp(1.6rem,3vw,2rem); font-weight:800; color:#0a0f2e; letter-spacing:-.02em; margin:0 0 4px; }
-        .op-sub { font-size:14px; color:#9ca3af; }
+        .op-sub { font-size:14px; color: var(--vx-muted); }
 
         .op-pills { display:flex; gap:10px; margin-bottom:28px; flex-wrap:wrap; }
         .op-pill { display:flex; align-items:center; gap:8px; padding:7px 16px; border-radius:100px; background:#fff; border:1.5px solid #f1f5f9; font-size:13px; font-weight:600; color:#374151; box-shadow:0 1px 4px rgba(0,0,0,.04); }
@@ -117,23 +117,23 @@ export default async function OrdersPage() {
         .oc-head { padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; border-bottom:1.5px solid #f8faff; background:#fdfdff; }
         .oc-id-row { display:flex; align-items:center; gap:10px; }
         .oc-id-icon { width:34px; height:34px; border-radius:10px; background:#eff6ff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-        .oc-id-label { font-size:11px; font-weight:600; color:#9ca3af; text-transform:uppercase; letter-spacing:.06em; }
+        .oc-id-label { font-size:11px; font-weight:600; color: var(--vx-muted); text-transform:uppercase; letter-spacing:.06em; }
         .oc-id-val { font-family:'Sora',sans-serif; font-size:13px; font-weight:700; color:#0a0f2e; }
         .oc-head-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 
         .status-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:100px; font-size:12px; font-weight:700; }
         .pay-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:100px; font-size:11px; font-weight:600; }
-        .oc-date { font-size:12px; color:#9ca3af; white-space:nowrap; }
+        .oc-date { font-size:12px; color: var(--vx-muted); white-space:nowrap; }
 
         .oc-items { padding:8px 20px; display:flex; flex-direction:column; }
         .oi { padding:14px 0; }
         .oi + .oi { border-top:1.5px solid #f8faff; }
         .oi-row { display:flex; align-items:center; gap:14px; }
-        .oi-img { width:56px; height:56px; border-radius:12px; overflow:hidden; background:linear-gradient(135deg,#f8faff,#eff2ff); flex-shrink:0; display:flex; align-items:center; justify-content:center; border:1px solid #f1f5f9; }
+        .oi-img { width:56px; height:56px; border-radius:12px; overflow:hidden; background:var(--vx-surface); flex-shrink:0; display:flex; align-items:center; justify-content:center; border:1px solid #f1f5f9; }
         .oi-img img { width:100%; height:100%; object-fit:cover; }
         .oi-info { flex:1; min-width:0; }
         .oi-title { font-size:14px; font-weight:600; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
-        .oi-meta { font-size:12px; color:#9ca3af; }
+        .oi-meta { font-size:12px; color: var(--vx-muted); }
         .oi-subtotal { font-family:'Sora',sans-serif; font-size:14px; font-weight:700; color:#0a0f2e; flex-shrink:0; }
         .oi-status { margin-top:10px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
         .oi-note { font-size:12.5px; line-height:1.5; color:#6b7280; }
@@ -143,15 +143,15 @@ export default async function OrdersPage() {
         .oc-delivery { display:flex; align-items:center; gap:6px; font-size:12px; color:#6b7280; max-width:55%; }
         .oc-delivery-txt { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .oc-total-row { display:flex; align-items:center; gap:8px; }
-        .oc-total-lbl { font-size:13px; color:#9ca3af; }
+        .oc-total-lbl { font-size:13px; color: var(--vx-muted); }
         .oc-total-val { font-family:'Sora',sans-serif; font-size:18px; font-weight:800; color:#0a0f2e; }
 
-        .empty-state { text-align:center; padding:80px 24px; background:#fff; border-radius:24px; border:2px dashed #e0e7ff; }
-        .empty-icon { width:72px; height:72px; border-radius:20px; background:linear-gradient(135deg,#eff6ff,#e0e7ff); display:flex; align-items:center; justify-content:center; margin:0 auto 20px; }
+        .empty-state { text-align:center; padding:80px 24px; background:var(--vx-card); border-radius:20px; border:1px solid var(--vx-border); }
+        .empty-icon { width:72px; height:72px; border-radius:20px; background:var(--vx-surface); display:flex; align-items:center; justify-content:center; margin:0 auto 20px; }
         .empty-title { font-family:'Sora',sans-serif; font-size:1.25rem; font-weight:800; color:#0a0f2e; margin-bottom:8px; }
-        .empty-sub { font-size:14px; color:#9ca3af; margin-bottom:28px; line-height:1.6; }
-        .btn-shop { display:inline-flex; align-items:center; gap:8px; padding:12px 28px; border-radius:12px; background:linear-gradient(135deg,#2563eb,#4f46e5); color:#fff; font-size:14px; font-weight:600; text-decoration:none; transition:all .2s; box-shadow:0 4px 16px rgba(37,99,235,.3); }
-        .btn-shop:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(37,99,235,.4); }
+        .empty-sub { font-size:14px; color: var(--vx-muted); margin-bottom:28px; line-height:1.6; }
+        .btn-shop { display:inline-flex; align-items:center; gap:8px; padding:12px 28px; border-radius:12px; background:#2563eb; color:#fff; font-size:14px; font-weight:600; text-decoration:none; transition:all .2s; box-shadow:0 4px 16px rgba(37,99,235,.3); }
+        .btn-shop:hover { transform:translateY(-2px); box-shadow:0 2px 8px rgba(15,23,42,.18); }
         .dark .op { background: transparent; }
         .dark .op-back { color: #94a3b8; }
         .dark .op-title, .dark .oc-id-val, .dark .oi-subtotal, .dark .oc-total-val, .dark .empty-title { color: #f1f5f9; }

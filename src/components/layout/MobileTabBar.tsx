@@ -59,7 +59,7 @@ export function MobileTabBar() {
             type="text"
             placeholder="Search for products or vendors..."
             className="w-full pl-9 pr-4 py-2 rounded-full text-sm
-              bg-white dark:bg-gray-800
+              bg-slate-100 focus:bg-white dark:bg-gray-800 dark:focus:bg-gray-800
               border border-transparent focus:border-blue-400
               text-gray-900 dark:text-gray-100
               placeholder:text-gray-400 outline-none transition-all"
