@@ -1,457 +1,258 @@
 import Link from 'next/link'
-import JoinCard from '@/components/home/JoinCard'
 import { PriceBlock, PromoCorner } from '@/components/store/ListingBits'
 import { createClient } from '@/lib/supabase/server'
 import {
   BookOpen, Laptop, Armchair, Shirt, ShoppingBag,
-  Dumbbell, Sparkles, PenLine, LayoutGrid,
-  GraduationCap, Shield, MapPin, Leaf,
-  ArrowRight, Star, Heart, CheckCircle2
+  Dumbbell, Sparkles, PenLine, ArrowRight, Star, Package,
 } from 'lucide-react'
 
+type Listing = {
+  id: string
+  title: string
+  price: number
+  images: string | string[] | null
+  avg_rating: number | null
+  stock_quantity: number
+  compare_at_price: number | null
+  sale_ends_at: string | null
+}
+
 const categories = [
-  { label: 'Books & Notes', icon: BookOpen, color: '#4f46e5', bg: '#eef2ff', href: '/products?category=books' },
-  { label: 'Electronics', icon: Laptop, color: '#d97706', bg: '#fef3c7', href: '/products?category=electronics' },
-  { label: 'Furniture', icon: Armchair, color: '#b45309', bg: '#fef9ee', href: '/products?category=furniture' },
-  { label: 'Clothing', icon: Shirt, color: '#2563eb', bg: '#eff6ff', href: '/products?category=clothing' },
-  { label: 'Accessories', icon: ShoppingBag, color: '#e11d48', bg: '#fff1f2', href: '/products?category=accessories' },
-  { label: 'Sports & Fitness', icon: Dumbbell, color: '#7c3aed', bg: '#f5f3ff', href: '/products?category=sports' },
-  { label: 'Beauty & Health', icon: Sparkles, color: '#db2777', bg: '#fdf2f8', href: '/products?category=beauty' },
-  { label: 'Stationery', icon: PenLine, color: '#0891b2', bg: '#ecfeff', href: '/products?category=stationery' },
-  { label: 'Other', icon: LayoutGrid, color: '#6b7280', bg: '#f9fafb', href: '/products?category=other' },
+  { label: 'Books & Notes', icon: BookOpen, href: '/products?category=books' },
+  { label: 'Electronics', icon: Laptop, href: '/products?category=electronics' },
+  { label: 'Furniture', icon: Armchair, href: '/products?category=furniture' },
+  { label: 'Clothing', icon: Shirt, href: '/products?category=clothing' },
+  { label: 'Accessories', icon: ShoppingBag, href: '/products?category=accessories' },
+  { label: 'Sports & Fitness', icon: Dumbbell, href: '/products?category=sports' },
+  { label: 'Beauty & Health', icon: Sparkles, href: '/products?category=beauty' },
+  { label: 'Stationery', icon: PenLine, href: '/products?category=stationery' },
 ]
 
-const trustItems = [
-  { icon: GraduationCap, title: 'Made for Students', sub: 'By students, for students.' },
-  { icon: Shield, title: 'Safe & Secure', sub: 'Your safety is our priority.' },
-  { icon: MapPin, title: 'Local & Convenient', sub: 'Meet on campus or nearby.' },
-  { icon: Leaf, title: 'Sustainable Choice', sub: 'Give items a second life.' },
+const steps = [
+  { n: '01', title: 'Find what you need', text: 'Browse listings from student vendors on your campus.' },
+  { n: '02', title: 'Pay on CampusMart', text: 'Your payment is held by CampusMart. It is not sent to the vendor yet.' },
+  { n: '03', title: 'Confirm when it arrives', text: 'Tap Received and the vendor is paid. If something is wrong, open a dispute and we review it before any payout.' },
 ]
 
-// Helper to get the first image URL from the images column
-function getImage(images: string | string[] | null): string {
-  if (!images) return 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&q=80'
-  if (Array.isArray(images)) return images[0] || ''
-  try {
-    const parsed = JSON.parse(images)
-    return Array.isArray(parsed) ? parsed[0] : images
-  } catch {
+// The images column can be an array, a JSON string or a plain URL. Return one URL or null.
+function getImage(images: unknown): string | null {
+  if (!images) return null
+  if (Array.isArray(images)) {
+    const first = images[0]
+    return typeof first === 'string' && first ? first : null
+  }
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images)
+      if (Array.isArray(parsed)) return typeof parsed[0] === 'string' && parsed[0] ? parsed[0] : null
+    } catch {
+      /* not JSON, so it is a plain URL */
+    }
     return images
   }
+  return null
 }
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const [{ data: { user } }, { data: listings }] = await Promise.all([
+  const [{ data: { user } }, { data: rows }] = await Promise.all([
     supabase.auth.getUser(),
     supabase
       .from('products')
       .select('id, title, price, images, avg_rating, stock_quantity, compare_at_price, sale_ends_at')
       .eq('status', 'active')
-      .order('avg_rating', { ascending: false })
-      .limit(5),
+      .order('avg_rating', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(6),
   ])
 
-  const popularListings = listings ?? []
+  const listings = (rows ?? []) as Listing[]
+  const mosaic = listings.map((l) => ({ l, src: getImage(l.images) })).filter((x) => x.src).slice(0, 4)
+  const vendorHref = user ? '/vendor/new' : '/register'
 
   return (
     <>
       <style>{`
-        /* ── Light mode tokens ── */
-        .cm-page { background: var(--page-bg); }
-        .cm-hero {
-          background: #eaf1fe;
-          border-radius: 20px;
-          margin: 16px;
-          overflow: hidden;
-          position: relative;
-          min-height: 220px;
-          display: flex;
-          align-items: stretch;
-        }
-        .cm-hero-text { padding: 28px 24px; flex: 1; z-index: 2; position: relative; }
-        .cm-hero-h1 {
-          font-family: var(--font-sora), Sora, sans-serif;
-          font-size: 28px;
-          font-weight: 800;
-          line-height: 1.15;
-          color: #0f172a;
-          margin-bottom: 10px;
-        }
-        .cm-hero-h1 span { color: #2563eb; }
-        .cm-hero-sub { font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 20px; max-width: 220px; }
-        .cm-hero-btns { display: flex; gap: 10px; flex-wrap: wrap; }
-        .cm-btn-primary {
-          background: #2563eb; color: white;
-          padding: 10px 20px; border-radius: 12px;
-          font-size: 13px; font-weight: 600;
-          text-decoration: none; transition: background 0.2s;
-          display: inline-block;
-        }
-        .cm-btn-primary:hover { background: #1d4ed8; }
-        .cm-btn-outline {
-          background: white; color: #0f172a;
-          border: 1.5px solid #cbd5e1;
-          padding: 10px 20px; border-radius: 12px;
-          font-size: 13px; font-weight: 600;
-          text-decoration: none; transition: all 0.2s;
-          display: inline-block;
-        }
-        .cm-btn-outline:hover { border-color: #2563eb; color: #2563eb; }
-        /* Hero photo — right side */
-        .cm-hero-photo {
-          position: absolute; right: 0; top: 0; bottom: 0;
-          width: 55%; overflow: hidden;
-        }
-        .cm-hero-photo img {
-          width: 100%; height: 100%; object-fit: cover;
-          object-position: center top;
-        }
-        /* gradient fade left edge of photo */
-        .cm-hero-photo::before {
-          content: '';
-          position: absolute; left: 0; top: 0; bottom: 0; width: 60%;
-          background: linear-gradient(to right, #eaf1fe 20%, transparent 100%);
-          z-index: 1;
-        }
-        /* Decorative scribble */
-        .cm-hero-scribble {
-          position: absolute; top: 16px; right: 30%;
-          color: #2563eb; opacity: 0.3; z-index: 3;
-        }
+        .hm { --hm-accent: #2563eb; --hm-accent-hover: #1d4ed8; display: flex; flex-direction: column; gap: clamp(32px, 5vw, 56px); padding-bottom: 72px; }
+        @media (min-width: 768px) { .hm { padding-bottom: 0; } }
+        .hm a:focus-visible { outline: 2px solid var(--hm-accent); outline-offset: 2px; }
 
-        /* ── Section ── */
-        .cm-section { padding: 0 16px; margin-top: 28px; }
-        .cm-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-        .cm-section-title {
-          font-family: var(--font-sora), Sora, sans-serif;
-          font-size: 18px; font-weight: 700; color: #0f172a;
+        /* Hero */
+        .hm-hero { display: grid; gap: 24px; padding: clamp(20px, 5vw, 48px); background: var(--vx-hero); border: 1px solid var(--vx-border); border-radius: 16px; }
+        .hm-h1 { font-family: var(--font-sora), Sora, sans-serif; font-size: clamp(28px, 6vw, 44px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; color: var(--vx-text); margin: 0 0 12px; max-width: 18ch; }
+        .hm-sub { font-size: clamp(14px, 2.4vw, 16px); line-height: 1.55; color: var(--vx-text-soft); margin: 0 0 24px; max-width: 46ch; }
+        .hm-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+        .hm-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; transition: background-color .15s ease-out, border-color .15s ease-out; }
+        .hm-btn-primary { background: var(--hm-accent); color: #fff; border: 1px solid var(--hm-accent); }
+        .hm-btn-primary:hover { background: var(--hm-accent-hover); border-color: var(--hm-accent-hover); }
+        .hm-btn-ghost { background: var(--vx-card); color: var(--vx-text); border: 1px solid var(--vx-border); }
+        .hm-btn-ghost:hover { border-color: var(--hm-accent); }
+
+        /* Real listing photos beside the headline (wide screens only) */
+        .hm-mosaic { display: none; }
+        @media (min-width: 900px) {
+          .hm-hero.has-mosaic { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: center; gap: 40px; }
+          .hm-mosaic { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
         }
-        .cm-view-all { font-size: 13px; font-weight: 600; color: #2563eb; text-decoration: none; display: flex; align-items: center; gap: 3px; }
-        .cm-view-all:hover { text-decoration: underline; }
+        .hm-tile { position: relative; display: block; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--vx-surface); border: 1px solid var(--vx-border); }
+        .hm-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s ease-out; }
+        .hm-tile:hover img { transform: scale(1.03); }
 
-        /* ── Category grid ── */
-        .cm-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .cm-cat-item {
-          display: flex; flex-direction: column; align-items: center; gap: 8px;
-          padding: 14px 8px; border-radius: 16px;
-          background: white; border: 1.5px solid #e2e8f0;
-          text-decoration: none; transition: all 0.2s;
-        }
-        .cm-cat-item:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
-        .cm-cat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        .cm-cat-label { font-size: 12px; font-weight: 500; color: #475569; text-align: center; line-height: 1.3; }
+        /* Section headers */
+        .hm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+        .hm-title { font-family: var(--font-sora), Sora, sans-serif; font-size: clamp(17px, 2.6vw, 20px); font-weight: 700; color: var(--vx-text); margin: 0; }
+        .hm-more { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 13px; font-weight: 600; color: var(--vx-link); text-decoration: none; }
+        .hm-more:hover { text-decoration: underline; }
 
-        /* ── Listing cards (mobile: horizontal scroll) ── */
-        .cm-listings-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x mandatory; scrollbar-width: none; }
-        .cm-listings-scroll::-webkit-scrollbar { display: none; }
-        .cm-listing-card {
-          flex-shrink: 0; width: 160px; scroll-snap-align: start;
-          border-radius: 16px; overflow: hidden;
-          background: white; border: 1.5px solid #e2e8f0;
-          text-decoration: none; color: inherit; display: block;
-          transition: box-shadow 0.2s;
-        }
-        .cm-listing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-        .cm-card-img-wrap { position: relative; overflow: hidden; }
-        .cm-card-img-wrap img { width: 100%; aspect-ratio: 1; object-fit: cover; transition: transform 0.3s; }
-        .cm-listing-card:hover .cm-card-img-wrap img { transform: scale(1.04); }
-        .cm-wishlist { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
-        .cm-card-body { padding: 10px; }
-        .cm-card-title { font-size: 13px; font-weight: 600; color: #0f172a; line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .cm-card-price { font-size: 14px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
-        .cm-card-meta { display: flex; align-items: center; justify-content: space-between; }
-        .cm-card-rating { display: flex; align-items: center; gap: 2px; font-size: 12px; color: #64748b; }
+        /* Categories: 2 columns on phones, 4 on tablets, 8 on desktop */
+        .hm-cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        @media (min-width: 480px) { .hm-cats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        @media (min-width: 1100px) { .hm-cats { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+        .hm-cat { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px; background: var(--vx-card); border: 1px solid var(--vx-border); border-radius: 12px; text-decoration: none; transition: border-color .15s ease-out, transform .15s ease-out; }
+        .hm-cat:hover { border-color: var(--hm-accent); transform: translateY(-2px); }
+        .hm-cat-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: var(--vx-surface); color: var(--vx-link); }
+        .hm-cat-label { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--vx-text); }
 
-        /* ── Join card (mobile) ── */
-        .cm-join-card {
-          margin: 28px 16px 0;
-          background: white; border: 1.5px solid #e2e8f0;
-          border-radius: 20px; padding: 20px;
-          display: flex; align-items: center; gap: 16px;
-        }
-        .cm-join-icon { width: 56px; height: 56px; flex-shrink: 0; }
-        .cm-join-text h3 { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; font-family: var(--font-sora), Sora, sans-serif; }
-        .cm-join-text p { font-size: 13px; color: #64748b; line-height: 1.4; }
-        .cm-join-actions { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-        .cm-join-login { font-size: 12px; color: #64748b; }
-        .cm-join-login a { color: #2563eb; font-weight: 600; text-decoration: none; }
+        /* Listings: 2 columns on phones, 3 on tablets, 6 on desktop */
+        .hm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        @media (min-width: 640px) { .hm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
+        @media (min-width: 1100px) { .hm-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+        .hm-card { display: flex; flex-direction: column; min-width: 0; background: var(--vx-card); border: 1px solid var(--vx-border); border-radius: 12px; overflow: hidden; color: inherit; text-decoration: none; transition: border-color .15s ease-out, transform .15s ease-out; }
+        .hm-card:hover { border-color: var(--hm-accent); transform: translateY(-2px); }
+        .hm-photo { position: relative; aspect-ratio: 1; background: var(--vx-surface); display: flex; align-items: center; justify-content: center; color: var(--vx-muted); }
+        .hm-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .hm-soldout { position: absolute; right: 8px; top: 8px; z-index: 1; padding: 3px 8px; border-radius: 999px; background: #0f172a; color: #fff; font: 700 11px/1.2 'DM Sans', sans-serif; }
+        .hm-body { display: flex; flex-direction: column; gap: 6px; padding: 12px; min-width: 0; }
+        .hm-card-title { font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--vx-text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+        .hm-price { font-family: var(--font-sora), Sora, sans-serif; font-size: 15px; font-weight: 700; color: var(--vx-text); }
+        .hm-rating { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--vx-muted); }
+        .hm-rating svg { color: var(--vx-warn); fill: currentColor; }
 
-        /* ── Trust strip (mobile) ── */
-        .cm-trust-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 16px 24px; }
-        .cm-trust-item { display: flex; align-items: center; gap: 10px; background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 12px; }
-        .cm-trust-icon { width: 36px; height: 36px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .cm-trust-title { font-size: 13px; font-weight: 600; color: #0f172a; }
-        .cm-trust-sub { font-size: 12px; color: #64748b; }
+        /* How it works: hairline columns, no boxes */
+        .hm-steps { display: grid; gap: 20px; }
+        @media (min-width: 768px) { .hm-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; } }
+        .hm-step { border-top: 1px solid var(--vx-border); padding-top: 16px; }
+        .hm-step-n { font-family: var(--font-sora), Sora, sans-serif; font-size: 13px; font-weight: 600; color: var(--vx-link); margin-bottom: 8px; }
+        .hm-step-title { font-size: 16px; font-weight: 600; color: var(--vx-text); margin: 0 0 6px; }
+        .hm-step-text { font-size: 14px; line-height: 1.55; color: var(--vx-text-soft); margin: 0; max-width: 40ch; }
 
-        /* ── DARK MODE ── */
-        .dark .cm-page { background: #060d1f; }
-        .dark .cm-hero { background: #0f1a35; }
-        .dark .cm-hero-photo::before { background: linear-gradient(to right, #0f1a35 20%, transparent 100%); }
-        .dark .cm-hero-h1 { color: #f1f5f9; }
-        .dark .cm-hero-sub { color: #94a3b8; }
-        .dark .cm-btn-outline { background: transparent; color: #e2e8f0; border-color: #334155; }
-        .dark .cm-btn-outline:hover { border-color: #3b82f6; color: #3b82f6; }
-        .dark .cm-section-title { color: #f1f5f9; }
-        .dark .cm-cat-item { background: #0f1a35; border-color: #1e3a5f; }
-        .dark .cm-cat-item:hover { border-color: #3b82f6; }
-        .dark .cm-cat-label { color: #94a3b8; }
-        .dark .cm-listing-card { background: #0f1a35; border-color: #1e3a5f; }
-        .dark .cm-card-title { color: #f1f5f9; }
-        .dark .cm-card-price { color: #60a5fa; }
-        .dark .cm-card-rating { color: #94a3b8; }
-        .dark .cm-wishlist { background: #1e293b; }
-        .dark .cm-join-card { background: #0f1a35; border-color: #1e3a5f; }
-        .dark .cm-join-text h3 { color: #f1f5f9; }
-        .dark .cm-join-text p { color: #94a3b8; }
-        .dark .cm-join-login { color: #94a3b8; }
-        .dark .cm-trust-item { background: #0f1a35; border-color: #1e3a5f; }
-        .dark .cm-trust-icon { background: #1e3a5f; }
-        .dark .cm-trust-title { color: #f1f5f9; }
-        .dark .cm-trust-sub { color: #94a3b8; }
+        /* Vendor band */
+        .hm-band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: clamp(18px, 4vw, 28px); background: var(--vx-card); border: 1px solid var(--vx-border); border-radius: 16px; }
+        .hm-band-text { flex: 1 1 280px; min-width: 0; }
+        .hm-band h2 { font-family: var(--font-sora), Sora, sans-serif; font-size: clamp(17px, 2.6vw, 20px); font-weight: 700; color: var(--vx-text); margin: 0 0 6px; }
+        .hm-band p { font-size: 14px; line-height: 1.55; color: var(--vx-text-soft); margin: 0; max-width: 56ch; }
 
-        /* ── DESKTOP OVERRIDES (md+) ── */
-        @media (min-width: 768px) {
-          .cm-hero { margin: 0 0 0 0; border-radius: 20px; min-height: 320px; }
-          .cm-hero-h1 { font-size: 42px; }
-          .cm-hero-sub { font-size: 15px; max-width: 360px; }
-          .cm-hero-photo { width: 50%; }
-          .cm-section { padding: 0; margin-top: 32px; }
-          .cm-cat-grid { grid-template-columns: repeat(9, 1fr); gap: 12px; }
-          .cm-cat-item { padding: 16px 8px; }
-          .cm-listings-scroll { display: grid; grid-template-columns: repeat(5, 1fr); overflow-x: visible; }
-          .cm-listing-card { width: auto; }
-          .cm-join-card { display: none; }
-          .cm-trust-grid { display: none; }
+        @media (prefers-reduced-motion: reduce) {
+          .hm *, .hm *::before { transition: none !important; }
+          .hm a:hover { transform: none !important; }
         }
       `}</style>
 
-      <div className="cm-page min-h-screen pb-20 md:pb-0">
-
-        {/* ── Mobile layout ── */}
-        <div className="md:hidden">
-
-          {/* Hero */}
-          <div className="cm-hero">
-            <div className="cm-hero-text">
-              <h1 className="cm-hero-h1">
-                Buy. Sell.<br />Connect.<br />
-                All on <span>Campus.</span>
-              </h1>
-              <p className="cm-hero-sub">
-                The student marketplace for buying and selling what you need.
-              </p>
-              <div className="cm-hero-btns">
-                <Link href="/products" className="cm-btn-primary">Browse Listings</Link>
-                <Link href="/vendor/new" className="cm-btn-outline">Sell an Item</Link>
-              </div>
+      <div className="hm">
+        {/* Hero */}
+        <section className={`hm-hero${mosaic.length === 4 ? ' has-mosaic' : ''}`} aria-labelledby="hm-h1">
+          <div>
+            <h1 id="hm-h1" className="hm-h1">Buy and sell with students on your campus.</h1>
+            <p className="hm-sub">
+              Browse listings from student vendors. Your payment is held until your order arrives.
+            </p>
+            <div className="hm-btns">
+              <Link href="/products" className="hm-btn hm-btn-primary">Browse listings</Link>
+              <Link href={vendorHref} className="hm-btn hm-btn-ghost">Become a vendor</Link>
             </div>
-            <div className="cm-hero-photo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=80"
-                alt="Students on campus"
-              />
-            </div>
-            <svg className="cm-hero-scribble" width="50" height="50" viewBox="0 0 60 60" fill="none">
-              <path d="M5 30 Q 20 5 35 30 Q 50 55 55 30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" fill="none"/>
-              <path d="M50 20 L55 30 L44 28" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            </svg>
           </div>
 
-          {/* Categories */}
-          <div className="cm-section">
-            <div className="cm-section-header">
-              <span className="cm-section-title">Shop by Category</span>
-              <Link href="/categories" className="cm-view-all">View all <ArrowRight size={13}/></Link>
-            </div>
-            <div className="cm-cat-grid">
-              {categories.slice(0, 6).map(({ label, icon: Icon, color, bg, href }) => (
-                <Link key={label} href={href} className="cm-cat-item">
-                  <div className="cm-cat-icon" style={{ backgroundColor: bg }}>
-                    <Icon size={20} style={{ color }} strokeWidth={1.8} />
-                  </div>
-                  <span className="cm-cat-label">{label}</span>
+          {mosaic.length === 4 && (
+            <div className="hm-mosaic">
+              {mosaic.map(({ l, src }) => (
+                <Link key={l.id} href={`/products/${l.id}`} className="hm-tile" aria-label={l.title}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src as string} alt="" loading="lazy" decoding="async" />
                 </Link>
               ))}
             </div>
-          </div>
-
-          {/* Popular Listings — real data */}
-          <div className="cm-section" style={{marginTop: 28}}>
-            <div className="cm-section-header">
-              <span className="cm-section-title">Popular Listings</span>
-              <Link href="/products" className="cm-view-all">View all <ArrowRight size={13}/></Link>
-            </div>
-            <div className="cm-listings-scroll">
-              {popularListings.map(item => (
-                <Link key={item.id} href={`/products/${item.id}`} className="cm-listing-card">
-                  <div className="cm-card-img-wrap">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={getImage(item.images)} alt={item.title} /><PromoCorner product={item} />
-                    <button className="cm-wishlist">
-                      <Heart size={13} color="#9ca3af" />
-                    </button>
-                  </div>
-                  <div className="cm-card-body">
-                    <div className="cm-card-title">{item.title}</div>
-                    <div className="cm-card-price"><PriceBlock product={item} /></div>
-                    <div className="cm-card-meta">
-                      <div className="cm-card-rating">
-                        <Star size={11} style={{color: '#fbbf24', fill: '#fbbf24'}} />
-                        {item.avg_rating?.toFixed(1) ?? '—'}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Join CampusMart card */}
-          {!user && (
-          <div className="cm-join-card">
-            <svg className="cm-join-icon" viewBox="0 0 56 56" fill="none">
-              <rect width="56" height="56" rx="16" fill="#eff6ff"/>
-              <path d="M28 10 L40 18 L40 36 L28 44 L16 36 L16 18 Z" fill="#2563eb" opacity="0.15"/>
-              <path d="M28 10 L40 18 L40 36 L28 44 L16 36 L16 18 Z" stroke="#2563eb" strokeWidth="2" fill="none"/>
-              <circle cx="28" cy="24" r="6" fill="#2563eb"/>
-              <path d="M18 40 Q22 32 28 32 Q34 32 38 40" fill="#2563eb" opacity="0.5"/>
-            </svg>
-            <div style={{flex: 1}}>
-              <div className="cm-join-text">
-                <h3>Join CampusMart</h3>
-                <p>Create an account to buy, sell, and connect with students on campus.</p>
-              </div>
-              <div className="cm-join-actions">
-                <Link href="/register" className="cm-btn-primary" style={{fontSize: 13}}>Sign Up</Link>
-                <p className="cm-join-login">Already have an account? <Link href="/login">Log In</Link></p>
-              </div>
-            </div>
-          </div>
           )}
+        </section>
 
-          {/* Trust grid */}
-          <div className="cm-trust-grid">
-            {trustItems.map(({ icon: Icon, title, sub }) => (
-              <div key={title} className="cm-trust-item">
-                <div className="cm-trust-icon">
-                  <Icon size={18} color="#2563eb" />
-                </div>
-                <div>
-                  <div className="cm-trust-title">{title}</div>
-                  <div className="cm-trust-sub">{sub}</div>
-                </div>
+        {/* Categories */}
+        <section aria-labelledby="hm-cats">
+          <div className="hm-head">
+            <h2 id="hm-cats" className="hm-title">Shop by category</h2>
+            <Link href="/products" className="hm-more">All listings <ArrowRight size={14} aria-hidden="true" /></Link>
+          </div>
+          <div className="hm-cats">
+            {categories.map(({ label, icon: Icon, href }) => (
+              <Link key={label} href={href} className="hm-cat">
+                <span className="hm-cat-icon"><Icon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+                <span className="hm-cat-label">{label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Top rated listings, real data */}
+        {listings.length > 0 && (
+          <section aria-labelledby="hm-top">
+            <div className="hm-head">
+              <h2 id="hm-top" className="hm-title">Top rated listings</h2>
+              <Link href="/products" className="hm-more">View all <ArrowRight size={14} aria-hidden="true" /></Link>
+            </div>
+            <div className="hm-grid">
+              {listings.map((item) => {
+                const src = getImage(item.images)
+                const rated = item.avg_rating != null && item.avg_rating > 0
+                return (
+                  <Link key={item.id} href={`/products/${item.id}`} className="hm-card">
+                    <div className="hm-photo">
+                      {src ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={src} alt={item.title} loading="lazy" decoding="async" />
+                      ) : (
+                        <Package size={28} strokeWidth={1.5} aria-hidden="true" />
+                      )}
+                      {item.stock_quantity === 0 ? <span className="hm-soldout">Sold out</span> : <PromoCorner product={item} />}
+                    </div>
+                    <div className="hm-body">
+                      <span className="hm-card-title">{item.title}</span>
+                      <span className="hm-price"><PriceBlock product={item} /></span>
+                      {rated && (
+                        <span className="hm-rating">
+                          <Star size={12} aria-hidden="true" />
+                          {item.avg_rating!.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* How it works */}
+        <section aria-labelledby="hm-how">
+          <div className="hm-head">
+            <h2 id="hm-how" className="hm-title">How buying works</h2>
+          </div>
+          <div className="hm-steps">
+            {steps.map((s) => (
+              <div key={s.n} className="hm-step">
+                <div className="hm-step-n">{s.n}</div>
+                <h3 className="hm-step-title">{s.title}</h3>
+                <p className="hm-step-text">{s.text}</p>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* ── Desktop layout ── */}
-        <div className="hidden md:block px-6 py-6">
-
-          {/* Hero */}
-          <div className="cm-hero">
-            <div className="cm-hero-text">
-              <h1 className="cm-hero-h1">
-                Buy. Sell. Connect.<br />
-                All on <span>Campus.</span>
-              </h1>
-              <p className="cm-hero-sub">
-                CampusMart is the student marketplace for buying and selling what you need.
-              </p>
-              <div className="cm-hero-btns">
-                <Link href="/products" className="cm-btn-primary">Browse Listings</Link>
-                <Link href="/vendor/new" className="cm-btn-outline">Sell an Item</Link>
-              </div>
-            </div>
-            <div className="cm-hero-photo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80"
-                alt="Students on campus"
-              />
-            </div>
-            <svg className="cm-hero-scribble" width="60" height="60" viewBox="0 0 60 60" fill="none">
-              <path d="M5 30 Q 20 5 35 30 Q 50 55 55 30" stroke="currentColor" strokeWidth="3" strokeLinecap="round" fill="none"/>
-              <path d="M50 20 L55 30 L44 28" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            </svg>
+        {/* Vendor call to action */}
+        <section className="hm-band" aria-labelledby="hm-vendor">
+          <div className="hm-band-text">
+            <h2 id="hm-vendor">Have something to sell?</h2>
+            <p>Open a vendor account, list in minutes, and get paid once the buyer confirms delivery. CampusMart keeps 5 percent per item.</p>
           </div>
-
-          {/* Main + right sidebar */}
-          <div className="flex gap-6 mt-8">
-            <div className="flex-1 min-w-0 space-y-8">
-
-              {/* Categories */}
-              <section className="cm-section">
-                <div className="cm-section-header">
-                  <span className="cm-section-title">Shop by Category</span>
-                  <Link href="/categories" className="cm-view-all">View all <ArrowRight size={14}/></Link>
-                </div>
-                <div className="cm-cat-grid">
-                  {categories.map(({ label, icon: Icon, color, bg, href }) => (
-                    <Link key={label} href={href} className="cm-cat-item">
-                      <div className="cm-cat-icon" style={{ backgroundColor: bg }}>
-                        <Icon size={22} style={{ color }} strokeWidth={1.8} />
-                      </div>
-                      <span className="cm-cat-label">{label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-
-              {/* Popular Listings — real data */}
-              <section className="cm-section">
-                <div className="cm-section-header">
-                  <span className="cm-section-title">Popular Listings</span>
-                  <Link href="/products" className="cm-view-all">View all <ArrowRight size={14}/></Link>
-                </div>
-                <div className="cm-listings-scroll">
-                  {popularListings.map(item => (
-                    <Link key={item.id} href={`/products/${item.id}`} className="cm-listing-card">
-                      <div className="cm-card-img-wrap">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={getImage(item.images)} alt={item.title} /><PromoCorner product={item} />
-                        <button className="cm-wishlist">
-                          <Heart size={13} color="#9ca3af" />
-                        </button>
-                      </div>
-                      <div className="cm-card-body">
-                        <div className="cm-card-title">{item.title}</div>
-                        <div className="cm-card-price"><PriceBlock product={item} /></div>
-                        <div className="cm-card-meta">
-                          <div className="cm-card-rating">
-                            <Star size={11} style={{color: '#fbbf24', fill: '#fbbf24'}} />
-                            {item.avg_rating?.toFixed(1) ?? '—'}
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-
-              {/* Desktop trust bar */}
-              <div className="grid grid-cols-4 gap-4 pt-4 pb-8">
-                {trustItems.map(({ icon: Icon, title, sub }) => (
-                  <div key={title} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center shrink-0">
-                      <Icon size={20} className="text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{title}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{sub}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right sidebar */}
-            <JoinCard />
-          </div>
-        </div>
-
+          <Link href={vendorHref} className="hm-btn hm-btn-primary">Become a vendor</Link>
+        </section>
       </div>
     </>
   )
