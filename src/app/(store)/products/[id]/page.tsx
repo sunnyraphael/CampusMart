@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { formatPrice, formatRelativeTime } from "@/lib/utils/format"
+import { formatRelativeTime } from "@/lib/utils/format"
 import {
   ArrowLeft, Star, ShoppingCart, Heart, Share2,
   ShieldCheck, Truck, MessageCircle, Store,
@@ -10,7 +10,7 @@ import { notFound } from "next/navigation"
 import type { ProductFull, Review } from "@/types"
 import AddToCartButton from "./AddToCartButton"
 import ProductGallery from "./ProductGallery"
-import { PriceBlock, ListingChips, DeliveryLine } from "@/components/store/ListingBits"
+import { PriceBlock, PromoCorner, ListingChips, DeliveryLine } from "@/components/store/ListingBits"
 
 async function getProduct(id: string) {
   const supabase = await createClient()
@@ -218,7 +218,7 @@ export default async function ProductDetailPage({
         @media(min-width:640px) { .related-grid { grid-template-columns: repeat(4, 1fr); } }
         .related-card { background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #f1f5f9; text-decoration: none; transition: all 0.25s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .related-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.1); border-color: #e0e7ff; }
-        .related-img { aspect-ratio: 1; background: linear-gradient(135deg, #f8faff, #eff2ff); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .related-img { position: relative; aspect-ratio: 1; background: linear-gradient(135deg, #f8faff, #eff2ff); overflow: hidden; display: flex; align-items: center; justify-content: center; }
         .related-img img { width: 100%; height: 100%; object-fit: cover; }
         .related-body { padding: 12px; }
         .related-title { font-size: 13px; font-weight: 500; color: #111827; line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -347,7 +347,13 @@ export default async function ProductDetailPage({
                 </div>
               </div>
 
-              <div className="pd-price">{formatPrice(product.price)}</div>
+              <div className="pd-price">
+                <PriceBlock product={product} showSaleEnd badge />
+              </div>
+              <div className="ld-facts">
+                <ListingChips product={product} showNew lowStock={false} />
+                <DeliveryLine product={product} variant="long" />
+              </div>
 
               <div className="pd-divider" />
 
@@ -469,7 +475,7 @@ export default async function ProductDetailPage({
               <div className="related-grid">
                 {related.map((p: any) => (
                   <Link key={p.id} href={`/products/${p.id}`} className="related-card">
-                    <div className="related-img">
+                    <div className="related-img"><PromoCorner product={p} />
                       {p.images?.[0]
                         ? <img src={p.images[0]} alt={p.title} />
                         : <Package size={40} color="#cbd5e1" />
@@ -477,7 +483,7 @@ export default async function ProductDetailPage({
                     </div>
                     <div className="related-body">
                       <div className="related-title">{p.title}</div>
-                      <div className="related-price">{formatPrice(p.price)}</div>
+                      <div className="related-price"><PriceBlock product={p} /></div>
                     </div>
                   </Link>
                 ))}

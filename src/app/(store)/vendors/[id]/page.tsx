@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
-import { formatPrice, formatDate } from "@/lib/utils/format"
+import { formatDate } from "@/lib/utils/format"
+import { PriceBlock, PromoCorner, ListingChips } from "@/components/store/ListingBits"
 import { ShieldCheck, MapPin, Package, Star, ChevronRight, Tag, CalendarDays } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -32,7 +33,7 @@ async function getVendorProducts(vendorId: string) {
   const supabase = await createClient()
   const { data } = await supabase
     .from("products")
-    .select("id, title, price, images, avg_rating, total_reviews, stock_quantity, created_at, categories(name)")
+    .select("id, title, price, images, avg_rating, total_reviews, stock_quantity, compare_at_price, sale_ends_at, condition, created_at, categories(name)")
     .eq("seller_id", vendorId)
     .eq("status", "active")
     .order("created_at", { ascending: false })
@@ -225,7 +226,7 @@ export default async function VendorStorefrontPage({ params }: { params: Promise
                     ) : (
                       <Package size={32} />
                     )}
-                    {p.stock_quantity === 0 && <span className="vs-out">Out of stock</span>}
+                    {p.stock_quantity === 0 ? <span className="vs-out">Out of stock</span> : <PromoCorner product={p} />}
                   </div>
                   <div className="vs-card-body">
                     {p.categories?.name && <span className="vs-card-cat">{p.categories.name}</span>}
@@ -235,7 +236,7 @@ export default async function VendorStorefrontPage({ params }: { params: Promise
                         <Star size={12} />{Number(p.avg_rating ?? 0).toFixed(1)} ({p.total_reviews})
                       </span>
                     )}
-                    <span className="vs-card-price">{formatPrice(p.price)}</span>
+                    <span className="vs-card-price"><PriceBlock product={p} /></span><ListingChips product={p} />
                   </div>
                 </Link>
               ))}

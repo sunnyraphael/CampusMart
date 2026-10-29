@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import JoinCard from '@/components/home/JoinCard'
+import { PriceBlock, PromoCorner } from '@/components/store/ListingBits'
 import { createClient } from '@/lib/supabase/server'
 import {
   BookOpen, Laptop, Armchair, Shirt, ShoppingBag,
@@ -27,10 +28,6 @@ const trustItems = [
   { icon: Leaf, title: 'Sustainable Choice', sub: 'Give items a second life.' },
 ]
 
-function formatPrice(n: number) {
-  return '₦' + n.toLocaleString('en-NG')
-}
-
 // Helper to get the first image URL from the images column
 function getImage(images: string | string[] | null): string {
   if (!images) return 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=400&q=80'
@@ -49,7 +46,7 @@ export default async function HomePage() {
     supabase.auth.getUser(),
     supabase
       .from('products')
-      .select('id, title, price, images, avg_rating')
+      .select('id, title, price, images, avg_rating, stock_quantity, compare_at_price, sale_ends_at')
       .eq('status', 'active')
       .order('avg_rating', { ascending: false })
       .limit(5),
@@ -291,14 +288,14 @@ export default async function HomePage() {
                 <Link key={item.id} href={`/products/${item.id}`} className="cm-listing-card">
                   <div className="cm-card-img-wrap">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={getImage(item.images)} alt={item.title} />
+                    <img src={getImage(item.images)} alt={item.title} /><PromoCorner product={item} />
                     <button className="cm-wishlist">
                       <Heart size={13} color="#9ca3af" />
                     </button>
                   </div>
                   <div className="cm-card-body">
                     <div className="cm-card-title">{item.title}</div>
-                    <div className="cm-card-price">{formatPrice(item.price)}</div>
+                    <div className="cm-card-price"><PriceBlock product={item} /></div>
                     <div className="cm-card-meta">
                       <div className="cm-card-rating">
                         <Star size={11} style={{color: '#fbbf24', fill: '#fbbf24'}} />
@@ -414,14 +411,14 @@ export default async function HomePage() {
                     <Link key={item.id} href={`/products/${item.id}`} className="cm-listing-card">
                       <div className="cm-card-img-wrap">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={getImage(item.images)} alt={item.title} />
+                        <img src={getImage(item.images)} alt={item.title} /><PromoCorner product={item} />
                         <button className="cm-wishlist">
                           <Heart size={13} color="#9ca3af" />
                         </button>
                       </div>
                       <div className="cm-card-body">
                         <div className="cm-card-title">{item.title}</div>
-                        <div className="cm-card-price">{formatPrice(item.price)}</div>
+                        <div className="cm-card-price"><PriceBlock product={item} /></div>
                         <div className="cm-card-meta">
                           <div className="cm-card-rating">
                             <Star size={11} style={{color: '#fbbf24', fill: '#fbbf24'}} />
