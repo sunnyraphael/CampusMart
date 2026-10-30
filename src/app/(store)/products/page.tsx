@@ -1,406 +1,165 @@
-"use client";
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { AlertTriangle, ChevronLeft, ChevronRight, PackageSearch } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import ProductCard, { type ProductCardData } from '@/components/store/ProductCard'
+import SortSelect from '@/components/store/SortSelect'
+import { PAGE_SIZE, buildProductsHref, cleanSearch, parseSort } from '@/lib/products-query'
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Heart, MapPin, Package, Star, ShoppingCart } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { useCartStore } from "@/store/cart";
-import { PriceBlock, PromoCorner, ListingChips, DeliveryLine } from "@/components/store/ListingBits";
+// Server component: the database does the filtering, sorting and paging, and the browser
+// receives finished HTML. The URL is the single source of truth (?category= &q= &sort= &page=).
+type SearchParams = Promise<Record<string, string | string[] | undefined>>
 
-const SORT_OPTIONS = ["Newest", "Price: Low to High", "Price: High to Low", "Most Popular"];
+const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)
 
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  images: string[];
-  avg_rating: number;
-  total_reviews: number;
-  stock_quantity: number;
-  compare_at_price: number | null;
-  sale_ends_at: string | null;
-  condition: string | null;
-  availability: string | null;
-  delivery_days: number | null;
-  status: string;
-  created_at: string;
-  categories: { name: string; slug: string } | null;
-  sellers: { store_name: string } | null;
-}
+const SELECT = `
+  id, title, price, images, avg_rating, total_reviews, stock_quantity,
+  compare_at_price, sale_ends_at, condition, availability, delivery_days,
+  categories ( name, slug ),
+  sellers:public_vendors ( store_name, is_verified )
+`
 
-export default function ProductsPage() {
-  const supabase = createClient();
-  const { addItem } = useCartStore();
+export default async function ProductsPage({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams
+  const categorySlug = first(sp.category)?.trim().toLowerCase() || null
+  const q = cleanSearch(first(sp.q))
+  const sort = parseSort(first(sp.sort))
+  const page = Math.max(1, Number.parseInt(first(sp.page) ?? '1', 10) || 1)
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sort, setSort] = useState("Newest");
-  const [wishlist, setWishlist] = useState<string[]>([]);
-  const [addedToCart, setAddedToCart] = useState<string[]>([]);
+  const supabase = await createClient()
 
-  useEffect(() => {
-    async function fetchProducts() {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("products")
-        .select(`
-          id, title, price, images, avg_rating,
-          total_reviews, stock_quantity, status, created_at,
-          compare_at_price, sale_ends_at, condition, availability, delivery_days,
-          categories ( name, slug ),
-          sellers:public_vendors ( store_name )
-        `)
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
+  // Real categories from the database drive the filter chips, so the slugs can never drift from what is stored.
+  const { data: categoryRows } = await supabase
+    .from('categories')
+    .select('id, name, slug')
+    .order('name', { ascending: true })
+  const categories = (categoryRows ?? []) as { id: string; name: string; slug: string }[]
+  const activeCategory = categorySlug ? categories.find((c) => c.slug === categorySlug) ?? null : null
+  const unknownCategory = !!categorySlug && !activeCategory
 
-      if (!error && data) setProducts(data as unknown as Product[]);
-      setLoading(false);
-    }
-    fetchProducts();
-  }, []);
+  const from = (page - 1) * PAGE_SIZE
+  let query = supabase
+    .from('products')
+    .select(SELECT, { count: 'exact' })
+    .eq('status', 'active')
+    .gt('stock_quantity', 0) // out-of-stock listings stay hidden until the vendor restocks (item J)
 
-  const toggleWishlist = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    setWishlist(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
+  if (activeCategory) query = query.eq('category_id', activeCategory.id)
+  if (q) query = query.ilike('title', `%${q}%`)
 
-  const handleAddToCart = (product: Product, e: React.MouseEvent) => {
-    e.preventDefault();
-    addItem({
-      id: product.id,
-      title: product.title,
-      price: product.price,
-      quantity: 1,
-      image_url: product.images?.[0] ?? null,
-      vendor_name: product.sellers?.store_name ?? null,
-    });
-    setAddedToCart(prev => [...prev, product.id]);
-    setTimeout(() => setAddedToCart(prev => prev.filter(x => x !== product.id)), 2000);
-  };
+  if (sort === 'price_asc') query = query.order('price', { ascending: true })
+  else if (sort === 'price_desc') query = query.order('price', { ascending: false })
+  else if (sort === 'top') query = query.order('avg_rating', { ascending: false, nullsFirst: false })
+  // created_at is always the tie-breaker so pages never repeat or skip a listing.
+  query = query.order('created_at', { ascending: false }).range(from, from + PAGE_SIZE - 1)
 
-  // ── Sort filtering ───────────────────────────────────────────────────
-  const filtered = products.slice().sort((a, b) => {
-    if (sort === "Price: Low to High") return a.price - b.price;
-    if (sort === "Price: High to Low") return b.price - a.price;
-    if (sort === "Most Popular") return (b.avg_rating ?? 0) - (a.avg_rating ?? 0);
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // Newest
-  });
+  const { data, error, count } = await query
 
-  const ProductCard = ({ product, mobile }: { product: Product; mobile: boolean }) => {
-    const inCart = addedToCart.includes(product.id);
-    const outOfStock = product.stock_quantity === 0;
-    const wishlisted = wishlist.includes(product.id);
-    const categoryName = product.categories?.name ?? "Other";
-    const storeName = product.sellers?.store_name ?? "Vendor";
+  // Asking for a page past the end: send the visitor to page 1 instead of showing an error.
+  if (error && page > 1 && error.code === 'PGRST103') {
+    redirect(buildProductsHref({ category: activeCategory?.slug, q, sort, page: 1 }))
+  }
 
-    return (
-      <Link href={`/products/${product.id}`} className={mobile ? "mob-card" : "desk-card"}>
-                <div className={mobile ? "mob-card-img" : "desk-card-img"}>
-          {product.images?.[0] ? (
-            <img src={product.images[0]} alt={product.title}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            <Package size={mobile ? 32 : 40} strokeWidth={1.5} color="#94a3b8" aria-hidden="true" />
-          )}
-          <PromoCorner product={product} />
-          {outOfStock && (
-            <div style={{
-              position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <span style={{
-                background: "#ef4444", color: "white",
-                padding: "4px 12px", borderRadius: 999, fontSize: 11, fontWeight: 700,
-              }}>Out of Stock</span>
-            </div>
-          )}
-          <button className={mobile ? "mob-wishlist-btn" : "desk-wishlist-btn"}
-            onClick={e => toggleWishlist(product.id, e)}>
-            <Heart size={mobile ? 13 : 15}
-              fill={wishlisted ? "#ef4444" : "none"}
-              color={wishlisted ? "#ef4444" : "#9ca3af"} />
-          </button>
-        </div>
-
-        <div className={mobile ? "mob-card-body" : "desk-card-body"}>
-          <div className={mobile ? "mob-card-cat" : "desk-card-cat"}>{categoryName}</div>
-          <div className={mobile ? "mob-card-title" : "desk-card-title"}>{product.title}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: mobile ? 4 : 6 }}>
-            {[1,2,3,4,5].map(i => (
-              <Star key={i} size={mobile ? 10 : 12}
-                fill={i <= Math.round(product.avg_rating ?? 0) ? "#facc15" : "none"}
-                color={i <= Math.round(product.avg_rating ?? 0) ? "#facc15" : "#d1d5db"} />
-            ))}
-            {product.total_reviews > 0 && (
-              <span style={{ fontSize: mobile ? 10 : 11, color: "#9ca3af" }}>
-                ({product.total_reviews})
-              </span>
-            )}
-          </div>
-          <div className={mobile ? "mob-card-price" : "desk-card-price"}>
-            <PriceBlock product={product} />
-          </div>
-          <ListingChips product={product} />
-          <DeliveryLine product={product} />
-          <div className={mobile ? "mob-card-seller" : "desk-card-seller"}>
-            <span className={mobile ? "mob-seller-av" : "desk-seller-av"}>{storeName[0]}</span>
-            {storeName}
-            <span>·</span>
-            <MapPin size={mobile ? 9 : 10} />
-            Campus
-          </div>
-          {!mobile && (
-            <button className="desk-cart-btn"
-              style={{
-                background: inCart ? "#22c55e" : outOfStock ? "#e2e8f0" : "#2563eb",
-                color: outOfStock ? "#9ca3af" : "white",
-                cursor: outOfStock ? "not-allowed" : "pointer",
-              }}
-              disabled={outOfStock}
-              onClick={e => { e.preventDefault(); if (!outOfStock) handleAddToCart(product, e); }}>
-              <ShoppingCart size={14} />
-              {inCart ? "Added!" : outOfStock ? "Out of Stock" : "Add to Cart"}
-            </button>
-          )}
-        </div>
-      </Link>
-    );
-  };
-
-  const SkeletonCard = ({ mobile }: { mobile: boolean }) => (
-    <div className={mobile ? "mob-card" : "desk-card"} style={{ pointerEvents: "none" }}>
-      <div className={mobile ? "mob-card-img" : "desk-card-img"}
-        style={{ background: "linear-gradient(90deg, var(--vx-surface) 25%, var(--vx-hover) 50%, var(--vx-surface) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
-      <div className={mobile ? "mob-card-body" : "desk-card-body"}>
-        <div style={{ height: 10, width: "40%", background: "#e2e8f0", borderRadius: 4, marginBottom: 8 }} />
-        <div style={{ height: 14, width: "90%", background: "#e2e8f0", borderRadius: 4, marginBottom: 6 }} />
-        <div style={{ height: 14, width: "70%", background: "#e2e8f0", borderRadius: 4, marginBottom: 10 }} />
-        <div style={{ height: 18, width: "50%", background: "#e2e8f0", borderRadius: 4 }} />
-      </div>
-    </div>
-  );
+  const products = (data ?? []) as unknown as ProductCardData[]
+  const total = count ?? products.length
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const heading = activeCategory ? activeCategory.name : q ? 'Search results' : 'All listings'
+  const hrefFor = (p: { category?: string | null; page?: number }) =>
+    buildProductsHref({ category: p.category, q, sort, page: p.page })
 
   return (
-    <>
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
+    <section className="pl" aria-labelledby="pl-title">
+      <header className="pl-head">
+        <div className="pl-head-text">
+          <h1 id="pl-title" className="pl-title">{heading}</h1>
+          <p className="pl-count">
+            {error
+              ? 'Could not load listings'
+              : `${total.toLocaleString('en-NG')} ${total === 1 ? 'listing' : 'listings'}`}
+            {q && (
+              <>
+                {' '}for &ldquo;{q}&rdquo;{' '}
+                <Link href={hrefFor({ category: activeCategory?.slug })} className="pl-clear">Clear search</Link>
+              </>
+            )}
+          </p>
+        </div>
+        <SortSelect sort={sort} category={activeCategory?.slug ?? null} q={q} />
+      </header>
 
-        /* ── MOBILE TABS STRIP (no search bar) ── */
-        .mob-strip {
-          background: #2563eb;
-          padding: 0 16px;
-          position: sticky;
-          top: 113px;
-          z-index: 30;
-        }
-        .mob-tabs {
-          display: flex; gap: 4px;
-          overflow-x: auto; scrollbar-width: none;
-        }
-        .mob-tabs::-webkit-scrollbar { display: none; }
-        .mob-tab {
-          white-space: nowrap; padding: 10px 18px;
-          border-radius: 999px 999px 0 0;
-          font-size: 13px; border: none; cursor: pointer;
-          background: transparent; color: rgba(255,255,255,0.7);
-          transition: all 0.2s; font-weight: 500;
-        }
-        .mob-tab.active { background: white; color: #2563eb; font-weight: 600; }
+      <nav className="pl-chips" aria-label="Categories">
+        <Link
+          href={hrefFor({})}
+          className="pl-chip"
+          aria-current={!activeCategory ? 'page' : undefined}
+        >
+          All
+        </Link>
+        {categories.map((c) => (
+          <Link
+            key={c.id}
+            href={hrefFor({ category: c.slug })}
+            className="pl-chip"
+            aria-current={activeCategory?.id === c.id ? 'page' : undefined}
+          >
+            {c.name}
+          </Link>
+        ))}
+      </nav>
 
-        /* ── MOBILE CARDS ── */
-        .mob-products-wrap {
-          padding: 16px; padding-bottom: 88px;
-          background: var(--page-bg); min-height: 100vh;
-        }
-        .dark .mob-products-wrap { background: #060d1f; }
-        .mob-results-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .mob-results-count { font-size: 13px; color: #6b7280; }
-        .dark .mob-results-count { color: #94a3b8; }
-        .mob-sort-select { font-size: 13px; color: #2563eb; font-weight: 600; border: none; background: transparent; cursor: pointer; }
-        .mob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .mob-card {
-          background: white; border-radius: 14px; overflow: hidden;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-          border: 1.5px solid #f1f5f9; position: relative;
-          text-decoration: none; color: inherit; display: block;
-          transition: box-shadow 0.2s, transform 0.2s;
-        }
-        .mob-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
-        .dark .mob-card { background: #0f1a35; border-color: #1e3a5f; }
-        .mob-card-img {
-          width: 100%; aspect-ratio: 1; position: relative;
-          background: var(--vx-surface);
-          display: flex; align-items: center; justify-content: center; overflow: hidden;
-        }
-        .mob-wishlist-btn {
-          position: absolute; top: 8px; right: 8px;
-          width: 28px; height: 28px; border-radius: 50%;
-          background: white; border: none;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.15); z-index: 2;
-        }
-        .mob-card-body { padding: 10px; }
-        .mob-card-cat { font-size: 10px; color: #2563eb; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-        .mob-card-title {
-          font-size: 13px; font-weight: 600; color: #0f172a; line-height: 1.3; margin-bottom: 4px;
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-        }
-        .dark .mob-card-title { color: #f1f5f9; }
-        .mob-card-price { font-size: 15px; font-weight: 700; color: #2563eb; margin-bottom: 5px; }
-        .dark .mob-card-price { color: #60a5fa; }
-        .mob-card-seller { font-size: 11px; color: #6b7280; display: flex; align-items: center; gap: 3px; }
-        .dark .mob-card-seller { color: #94a3b8; }
-        .mob-seller-av {
-          width: 16px; height: 16px; border-radius: 50%;
-          background: #dbeafe; display: inline-flex;
-          align-items: center; justify-content: center;
-          font-size: 9px; font-weight: 700; color: #2563eb; flex-shrink: 0;
-        }
-        .dark .mob-seller-av { background: #1e3a5f; color: #60a5fa; }
+      {unknownCategory && (
+        <p className="pl-note" role="status">
+          We could not find a category called &ldquo;{categorySlug}&rdquo;, so you are seeing every listing.
+        </p>
+      )}
 
-        /* ── DESKTOP ── */
-        .desk-wrap { padding: 24px; background: var(--page-bg); min-height: 100vh; }
-        .dark .desk-wrap { background: #060d1f; }
-        .desk-header { margin-bottom: 20px; }
-        .desk-title { font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 2px; font-family: var(--font-sora), Sora, sans-serif; }
-        .dark .desk-title { color: #f1f5f9; }
-        .desk-subtitle { font-size: 14px; color: #6b7280; }
-        .dark .desk-subtitle { color: #94a3b8; }
-        .desk-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1.5px solid #e2e8f0; }
-        .dark .desk-tabs { border-color: #1e3a5f; }
-        .desk-tab {
-          padding: 8px 18px; font-size: 14px; font-weight: 500;
-          border: none; background: transparent; color: #6b7280;
-          cursor: pointer; border-bottom: 2.5px solid transparent;
-          margin-bottom: -1.5px; transition: all 0.2s;
-        }
-        .dark .desk-tab { color: #94a3b8; }
-        .desk-tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
-        .desk-results-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .desk-results-count { font-size: 14px; color: #6b7280; }
-        .dark .desk-results-count { color: #94a3b8; }
-        .desk-sort { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6b7280; }
-        .desk-sort select { font-size: 13px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; background: white; color: #0f172a; cursor: pointer; outline: none; }
-        .dark .desk-sort select { background: #0f1a35; border-color: #1e3a5f; color: #f1f5f9; }
-        .desk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-
-        /* ── DESKTOP CARD ── */
-        .desk-card {
-          background: white; border-radius: 16px; overflow: hidden;
-          border: 1.5px solid #e2e8f0; position: relative;
-          text-decoration: none; color: inherit; display: flex;
-          flex-direction: column; transition: all 0.2s;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-        }
-        .desk-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-3px); }
-        .dark .desk-card { background: #0f1a35; border-color: #1e3a5f; }
-        .desk-card-img {
-          width: 100%; aspect-ratio: 1; position: relative;
-          background: var(--vx-surface);
-          display: flex; align-items: center; justify-content: center; overflow: hidden;
-        }
-        .desk-card-img img { transition: transform 0.3s; }
-        .desk-card:hover .desk-card-img img { transform: scale(1.05); }
-        .desk-wishlist-btn {
-          position: absolute; top: 10px; right: 10px;
-          width: 32px; height: 32px; border-radius: 50%;
-          background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
-          border: none; display: flex; align-items: center; justify-content: center;
-          cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-          transition: transform 0.2s; z-index: 2;
-        }
-        .desk-wishlist-btn:hover { transform: scale(1.1); }
-        .desk-card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; }
-        .desk-card-cat { font-size: 11px; color: #2563eb; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .desk-card-title {
-          font-size: 14px; font-weight: 600; color: #0f172a; line-height: 1.4; margin-bottom: 6px;
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: 1;
-        }
-        .dark .desk-card-title { color: #f1f5f9; }
-        .desk-card-price { font-size: 17px; font-weight: 700; color: #2563eb; margin-bottom: 6px; }
-        .dark .desk-card-price { color: #60a5fa; }
-        .desk-card-seller { font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 4px; margin-bottom: 12px; }
-        .dark .desk-card-seller { color: #94a3b8; }
-        .desk-seller-av {
-          width: 18px; height: 18px; border-radius: 50%;
-          background: #dbeafe; display: inline-flex;
-          align-items: center; justify-content: center;
-          font-size: 10px; font-weight: 700; color: #2563eb; flex-shrink: 0;
-        }
-        .dark .desk-seller-av { background: #1e3a5f; color: #60a5fa; }
-        .desk-cart-btn {
-          width: 100%; padding: 9px; border-radius: 10px;
-          border: none; font-size: 13px; font-weight: 600;
-          display: flex; align-items: center; justify-content: center; gap: 6px;
-          transition: all 0.2s;
-        }
-        .desk-cart-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
-      `}</style>
-
-      {/* ════ MOBILE ════ */}
-      <div className="md:hidden">
-        {/* Tabs removed; showing product list only on mobile */}
-
-        <div className="mob-products-wrap">
-          <div className="mob-results-row">
-            <span className="mob-results-count">
-              {loading ? "Loading..." : `${filtered.length} products found`}
-            </span>
-            <select className="mob-sort-select" value={sort} onChange={e => setSort(e.target.value)}>
-              {SORT_OPTIONS.map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-          <div className="mob-grid">
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} mobile />)
-              : filtered.map(p => <ProductCard key={p.id} product={p} mobile />)
-            }
-          </div>
-          {!loading && filtered.length === 0 && (
-            <div style={{ textAlign: "center", padding: "48px 0", color: "#9ca3af" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-              <div style={{ fontWeight: 600 }}>No products found</div>
-              <div style={{ fontSize: 13, marginTop: 4 }}>Try a different search term</div>
-            </div>
+      {error ? (
+        // A database problem is shown, never disguised as an empty shop (trim the detail before launch).
+        <div className="pl-state is-error" role="alert">
+          <AlertTriangle size={28} strokeWidth={1.5} aria-hidden="true" />
+          <h2>Listings could not be loaded</h2>
+          <p>{error.message}</p>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="pl-state">
+          <PackageSearch size={28} strokeWidth={1.5} aria-hidden="true" />
+          <h2>No listings match</h2>
+          <p>
+            {q || activeCategory
+              ? 'Nothing is in stock for this search or category right now.'
+              : 'There are no listings in stock right now.'}
+          </p>
+          {(q || activeCategory) && (
+            <Link href="/products" className="pl-btn">See all listings</Link>
           )}
         </div>
-      </div>
+      ) : (
+        <div className="pl-grid">
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} showCategory={!activeCategory} />
+          ))}
+        </div>
+      )}
 
-      {/* ════ DESKTOP ════ */}
-      <div className="hidden md:block desk-wrap">
-        <div className="desk-header">
-          <div className="desk-title">All Products</div>
-          <div className="desk-subtitle">Browse listings from students on campus</div>
-        </div>
-        {/* Tabs removed; showing product list only on desktop */}
-        <div className="desk-results-row">
-          <span className="desk-results-count">
-            {loading ? "Loading..." : `${filtered.length} products found`}
-          </span>
-          <div className="desk-sort">
-            <span>Sort by:</span>
-            <select value={sort} onChange={e => setSort(e.target.value)}>
-              {SORT_OPTIONS.map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="desk-grid">
-          {loading
-            ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} mobile={false} />)
-            : filtered.map(p => <ProductCard key={p.id} product={p} mobile={false} />)
-          }
-        </div>
-        {!loading && filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "64px 0", color: "#9ca3af" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
-            <div style={{ fontWeight: 600, fontSize: 18 }}>No products found</div>
-            <div style={{ fontSize: 14, marginTop: 4 }}>Try a different search term</div>
-          </div>
-        )}
-      </div>
-    </>
-  );
+      {!error && totalPages > 1 && (
+        <nav className="pl-pager" aria-label="Pagination">
+          {page > 1 ? (
+            <Link href={hrefFor({ category: activeCategory?.slug, page: page - 1 })} className="pl-btn" rel="prev">
+              <ChevronLeft size={16} aria-hidden="true" /> Previous
+            </Link>
+          ) : (
+            <span className="pl-btn is-off" aria-disabled="true"><ChevronLeft size={16} aria-hidden="true" /> Previous</span>
+          )}
+          <span className="pl-page">Page {page} of {totalPages}</span>
+          {page < totalPages ? (
+            <Link href={hrefFor({ category: activeCategory?.slug, page: page + 1 })} className="pl-btn" rel="next">
+              Next <ChevronRight size={16} aria-hidden="true" />
+            </Link>
+          ) : (
+            <span className="pl-btn is-off" aria-disabled="true">Next <ChevronRight size={16} aria-hidden="true" /></span>
+          )}
+        </nav>
+      )}
+    </section>
+  )
 }
