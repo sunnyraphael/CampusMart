@@ -4,6 +4,7 @@ import { ArrowLeft, FileText, Package, ShieldAlert, Clock, MapPin, Phone, User, 
 import { createClient } from '@/lib/supabase/server'
 import { getVendorOrder, pick, naira, fmtDate, itemSubtotal } from '@/lib/vendor-orders'
 import ItemStatusButton from './ItemStatusButton'
+import { PageHeading } from '@/components/vendor/Workspace'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,22 +37,17 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
   const notes = pick(order, ['delivery_notes', 'notes', 'note'])
 
   return (
-    <main className="od-page">
+    <div className="od-page">
       <style>{css}</style>
 
       <Link href="/vendor/orders" className="od-back">
         <ArrowLeft size={16} aria-hidden /> All orders
       </Link>
 
-      <header className="od-head">
-        <div>
-          <h1>Order #{ref}</h1>
-          <p>Placed {fmtDate(order.created_at)}</p>
-        </div>
-        <Link href={`/vendor/orders/${order.id}/slip`} className="od-ghost">
+      <PageHeading eyebrow="Order details" title={`Order #${ref}`} description={`Placed ${fmtDate(order.created_at)}`} actions={<Link href={`/vendor/orders/${order.id}/slip`} className="vx-btn vx-btn-secondary">
           <FileText size={15} aria-hidden /> Print packing slip
-        </Link>
-      </header>
+        </Link>} />
+      <div className="vx-order-summary"><span><Package size={17} />{items.reduce((sum, i) => sum + Number(i.quantity ?? 0), 0)} units in your part of this order</span><strong>{naira(items.reduce((sum, i) => sum + itemSubtotal(i), 0))}</strong></div>
 
       {disputed.length > 0 && (
         <section className="od-dispute" role="alert">
@@ -140,7 +136,8 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
           </dl>
         </aside>
       </div>
-    </main>
+      <p className="vx-chat-help">Need help with this order? <Link href="/contact">Contact support</Link> with order reference #{ref}.</p>
+    </div>
   )
 }
 

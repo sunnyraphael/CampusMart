@@ -23,28 +23,32 @@ export const itemSubtotal = (i: Row) =>
 
 // Returns this vendor's items inside one paid order, or null if it isn't theirs
 export async function getVendorOrder(supabase: SupabaseClient, orderId: string, userId: string) {
-  const { data: seller } = await supabase.from('sellers').select('*').eq('user_id', userId).single()
+  const { data: seller, error: sellerError } = await supabase.from('sellers').select('*').eq('user_id', userId).maybeSingle()
+  if (sellerError) throw new Error('Could not load your store.')
   if (!seller) return null
 
-  const { data: items } = await supabase
+  const { data: items, error: itemsError } = await supabase
     .from('order_items')
     .select('*')
     .eq('order_id', orderId)
     .eq('seller_id', seller.id)
+  if (itemsError) throw new Error('Could not load your order items.')
   if (!items?.length) return null
 
-  const { data: order } = await supabase
+  const { data: order, error: orderError } = await supabase
     .from('orders')
     .select('*')
     .eq('id', orderId)
     .eq('payment_status', 'paid')
-    .single()
+    .maybeSingle()
+  if (orderError) throw new Error('Could not load your order.')
   if (!order) return null
 
-  const { data: products } = await supabase
+  const { data: products, error: productsError } = await supabase
     .from('products')
     .select('*')
     .in('id', items.map((i) => i.product_id))
 
+  if (productsError) throw new Error('Could not load your order products.')
   return { seller, order, items, products: products ?? [] }
 }

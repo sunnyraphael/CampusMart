@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { PageHeading } from '@/components/vendor/Workspace'
+import ShareStoreButton from '@/components/vendor/ShareStoreButton'
 
 type Seller = {
   id: string
@@ -272,13 +274,11 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
   const rejected = kyc === 'rejected'
 
   return (
-    <main className="ss-page">
+    <div className="ss-page">
       <style>{css}</style>
 
-      <header className="ss-head">
-        <h1>Store Settings</h1>
-        <p>Keep your store details, contact information and payout account up to date.</p>
-      </header>
+      <PageHeading eyebrow="Make it yours" title="Store settings" description="The details that help buyers get to know your business." actions={<ShareStoreButton sellerId={seller.id} />} />
+      <div className="vx-settings-grid"><aside className="vx-settings-index"><p className="vx-eyebrow">Store essentials</p><nav aria-label="Settings sections"><a href="#store-profile"><Store size={16} />Store profile</a><a href="#contact"><MapPin size={16} />Contact &amp; location</a><a href="#payout"><Landmark size={16} />Payout account</a></nav><p className="vx-settings-tip">Keep these details current. Your store profile and location help buyers know who they are ordering from.</p><Link className="vx-text-link" href={`/vendors/${seller.id}`}>Preview your storefront</Link></aside><div className="vx-settings-body">
 
       {/* Verification */}
       <section className={`ss-card ss-verify ${verified ? 'is-ok' : rejected ? 'is-bad' : ''}`} aria-label="Verification status">
@@ -304,7 +304,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       </section>
 
       {/* Store profile */}
-      <section className="ss-card" aria-labelledby="ss-profile-title">
+      <section id="store-profile" className="ss-card" aria-labelledby="ss-profile-title">
         <h2 id="ss-profile-title" className="ss-title">
           <Store size={17} aria-hidden /> Store profile
         </h2>
@@ -362,7 +362,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       </section>
 
       {/* Contact and location */}
-      <section className="ss-card" aria-labelledby="ss-contact-title">
+      <section id="contact" className="ss-card" aria-labelledby="ss-contact-title">
         <h2 id="ss-contact-title" className="ss-title">
           <MapPin size={17} aria-hidden /> Contact and location
         </h2>
@@ -401,7 +401,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       </section>
 
       {/* Payout account */}
-      <section className="ss-card" aria-labelledby="ss-payout-title">
+      <section id="payout" className="ss-card" aria-labelledby="ss-payout-title">
         <h2 id="ss-payout-title" className="ss-title">
           <Landmark size={17} aria-hidden /> Payout account
         </h2>
@@ -471,7 +471,8 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
           </>
         )}
       </section>
-    </main>
+      </div></div>
+    </div>
   )
 }
 

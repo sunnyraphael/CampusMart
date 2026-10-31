@@ -1,4 +1,7 @@
 export function vendorPageTitle(pathname: string): string {
+  if (pathname === '/vendor/guide') return 'Vendor guide'
+  if (pathname === '/vendor/messages') return 'Messages'
+  if (pathname.startsWith('/vendor/messages/')) return 'Conversation'
   if (pathname === '/vendor/onboarding') return 'Set up your store'
   if (pathname === '/vendor/verify') return 'Verify identity'
   if (pathname === '/vendor/listings/new') return 'New listing'

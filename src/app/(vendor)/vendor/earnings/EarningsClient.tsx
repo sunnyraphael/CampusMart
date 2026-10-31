@@ -1,6 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { PageHeading } from '@/components/vendor/Workspace'
+import { transactionsCsv } from '@/lib/vendor/export'
 import {
   Wallet,
   Clock,
@@ -10,6 +13,7 @@ import {
   Hourglass,
   Receipt,
   Info,
+  Download,
 } from 'lucide-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,15 +91,18 @@ export default function EarningsClient({
   ]
 
   const comingSoon = inProgress + awaitingBuyer
+  function download() {
+    const url = URL.createObjectURL(new Blob([transactionsCsv(filtered)], { type: 'text/csv;charset=utf-8;' }))
+    const link = document.createElement('a')
+    link.href = url; link.download = 'campusmart-transactions.csv'; document.body.appendChild(link); link.click(); link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
 
   return (
-    <main className="er-page">
+    <div className="er-page">
       <style>{css}</style>
 
-      <header className="er-head">
-        <h1>Earnings</h1>
-        <p>Your wallet, the money on its way, and every movement on your account.</p>
-      </header>
+      <PageHeading eyebrow="Know where you stand" title="Your earnings" description="Your wallet and pending earnings, with a clear view of each transaction." actions={<button className="vx-btn vx-btn-secondary" onClick={download} disabled={!!txError || !filtered.length}><Download size={16} />Export transactions</button>} />
 
       <section className="er-hero" aria-label="Wallet balance">
         <div className="er-hero-icon" aria-hidden>
@@ -104,9 +111,11 @@ export default function EarningsClient({
         <div className="er-hero-body">
           <span className="er-label">Available in wallet</span>
           <strong className="er-hero-amount">{naira(balance)}</strong>
-          <span className="er-hint">Released after buyers confirm receipt, minus the 5% commission.</span>
+          <span className="er-hint">Funds released to your CampusMart wallet, after the 5% commission.</span>
         </div>
       </section>
+
+      <div className="vx-notice"><Info size={17} /><span>Wallet funds and bank transfers are separate. Manage your bank details in <Link href="/vendor/settings#payout" className="vx-text-link">payout settings</Link>.</span></div>
 
       <section className="er-grid" aria-label="Money on its way">
         <div className="er-stat">
@@ -179,7 +188,7 @@ export default function EarningsClient({
           <div className="er-empty">
             <Receipt size={26} strokeWidth={1.5} aria-hidden />
             <h3>No transactions yet</h3>
-            <p>Once a buyer confirms an order, your earnings will appear here.</p>
+            <p>{filter === 'all' ? 'Once earnings are released, they will appear here.' : 'No transactions match this filter.'}</p>
           </div>
         ) : (
           <ul className="er-list">
@@ -223,7 +232,8 @@ export default function EarningsClient({
           </button>
         )}
       </section>
-    </main>
+      <p className="vx-chat-help">Showing up to the latest 100 transactions. Export includes the currently selected filter.</p>
+    </div>
   )
 }
 
@@ -233,7 +243,7 @@ const css = `
 .er-head p{margin:0 0 24px;opacity:.7;font-size:.95rem;max-width:56ch}
 .er-label{font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;opacity:.7}
 .er-hint{font-size:.82rem;opacity:.65;line-height:1.4}
-.er-hero{display:flex;gap:16px;align-items:center;padding:22px;margin-bottom:14px;background:linear-gradient(135deg,var(--vx-hero) 0%,var(--vx-card) 70%);border:1px solid var(--vx-border);border-radius:18px;color:var(--vx-text);min-width:0}
+.er-hero{display:flex;gap:16px;align-items:center;padding:22px;margin-bottom:14px;background:var(--vx-hero);border:1px solid var(--vx-border);border-radius:18px;color:var(--vx-text);min-width:0}
 .er-hero-icon{flex:none;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#2563eb;color:#fff}
 .er-hero-body{display:flex;flex-direction:column;gap:4px;min-width:0}
 .er-hero-amount{font-family:'Sora',sans-serif;font-size:2rem;line-height:1.1;letter-spacing:-.02em;overflow-wrap:anywhere}

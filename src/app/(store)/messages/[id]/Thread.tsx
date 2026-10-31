@@ -8,7 +8,7 @@ import { useBuyerAccount } from '@/components/buyer/BuyerAccount'
 
 export type ChatMessage={id:string;conversation_id:string;sender_id:string;body:string;created_at:string}
 
-export default function Thread({id,userId,initial}:{id:string;userId:string;initial:ChatMessage[]}) {
+export default function Thread({id,userId,initial,otherLabel='Vendor'}:{id:string;userId:string;initial:ChatMessage[];otherLabel?:string}) {
   const supabase=useMemo(()=>createClient(),[])
   const [messages,setMessages]=useState(initial)
   const [body,setBody]=useState('')
@@ -69,7 +69,7 @@ export default function Thread({id,userId,initial}:{id:string;userId:string;init
     {syncError&&<p className="buyer-notice" role="status">{syncError}</p>}
     <div className="chat-history" ref={history} role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions">
       {!messages.length&&<p className="buyer-help">No messages yet. Ask about availability, condition, or delivery.</p>}
-      {messages.map((m)=><article className={`chat-bubble${m.sender_id===userId?' is-mine':''}`} key={m.id}><span className="sr-only">{m.sender_id===userId?'You':'Vendor'}: </span><p>{m.body}</p><time className="buyer-time" dateTime={m.created_at}>{new Date(m.created_at).toLocaleString('en-NG',{timeZone:'Africa/Lagos',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time></article>)}
+      {messages.map((m)=><article className={`chat-bubble${m.sender_id===userId?' is-mine':''}`} key={m.id}><span className="sr-only">{m.sender_id===userId?'You':otherLabel}: </span><p>{m.body}</p><time className="buyer-time" dateTime={m.created_at}>{new Date(m.created_at).toLocaleString('en-NG',{timeZone:'Africa/Lagos',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time></article>)}
     </div>
     {error&&<p className="buyer-notice is-error" role="alert">{error}</p>}
     <form className="chat-composer" onSubmit={submit}><label className="buyer-label buyer-row-text"><span className="sr-only">Message</span><textarea className="buyer-input" value={body} onChange={(e)=>setBody(e.target.value)} maxLength={2000} required placeholder="Write a message…" disabled={busy}/></label><button className="buyer-btn is-primary" disabled={busy||!body.trim()} aria-label="Send message"><Send size={18} aria-hidden="true"/></button></form>

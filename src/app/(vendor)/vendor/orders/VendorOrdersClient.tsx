@@ -1,7 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { PageHeading } from '@/components/vendor/Workspace'
 import {
   Package,
   PackageCheck,
@@ -14,6 +16,7 @@ import {
   FileText,
   Loader2,
   Inbox,
+  Search,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -65,10 +68,13 @@ export default function VendorOrdersClient({
   products: Row[]
 }) {
   const supabase = useMemo(() => createClient(), [])
-  const [items, setItems] = useState<Row[]>(initialItems)
+  const items = initialItems
+  const router = useRouter()
+  const [refreshing, startTransition] = useTransition()
   const [tab, setTab] = useState<Tab>('todo')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])
 
@@ -95,37 +101,18 @@ export default function VendorOrdersClient({
     return c
   }, [groups])
 
-  const visible = groups.filter((g) => g.tab === tab)
+  const visible = groups.filter(g => g.tab === tab && (!query.trim() || `${g.order.id} ${g.items.map(i => productById.get(i.product_id)?.title ?? '').join(' ')}`.toLowerCase().includes(query.trim().replace(/^#/, '').toLowerCase())))
 
   async function advance(item: Row, to: string) {
+    if (busyId || refreshing) return
     setBusyId(item.id)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('vendor_update_item_status', {
-      p_item_id: item.id,
-      p_new_status: to,
-    })
-    if (rpcError) {
-      setError(rpcError.message)
-    } else {
-      // Update local state so the UI changes without a full page reload
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === item.id
-            ? {
-                ...i,
-                fulfillment_status: to,
-                ...(to === 'delivered'
-                  ? {
-                      delivered_at: new Date().toISOString(),
-                      auto_release_at: new Date(Date.now() + 3 * 86400000).toISOString(),
-                    }
-                  : {}),
-              }
-            : i
-        )
-      )
-    }
-    setBusyId(null)
+    try {
+      const { error: rpcError } = await supabase.rpc('vendor_update_item_status', { p_item_id: item.id, p_new_status: to })
+      if (rpcError) { setError(rpcError.message); return }
+      startTransition(() => router.refresh())
+    } catch { setError('The order could not be updated. Check your connection and try again.') }
+    finally { setBusyId(null) }
   }
 
   const tabs: { key: Tab; label: string }[] = [
@@ -136,13 +123,12 @@ export default function VendorOrdersClient({
   ]
 
   return (
-    <main className="vo-page">
+    <div className="vo-page">
       <style>{css}</style>
 
-      <header className="vo-head">
-        <h1>Orders</h1>
-        <p>Move each item forward as you prepare and deliver it. You are paid once the buyer confirms receipt.</p>
-      </header>
+      <PageHeading eyebrow="From your store to their door" title="Your orders" description="A clear next step for every order. Confirm, prepare, and deliver." actions={<Link className="vx-btn vx-btn-secondary" href="/vendor/guide">Order &amp; payout guide</Link>} />
+      <div className="vx-listing-summary" aria-label="Order summary"><div className="vx-summary-item"><span>Need your attention</span><strong>{counts.todo}</strong></div><div className="vx-summary-item"><span>Awaiting confirmation</span><strong>{counts.awaiting}</strong></div><div className="vx-summary-item"><span>Completed orders</span><strong>{counts.completed}</strong></div></div>
+      <label className="vx-search vx-order-search"><Search size={15} /><input aria-label="Search orders" placeholder="Search order number or product…" value={query} onChange={e => setQuery(e.target.value)} type="search" /></label>
 
       <div className="vo-tabs" role="tablist" aria-label="Order status">
         {tabs.map((t) => (
@@ -168,8 +154,8 @@ export default function VendorOrdersClient({
       {visible.length === 0 ? (
         <div className="vo-empty">
           <Inbox size={28} strokeWidth={1.5} aria-hidden />
-          <h2>Nothing here yet</h2>
-          <p>Orders in this stage will show up as soon as they arrive.</p>
+          <h2>{query.trim() ? 'No matching orders' : tab === 'todo' ? 'You’re all caught up' : 'Nothing here yet'}</h2>
+          <p>{query.trim() ? 'Try another order number or product name.' : 'Orders in this stage will show up as soon as they arrive.'}</p>
         </div>
       ) : (
         <div className="vo-list">
@@ -211,7 +197,7 @@ export default function VendorOrdersClient({
                     const status: string = it.fulfillment_status
                     const step = NEXT_STEP[status]
                     const stepIndex = STEPS.indexOf(status as (typeof STEPS)[number])
-                    const busy = busyId === it.id
+                    const busy = busyId !== null || refreshing
                     return (
                       <li key={it.id} className="vo-item">
                         <div className="vo-thumb">
@@ -275,7 +261,7 @@ export default function VendorOrdersClient({
           })}
         </div>
       )}
-    </main>
+    </div>
   )
 }
 

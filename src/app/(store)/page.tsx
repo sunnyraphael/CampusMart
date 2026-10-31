@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import ProductCard, { type ProductCardData } from '@/components/store/ProductCard'
 import { createClient } from '@/lib/supabase/server'
+import { CARD_SELECT } from '@/lib/buyer/server'
+import { retryCatalogRead } from '@/lib/buyer/catalog-read'
+import RetryListingsButton from '@/components/store/RetryListingsButton'
 import { ArrowRight } from 'lucide-react'
 
 const steps = [
@@ -30,22 +33,21 @@ function getImage(images: unknown): string | null {
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const { data: rows, error: listingError } = await supabase
+  const result = await retryCatalogRead(() => supabase
       .from('products')
-      .select(`
-        id, title, price, images, avg_rating, total_reviews, stock_quantity,
-        compare_at_price, sale_ends_at, condition, availability, delivery_days,
-        categories(name, slug), sellers:public_vendors(store_name, is_verified)
-      `)
+      .select(CARD_SELECT)
       .eq('status', 'active')
       .gt('stock_quantity', 0)
       .order('avg_rating', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
       .limit(6)
+      .retry(false)
+      .abortSignal(AbortSignal.timeout(6000)))
+  const { data: rows, error: listingError } = result
 
   const listings = (rows ?? []) as unknown as ProductCardData[]
   const mosaic = listings.map((l) => ({ l, src: getImage(l.images) })).filter((x) => x.src).slice(0, 4)
-  if (listingError) throw new Error('Homepage listings could not be loaded', { cause: listingError })
+  if (listingError) console.error('[home] Listing query failed', { status: result.status, code: listingError.code, message: listingError.message, details: listingError.details })
   const vendorHref = '/start-selling'
 
   return (
@@ -134,17 +136,17 @@ export default async function HomePage() {
         </section>
 
         {/* Top rated listings, real data */}
-        {listings.length > 0 && (
+        {(listingError || listings.length > 0) && (
           <section aria-labelledby="hm-top">
             <div className="hm-head">
               <h2 id="hm-top" className="hm-title">Top rated listings</h2>
               <Link href="/products" className="hm-more">View all <ArrowRight size={14} aria-hidden="true" /></Link>
             </div>
-            <div className="hm-grid">
+            {listingError ? <div className="buyer-panel buyer-stack" role="alert"><h3>Listings are temporarily unavailable</h3><p className="buyer-help">We couldn’t load products right now. Please try again in a moment.</p><div><RetryListingsButton /></div></div> : <div className="hm-grid">
               {listings.map((item) => (
                 <ProductCard key={item.id} product={item} showCategory={false} />
               ))}
-            </div>
+            </div>}
           </section>
         )}
 

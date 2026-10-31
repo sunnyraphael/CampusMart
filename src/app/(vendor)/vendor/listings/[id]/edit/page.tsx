@@ -14,12 +14,13 @@ export default async function EditListingPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: seller } = await supabase
+  const { data: seller, error: sellerError } = await supabase
     .from('sellers')
     .select('id')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
+  if (sellerError) throw new Error('Could not load your store.')
   if (!seller) redirect('/vendor/onboarding')
 
   // Filtering by seller_id means a vendor can only open their own listing
@@ -61,11 +62,12 @@ export default async function EditListingPage({
 
   if (!product) notFound()
 
-  const { data: categories } = await supabase
+  const { data: categories, error: categoriesError } = await supabase
     .from('categories')
     .select('id, name')
     .order('name', { ascending: true })
 
+  if (categoriesError) throw new Error('Could not load listing categories.')
   return (
     <ListingForm
       mode="edit"

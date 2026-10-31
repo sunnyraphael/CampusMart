@@ -13,11 +13,12 @@ export default async function EarningsPage() {
   if (!user) redirect('/login?redirect=/vendor/earnings')
 
   // Everything points to sellers.id, never user.id
-  const { data: seller } = await supabase
+  const { data: seller, error: sellerError } = await supabase
     .from('sellers')
     .select('id, wallet_balance')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
+  if (sellerError) throw new Error('Could not load your wallet.')
   if (!seller) redirect('/vendor/onboarding')
 
   // Newest 100 transactions, plus every item whose money has not been released yet
@@ -35,17 +36,19 @@ export default async function EarningsPage() {
       .is('released_at', null),
   ])
 
+  if (openItemsRes.error) throw new Error('Could not load your pending earnings.')
   const openItems = openItemsRes.data ?? []
 
   // Only count items from orders that were really paid
   const orderIds = [...new Set(openItems.map((i) => i.order_id))]
-  const { data: paidOrders } = orderIds.length
+  const { data: paidOrders, error: ordersError } = orderIds.length
     ? await supabase.from('orders').select('id').in('id', orderIds).eq('payment_status', 'paid')
-    : { data: [] as { id: string }[] }
+    : { data: [] as { id: string }[], error: null }
+  if (ordersError) throw new Error('Could not verify your pending earnings.')
   const paidIds = new Set((paidOrders ?? []).map((o) => o.id))
 
   // The vendor's cut of an item is the subtotal minus the 5% commission
-  const cut = (i: { subtotal: number | null }) => Math.round(Number(i.subtotal ?? 0) * 0.95)
+  const cut = (i: { subtotal: number | null; payout_amount: number | null }) => i.payout_amount == null ? Math.round(Number(i.subtotal ?? 0) * 0.95) : Number(i.payout_amount)
 
   let inProgress = 0 // vendor still has to deliver
   let awaitingBuyer = 0 // delivered, waiting for the buyer to confirm

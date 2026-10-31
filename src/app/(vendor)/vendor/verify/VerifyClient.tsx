@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { PageHeading } from '@/components/vendor/Workspace'
 
 type Props = {
   userId: string
@@ -96,13 +97,11 @@ export default function VerifyClient({ userId, verified, status: initialStatus, 
   const busy = step !== null
 
   return (
-    <main className="vf-page">
+    <div className="vf-page">
       <style>{css}</style>
 
-      <header className="vf-head">
-        <h1>Verify your identity</h1>
-        <p>Verified stores earn a trust badge that helps buyers feel safe ordering from you.</p>
-      </header>
+      <PageHeading eyebrow="A store they can trust" title="Verify your identity" description="Help buyers feel confident. Submit your documents for a store trust badge." />
+      <div className="vx-verification-steps" aria-label="Verification process"><span><Camera size={17} />1. Add your photos</span><span><Clock size={17} />2. Submit for review</span><span><ShieldCheck size={17} />3. Earn your badge</span></div>
 
       {isVerified && (
         <section className="vf-banner is-ok" aria-label="Verification status">
@@ -225,7 +224,7 @@ export default function VerifyClient({ userId, verified, status: initialStatus, 
           </section>
         </>
       )}
-    </main>
+    </div>
   )
 }
 

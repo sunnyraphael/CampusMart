@@ -12,11 +12,12 @@ export default async function VerifyPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login?redirect=/vendor/verify')
 
-  const { data: seller } = await supabase
+  const { data: seller, error } = await supabase
     .from('sellers')
     .select('is_kyc_verified, kyc_status, kyc_rejection_reason, kyc_submitted_at')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
+  if (error) throw new Error('Could not load your verification status.')
   if (!seller) redirect('/vendor/onboarding')
 
   return (

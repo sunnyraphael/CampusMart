@@ -2,6 +2,8 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getVendorOrder, pick, naira, fmtDate, itemSubtotal } from '@/lib/vendor-orders'
 import PrintButton from './PrintButton'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,13 +34,14 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
       <style>{css}</style>
 
       <div className="slip-toolbar">
+        <Link href={`/vendor/orders/${order.id}`} className="slip-back"><ArrowLeft size={15} />Back to order</Link>
         <PrintButton />
       </div>
 
       <section className="slip">
         <header className="slip-head">
           <div>
-            <p className="slip-label">Packing slip</p>
+            <p className="slip-label">CampusMart / Packing slip</p>
             <h1>{String(store)}</h1>
           </div>
           <div className="slip-right">
@@ -88,7 +91,8 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
 
 const css = `
 .slip-overlay{position:fixed;inset:0;z-index:9999;background:#eef1f7;overflow:auto;font-family:'DM Sans',sans-serif;color:#0f1a35}
-.slip-toolbar{max-width:794px;margin:20px auto 0;display:flex;justify-content:flex-end;padding:0 16px}
+.slip-toolbar{max-width:794px;margin:20px auto 0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px}
+.slip-back{display:inline-flex;align-items:center;gap:7px;color:#1d4ed8;text-decoration:none;font-size:12px}
 .slip-print-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:#2563eb;color:#fff;border:0;border-radius:10px;font:inherit;font-weight:600;cursor:pointer}
 .slip{max-width:794px;margin:16px auto 40px;background:#fff;padding:48px;box-shadow:0 8px 30px rgba(15,26,53,.12);min-height:600px}
 .slip-head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #0f1a35;padding-bottom:20px;margin-bottom:24px}
@@ -105,6 +109,7 @@ const css = `
 .slip-table .num{text-align:right;white-space:nowrap}
 .slip-table tfoot td{font-weight:700;border-bottom:0;border-top:2px solid #0f1a35;padding-top:14px}
 .slip-foot{margin-top:48px;text-align:center;font-size:.85rem;color:#5b6b8c}
+@media(max-width:600px){.slip{padding:26px 20px;margin:15px 12px 35px;min-height:500px;border-radius:8px}.slip-head{flex-direction:column;gap:12px}.slip-right{text-align:left;font-size:12px}.slip-head h1{font-size:22px}.slip-table{font-size:12px}.slip-table td{padding:13px 5px 13px 0}.slip-print-btn{font-size:12px}}
 @media print{
   body *{visibility:hidden}
   .slip,.slip *{visibility:visible}

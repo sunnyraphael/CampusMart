@@ -521,6 +521,8 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
           </p>
         </div>
 
+        <nav className="vx-form-index" aria-label="Listing sections"><a href="#details">01 · Details</a><a href="#photos">02 · Photos</a><a href="#pricing">03 · Pricing</a><a href="#stock">04 · Stock &amp; delivery</a></nav>
+
         {error && (
           <div className="lf-error" ref={errorRef} role="alert">
             <AlertCircle size={16} />
@@ -528,7 +530,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
           </div>
         )}
 
-        <div className="lf-section">
+        <div id="details" className="lf-section">
           <p className="lf-section-title">Core information</p>
 
           <div className="lf-field">
@@ -574,7 +576,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
           </div>
         </div>
 
-        <div className="lf-section">
+        <div id="photos" className="lf-section">
           <p className="lf-section-title">Photos</p>
           <div
             className={`lf-dropzone${isDragging ? ' dragging' : ''}`}
@@ -618,7 +620,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
           )}
         </div>
 
-        <div className="lf-section">
+        <div id="pricing" className="lf-section">
           <p className="lf-section-title">Pricing</p>
 
           <div className="lf-field">
@@ -685,7 +687,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
           )}
         </div>
 
-        <div className="lf-section">
+        <div id="stock" className="lf-section">
           <p className="lf-section-title">Stock and delivery</p>
 
           <div className="lf-field">

@@ -359,7 +359,7 @@ export default function VendorOnboardingPage() {
             const isDone = currentStep > step.number
             const isActive = currentStep === step.number
             return (
-              <div key={step.number} className={`ob-step${isActive ? ' active' : ''}${isDone ? ' done' : ''}`}>
+              <div key={step.number} aria-current={isActive ? 'step' : undefined} className={`ob-step${isActive ? ' active' : ''}${isDone ? ' done' : ''}`}>
                 <div className="ob-step-circle">
                   {isDone ? <CheckCircle2 size={16} /> : <Icon size={16} />}
                 </div>
@@ -380,8 +380,9 @@ export default function VendorOnboardingPage() {
               <p className="ob-card-sub">This is what buyers will see when they visit your store page.</p>
 
               <div className="ob-field">
-                <label className="ob-label">Store name <span>*</span></label>
+                <label className="ob-label" htmlFor="ob-store-name">Store name <span>*</span></label>
                 <input
+                  id="ob-store-name"
                   className="ob-input"
                   placeholder="e.g. Raphael's Gadget Hub"
                   value={form.store_name}
@@ -392,8 +393,9 @@ export default function VendorOnboardingPage() {
               </div>
 
               <div className="ob-field">
-                <label className="ob-label">Store description <span>*</span></label>
+                <label className="ob-label" htmlFor="ob-description">Store description <span>*</span></label>
                 <textarea
+                  id="ob-description"
                   className="ob-textarea"
                   placeholder="Tell buyers what you sell, your campus, and why they should buy from you..."
                   value={form.description}
@@ -404,8 +406,9 @@ export default function VendorOnboardingPage() {
               </div>
 
               <div className="ob-field">
-                <label className="ob-label">Main category <span>*</span></label>
+                <label className="ob-label" htmlFor="ob-category">Main category <span>*</span></label>
                 <select
+                  id="ob-category"
                   className="ob-select"
                   value={form.category}
                   onChange={e => update('category', e.target.value)}
@@ -430,16 +433,16 @@ export default function VendorOnboardingPage() {
                 <div className="ob-info-row">
                   <ShieldCheck size={16} />
                   <p>
-                    Nothing else is needed to open your store. To withdraw more than ₦50,000,
-                    you will verify your identity later from your dashboard with a selfie
-                    and a photo of your school ID card.
+                    You can submit your identity documents from the verification page after setting up your store.
+                    You will need a clear selfie and a photo of your school ID card.
                   </p>
                 </div>
               </div>
 
               <div className="ob-field">
-                <label className="ob-label">Phone number <span>*</span></label>
+                <label className="ob-label" htmlFor="ob-phone">Phone number <span>*</span></label>
                 <input
+                  id="ob-phone"
                   className="ob-input"
                   placeholder="e.g. 08012345678"
                   value={form.phone}
@@ -452,8 +455,9 @@ export default function VendorOnboardingPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div className="ob-field">
-                  <label className="ob-label">State <span>*</span></label>
+                  <label className="ob-label" htmlFor="ob-state">State <span>*</span></label>
                   <select
+                    id="ob-state"
                     className="ob-select"
                     value={form.state}
                     onChange={e => update('state', e.target.value)}
@@ -465,8 +469,9 @@ export default function VendorOnboardingPage() {
                   </select>
                 </div>
                 <div className="ob-field">
-                  <label className="ob-label">Campus / Area <span>*</span></label>
+                  <label className="ob-label" htmlFor="ob-campus">Campus / Area <span>*</span></label>
                   <input
+                    id="ob-campus"
                     className="ob-input"
                     placeholder="e.g. UNILAG, Yaba"
                     value={form.campus}
@@ -481,7 +486,7 @@ export default function VendorOnboardingPage() {
           {currentStep === 3 && (
             <>
               <h2 className="ob-card-title">Bank details</h2>
-              <p className="ob-card-sub">Where your earnings will be sent when you request a withdrawal.</p>
+              <p className="ob-card-sub">Save the bank account to use for payouts. This setup does not initiate a withdrawal.</p>
 
               <div className="ob-info-box">
                 <div className="ob-info-row">
@@ -489,14 +494,15 @@ export default function VendorOnboardingPage() {
                   <p>
                     Each sale is added to your CampusMart wallet once the buyer confirms delivery,
                     or 3 days after you mark the item delivered if they do not respond.
-                    CampusMart charges a <strong style={{ color: '#bfdbfe' }}>5% commission</strong> on each sale, so you receive 95%.
+                    CampusMart charges a <strong>5% commission</strong> on each sale, so you receive 95%.
                   </p>
                 </div>
               </div>
 
               <div className="ob-field">
-                <label className="ob-label">Bank name <span>*</span></label>
+                <label className="ob-label" htmlFor="ob-bank">Bank name <span>*</span></label>
                 <select
+                  id="ob-bank"
                   className="ob-select"
                   value={form.bank_name}
                   onChange={e => update('bank_name', e.target.value)}
@@ -509,8 +515,9 @@ export default function VendorOnboardingPage() {
               </div>
 
               <div className="ob-field">
-                <label className="ob-label">Account number <span>*</span></label>
+                <label className="ob-label" htmlFor="ob-account-number">Account number <span>*</span></label>
                 <input
+                  id="ob-account-number"
                   className="ob-input"
                   placeholder="10-digit account number"
                   value={form.account_number}
@@ -521,8 +528,9 @@ export default function VendorOnboardingPage() {
               </div>
 
               <div className="ob-field">
-                <label className="ob-label">Account name <span>*</span></label>
+                <label className="ob-label" htmlFor="ob-account-name">Account name <span>*</span></label>
                 <input
+                  id="ob-account-name"
                   className="ob-input"
                   placeholder="Exactly as it appears on your bank account"
                   value={form.account_name}
@@ -559,34 +567,31 @@ export default function VendorOnboardingPage() {
                   text: 'I understand that <strong>CampusMart charges a 5% commission</strong> on every completed sale. This is deducted automatically before my earnings are added to my wallet.',
                 },
               ].map(({ field, text }) => (
-                <div
+                <label
                   key={field}
                   className={`ob-check-row${form[field] ? ' checked' : ''}`}
-                  onClick={() => update(field, !form[field])}
                 >
-                  <div className="ob-checkbox">
-                    {form[field] && <CheckCircle2 size={12} color="white" />}
-                  </div>
+                  <input type="checkbox" checked={Boolean(form[field])} onChange={e => update(field, e.target.checked)} />
                   <span
                     className="ob-check-label"
                     dangerouslySetInnerHTML={{ __html: text }}
                   />
-                </div>
+                </label>
               ))}
 
               <div className="ob-field" style={{ marginTop: '20px' }}>
-                <label className="ob-label">
+                <label className="ob-label" htmlFor="ob-signature">
                   Digital signature <span>*</span>
                 </label>
                 <input
+                  id="ob-signature"
                   className="ob-input"
                   placeholder="Type your full legal name"
                   value={form.signature}
                   onChange={e => update('signature', e.target.value)}
                 />
                 <p className="ob-hint">
-                  By typing your name, you are digitally signing this agreement.
-                  This is legally binding under Nigerian contract law.
+                  By typing your name, you confirm the statements above. <Link href="/terms">Read the marketplace terms</Link>.
                 </p>
               </div>
             </>
@@ -594,7 +599,7 @@ export default function VendorOnboardingPage() {
 
           {/* Error message */}
           {error && (
-            <div className="ob-error">
+            <div className="ob-error" role="alert">
               <AlertCircle size={16} />
               <span>{error}</span>
             </div>

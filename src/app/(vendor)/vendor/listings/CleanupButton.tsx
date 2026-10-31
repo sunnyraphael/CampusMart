@@ -11,5 +11,5 @@ export default function CleanupButton() {
     catch {setNotice('Photo cleanup could not finish. Please try again later.')}
     finally {setBusy(false)}
   }
-  return <div className="buyer-actions"><button className="buyer-btn" disabled={busy} onClick={retry}>{busy?'Cleaning photos…':'Clean up unused photos'}</button>{notice&&<p className="buyer-help" role="status">{notice}</p>}</div>
+  return <div className="buyer-actions"><button className="vx-btn vx-btn-secondary" disabled={busy} onClick={retry}>{busy?'Cleaning photos…':'Clean up unused photos'}</button>{notice&&<p className="buyer-help" role="status">{notice}</p>}</div>
 }
