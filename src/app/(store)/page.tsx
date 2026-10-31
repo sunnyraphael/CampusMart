@@ -52,62 +52,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <style>{`
-        .hm { --hm-accent: #2563eb; --hm-accent-hover: #1d4ed8; display: flex; flex-direction: column; gap: clamp(32px, 5vw, 56px); padding-bottom: 72px; }
-        @media (min-width: 768px) { .hm { padding-bottom: 0; } }
-        .hm a:focus-visible { outline: 2px solid var(--hm-accent); outline-offset: 2px; }
 
-        /* Hero */
-        .hm-hero { display: grid; gap: 24px; padding: clamp(20px, 5vw, 48px); background: var(--vx-hero); border: 1px solid var(--vx-border); border-radius: 16px; }
-        .hm-h1 { font-family: var(--font-sora), Sora, sans-serif; font-size: clamp(28px, 6vw, 44px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; color: var(--vx-text); margin: 0 0 12px; max-width: 18ch; }
-        .hm-sub { font-size: clamp(14px, 2.4vw, 16px); line-height: 1.55; color: var(--vx-text-soft); margin: 0 0 24px; max-width: 46ch; }
-        .hm-btns { display: flex; flex-wrap: wrap; gap: 10px; }
-        .hm-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; transition: background-color .15s ease-out, border-color .15s ease-out; }
-        .hm-btn-primary { background: var(--hm-accent); color: #fff; border: 1px solid var(--hm-accent); }
-        .hm-btn-primary:hover { background: var(--hm-accent-hover); border-color: var(--hm-accent-hover); }
-        .hm-btn-ghost { background: var(--vx-card); color: var(--vx-text); border: 1px solid var(--vx-border); }
-        .hm-btn-ghost:hover { border-color: var(--hm-accent); }
-
-        /* Real listing photos beside the headline (wide screens only) */
-        .hm-mosaic { display: none; }
-        @media (min-width: 900px) {
-          .hm-hero.has-mosaic { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: center; gap: 40px; }
-          .hm-mosaic { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-        }
-        .hm-tile { position: relative; display: block; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--vx-surface); border: 1px solid var(--vx-border); }
-        .hm-tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s ease-out; }
-        .hm-tile:hover img { transform: scale(1.03); }
-
-        /* Section headers */
-        .hm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-        .hm-title { font-family: var(--font-sora), Sora, sans-serif; font-size: clamp(17px, 2.6vw, 20px); font-weight: 700; color: var(--vx-text); margin: 0; }
-        .hm-more { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 13px; font-weight: 600; color: var(--vx-link); text-decoration: none; }
-        .hm-more:hover { text-decoration: underline; }
-
-        /* Compact listings keep two columns on phones. */
-        .hm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-        @media (min-width: 640px) { .hm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; } }
-        @media (min-width: 1100px) { .hm-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-
-        /* How it works: hairline columns, no boxes */
-        .hm-steps { display: grid; gap: 20px; }
-        @media (min-width: 768px) { .hm-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; } }
-        .hm-step { border-top: 1px solid var(--vx-border); padding-top: 16px; }
-        .hm-step-n { font-family: var(--font-sora), Sora, sans-serif; font-size: 13px; font-weight: 600; color: var(--vx-link); margin-bottom: 8px; }
-        .hm-step-title { font-size: 16px; font-weight: 600; color: var(--vx-text); margin: 0 0 6px; }
-        .hm-step-text { font-size: 14px; line-height: 1.55; color: var(--vx-text-soft); margin: 0; max-width: 40ch; }
-
-        /* Vendor band */
-        .hm-band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: clamp(18px, 4vw, 28px); background: var(--vx-card); border: 1px solid var(--vx-border); border-radius: 16px; }
-        .hm-band-text { flex: 1 1 280px; min-width: 0; }
-        .hm-band h2 { font-family: var(--font-sora), Sora, sans-serif; font-size: clamp(17px, 2.6vw, 20px); font-weight: 700; color: var(--vx-text); margin: 0 0 6px; }
-        .hm-band p { font-size: 14px; line-height: 1.55; color: var(--vx-text-soft); margin: 0; max-width: 56ch; }
-
-        @media (prefers-reduced-motion: reduce) {
-          .hm *, .hm *::before { transition: none !important; }
-          .hm a:hover { transform: none !important; }
-        }
-      `}</style>
 
       <div className="hm">
         {/* Hero */}

@@ -74,7 +74,7 @@ export default function DisputesClient({
 
   return (
     <div className="dq">
-      <style>{css}</style>
+
 
       <div className="dq-head">
         <div>
@@ -205,55 +205,3 @@ export default function DisputesClient({
     </div>
   )
 }
-
-const css = `
-.dq-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-.dq-head h1{margin:0 0 4px;font-family:'Sora',sans-serif;font-size:1.6rem;letter-spacing:-.02em}
-.dq-head p{margin:0;opacity:.7;font-size:.92rem}
-.dq-switch{display:flex;gap:4px;padding:3px;background:#0b1530;border:1px solid #1e3a5f;border-radius:10px}
-.dq-switch a{padding:6px 14px;border-radius:8px;color:#cfe0ff;font-size:.84rem;text-decoration:none;opacity:.75}
-.dq-switch a.is-active{background:#2563eb;color:#fff;opacity:1}
-.dq-switch a:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
-.dq-card{background:#0f1a35;border:1px solid #1e3a5f;border-radius:16px;padding:20px;margin-bottom:16px;min-width:0}
-.dq-card-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-.dq-card-head h2{margin:0 0 4px;font-family:'Sora',sans-serif;font-size:1.05rem}
-.dq-card-head p{margin:0;font-size:.84rem;opacity:.7}
-.dq-pill{align-self:flex-start;padding:4px 10px;border-radius:999px;font-size:.74rem;font-weight:600}
-.dq-pill.is-release{background:#0e4d2f;color:#7ee2a8}
-.dq-pill.is-refund{background:#4a3a0a;color:#ffd978}
-.dq-reason{padding:12px 14px;margin-bottom:14px;border-radius:10px;background:#2a1414;border:1px solid #7a2222}
-.dq-reason strong{display:block;margin-bottom:4px;font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:#ffb4ab}
-.dq-reason p{margin:0;font-size:.92rem;line-height:1.5;overflow-wrap:anywhere}
-.dq-people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
-.dq-people>div{display:flex;flex-direction:column;gap:3px;font-size:.86rem;min-width:0;overflow-wrap:anywhere}
-.dq-people a{display:inline-flex;align-items:center;gap:5px;color:#7fb0ff;text-decoration:none}
-.dq-people a:hover{text-decoration:underline}
-.dq-label{font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;opacity:.55}
-.dq-done p{margin:4px 0 0;font-size:.9rem;line-height:1.5;opacity:.9;overflow-wrap:anywhere}
-.dq-actions{display:flex;gap:10px;flex-wrap:wrap}
-.dq-btn,.dq-ghost{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border-radius:10px;font:inherit;font-weight:600;font-size:.9rem;cursor:pointer;border:1px solid transparent}
-.dq-pay{background:#15803d;color:#fff}
-.dq-pay:hover:not(:disabled){background:#166534}
-.dq-refund{background:#b45309;color:#fff}
-.dq-refund:hover:not(:disabled){background:#92400e}
-.dq-btn:disabled{opacity:.5;cursor:not-allowed}
-.dq-ghost{background:none;border-color:#1e3a5f;color:#cfe0ff}
-.dq-ghost:hover:not(:disabled){background:#142347;border-color:#2563eb}
-.dq-btn:focus-visible,.dq-ghost:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
-.dq-confirm label{display:block;margin:12px 0 6px;font-size:.85rem;font-weight:500}
-.dq-confirm textarea{width:100%;box-sizing:border-box;margin-bottom:12px;padding:11px 12px;background:#0b1530;border:1px solid #1e3a5f;border-radius:10px;color:#e6ecff;font:inherit;font-size:1rem;resize:vertical;color-scheme:dark}
-.dq-confirm textarea:focus-visible{outline:2px solid #2563eb;outline-offset:1px}
-.dq-effect{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:10px;background:#0b1530;border:1px solid #1e3a5f;font-size:.86rem;line-height:1.5}
-.dq-effect svg{flex:none;margin-top:2px;color:#7fb0ff}
-.dq-notice,.dq-err{display:flex;gap:8px;align-items:flex-start;margin-bottom:16px;padding:12px 14px;border-radius:10px;font-size:.88rem;line-height:1.5}
-.dq-notice{background:#0d2a1c;border:1px solid #14532d;color:#b9f0cf}
-.dq-err{background:#3a1212;border:1px solid #7a2222;color:#ffd5d5}
-.dq-notice svg,.dq-err svg{flex:none;margin-top:2px}
-.dq-empty{text-align:center;padding:56px 16px;border:1px dashed #1e3a5f;border-radius:16px;opacity:.85}
-.dq-empty h2{margin:10px 0 4px;font-family:'Sora',sans-serif;font-size:1.05rem}
-.dq-empty p{margin:0;font-size:.88rem;opacity:.7}
-.dq-spin{animation:dq-spin .8s linear infinite}
-@keyframes dq-spin{to{transform:rotate(360deg)}}
-@media(max-width:560px){.dq-people{grid-template-columns:minmax(0,1fr)}.dq-card{padding:16px}.dq-actions .dq-btn{flex:1}}
-@media(prefers-reduced-motion:reduce){.dq-spin{animation:none}}
-`

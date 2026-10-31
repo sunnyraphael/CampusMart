@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { vendorPageTitle } from '@/lib/vendor/navigation'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { LayoutDashboard, Package, ShoppingBag, Wallet, Settings, Store, MessageCircle, LogOut, HelpCircle, Menu, X, ArrowUpRight, ShieldCheck, Plus, ShoppingBasket, BookOpen } from 'lucide-react'
+import './vendor-pages.css'
 import './vendor.css'
 
 const navItems = [

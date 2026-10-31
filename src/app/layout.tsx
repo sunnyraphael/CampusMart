@@ -2,8 +2,12 @@ import type { Metadata } from 'next'
 import { Sora, DM_Sans } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
+import ConnectionGuard from '@/components/feedback/ConnectionGuard'
+import '../../public/status.css'
 import './globals.css'
 import './buyer.css'
+import './store-layouts.css'
+import './skeletons.css'
 
 const sora = Sora({
   subsets: ['latin'],
@@ -27,8 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${sora.variable} ${dmSans.variable} font-sans antialiased`}>
         <ThemeProvider>
-          {children}
-          <Toaster richColors position="top-right" />
+          <ConnectionGuard>{children}<Toaster richColors position="top-right" /></ConnectionGuard>
         </ThemeProvider>
       </body>
     </html>

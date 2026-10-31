@@ -9,6 +9,7 @@ import { calcServiceFee } from '@/lib/fees'
 import { DeliveryLine, ListingChips, PriceBlock } from '@/components/store/ListingBits'
 import { BuyerPage, EmptyState } from '@/components/buyer/Page'
 import ServiceFeeNote from '@/components/ServiceFeeNote'
+import { CheckoutSkeleton } from '@/components/loading/StoreSkeletons'
 
 export default function CheckoutClient() {
   const hydrated=useHydrated()
@@ -24,7 +25,7 @@ export default function CheckoutClient() {
   const fee=calcServiceFee(subtotal)
   // Preview only. A future payment endpoint must calculate the authoritative delivery fee.
   const delivery=method==='delivery'?500:0
-  if(!hydrated)return <p role="status">Loading your checkout...</p>
+  if(!hydrated)return <CheckoutSkeleton />
   if(!items.length)return <EmptyState title="Your cart is empty">Add items before checking out.</EmptyState>
   return <BuyerPage title="Checkout" description="Review current prices, delivery details and your total." actions={<Link className="buyer-btn" href="/cart">Back to cart</Link>}>
     <div className="buyer-notice" role="status">Online payment is not available yet. Your cart is saved and you have not been charged.</div>

@@ -1,0 +1,23 @@
+// Stable page copy gives the loading heading the same line wrapping as the real page.
+export const skeletonCopy = {
+  deals: ['Campus deals', 'Current offers from campus vendors. Only active, in-stock promotions appear here.'],
+  favorites: ['Your favorites', 'Keep an eye on the things you like. Prices and availability stay up to date.'],
+  orders: ['My orders', 'Track each item, confirm delivery, or report an issue from one place.'],
+  'order-detail': ['Order details', 'Payment status and progress for each item in your order.'],
+  inbox: ['Messages', 'Talk to vendors about a listing or an order without sharing your phone number.'],
+  profile: ['Your account', 'Manage your details and everything you have saved on CampusMart.'],
+  settings: ['Account settings', 'Choose your appearance and manage account security.'],
+  notifications: ['Notifications', 'Your latest order and account updates. Messages have their own inbox.'],
+  saved: ['Saved searches', 'Return to your favorite searches with the same category and sort order.'],
+  contact: ['Contact support', 'Tell us what happened and include the order reference when you have one.'],
+  help: ['How can we help?', 'Straightforward answers for buying, delivery, accounts and order issues.'],
+  enrollment: ['Start selling on CampusMart', 'Open a store with your existing account. Your purchases, favorites and messages stay with you.'],
+  checkout: ['Checkout', 'Review current prices, delivery details and your total.'],
+  'vendor-listings': ['Your listings', 'A well-stocked store starts with the little details.'],
+  'vendor-orders': ['Your orders', 'A clear next step for every order. Confirm, prepare, and deliver.'],
+  'vendor-settings': ['Store settings', 'The details that help buyers get to know your business.'],
+  'vendor-inbox': ['Your conversations', 'Answer questions, agree on the details, and keep buyers in the loop.'],
+  'vendor-earnings': ['Your earnings', 'Your wallet and pending earnings, with a clear view of each transaction.'],
+  'vendor-verification': ['Verify your identity', 'Help buyers feel confident. Submit your documents for a store trust badge.'],
+  'vendor-guide': ['Good habits. Better business.', 'Practical ways to make your store easier to find, trust, and buy from.'],
+} as const

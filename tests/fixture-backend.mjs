@@ -6,7 +6,7 @@ export const user={id:ids.user,aud:'authenticated',role:'authenticated',email:'b
 export function session(){const exp=Math.floor(Date.now()/1000)+3600;const token=[{alg:'HS256',typ:'JWT'},{sub:ids.user,aud:'authenticated',role:'authenticated',exp,iat:Math.floor(Date.now()/1000)},'test'].map((v)=>Buffer.from(typeof v==='string'?v:JSON.stringify(v)).toString('base64url')).join('.');return {access_token:token,refresh_token:'fixture-refresh',expires_in:3600,expires_at:exp,token_type:'bearer',user}}
 
 if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
-  let favorites=[];let saved=[];let support=[];let read=false;let messages=[];let failures=new Set();let temporaryFailures=new Map();let calls=[];let role='buyer';let hasStore=false;let removedProduct=false;let storageFailure=false;let cleanupQueued=false;let extraProducts=[];let itemStatus='received';let transactions=[]
+  let favorites=[];let saved=[];let support=[];let read=false;let messages=[];let failures=new Set();let temporaryFailures=new Map();let delays=new Map();let isAdmin=false;let calls=[];let role='buyer';let hasStore=false;let removedProduct=false;let storageFailure=false;let cleanupQueued=false;let extraProducts=[];let itemStatus='received';let transactions=[]
   const product={id:ids.product,title:'Campus headphones',description:'Comfortable headphones for lectures and study.',price:12000,images:[],avg_rating:4.5,total_reviews:2,stock_quantity:5,status:'active',seller_id:ids.vendor,category_id:'99999999-9999-4999-8999-999999999999',compare_at_price:15000,sale_ends_at:null,condition:'used_like_new',availability:'on_campus',delivery_days:2,categories:{name:'Electronics',slug:'electronics'},sellers:{id:ids.vendor,store_name:'Campus Store',is_verified:true,logo_url:null,description:'Study essentials'}}
   const categories=[{id:product.category_id,name:'Electronics',slug:'electronics'},{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',name:'Books & Notes',slug:'books'}]
   const order={id:ids.order,user_id:ids.user,created_at:now(),status:'pending',payment_status:'paid',total_amount:12240,delivery_address:'Hall A',order_items:[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',product_id:ids.product,seller_id:ids.vendor,quantity:1,unit_price:12000,subtotal:12000,fulfillment_status:'received',products:{title:product.title,images:[]}}]}
@@ -18,7 +18,9 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
     let body={};try{body=JSON.parse(Buffer.concat(buffers).toString()||'{}')}catch{}
     const json=(data,status=200)=>{res.setHeader('Content-Type','application/json');res.writeHead(status);res.end(req.method==='HEAD'?undefined:JSON.stringify(data))}
     if(url.pathname==='/health')return json({ok:true})
-    if(url.pathname==='/__reset'){favorites=[];saved=[];support=[];read=false;messages=[];failures=new Set();temporaryFailures=new Map();calls=[];role='buyer';hasStore=false;removedProduct=false;storageFailure=false;cleanupQueued=false;extraProducts=[];itemStatus='received';transactions=[];return json({ok:true})}
+    if(url.pathname==='/__reset'){favorites=[];saved=[];support=[];read=false;messages=[];failures=new Set();temporaryFailures=new Map();delays=new Map();isAdmin=false;calls=[];role='buyer';hasStore=false;removedProduct=false;storageFailure=false;cleanupQueued=false;extraProducts=[];itemStatus='received';transactions=[];return json({ok:true})}
+    if(url.pathname==='/__delay'){delays.set(body.table,body.ms??0);return json({ok:true})}
+    if(url.pathname==='/__admin'){isAdmin=!!body.enabled;return json({ok:true})}
     if(url.pathname==='/__fail'){if(body.times)temporaryFailures.set(body.table,{remaining:body.times,status:body.status??503});else failures.add(body.table);return json({ok:true})}
     if(url.pathname==='/__recover'){failures.delete(body.table);temporaryFailures.delete(body.table);return json({ok:true})}
     if(url.pathname==='/__vendor'){role=body.role??role;hasStore=body.store??hasStore;storageFailure=body.storageFailure??storageFailure;extraProducts=body.products??extraProducts;itemStatus=body.itemStatus??itemStatus;transactions=body.transactions??transactions;return json({ok:true})}
@@ -33,13 +35,14 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
     if(url.pathname==='/auth/v1/signup')return json({user,session:null})
     const rpc=url.pathname.split('/rpc/')[1]
     if(rpc) {
+      if(delays.get(rpc))await new Promise(resolve=>setTimeout(resolve,delays.get(rpc)))
       if(failures.has(rpc))return json({code:'XX000',message:'Fixture request failed'},500)
       if(rpc==='vendor_update_item_status'){itemStatus=body.p_new_status;return json(null)}
       if(rpc==='cm_enroll_vendor'){role='vendor';return json(null)}
       if(rpc==='cm_delete_listing'){removedProduct=true;cleanupQueued=true;return json(null)}
       if(rpc==='cm_claim_listing_image_cleanup')return json(cleanupQueued?[{id:ids.message,image_url:`http://127.0.0.1:54329/storage/v1/object/public/product-images/${ids.vendor}/shared.jpg`,vendor_id:ids.vendor,lease_token:ids.chat}]:[])
       if(rpc==='cm_finish_listing_image_cleanup'){if(body.p_result==='deleted')cleanupQueued=false;return json(null)}
-      if(rpc==='is_admin')return json(false)
+      if(rpc==='is_admin')return json(isAdmin)
       if(rpc==='cm_conversations')return json([{id:ids.chat,other_name:'Campus Store',product_id:ids.product,updated_at:now(),last_message:messages.at(-1)?.body??'Hello from the vendor',unread_count:0}])
       if(rpc==='cm_start_conversation')return json(ids.chat)
       if(rpc==='cm_send_message'){messages.push({id:crypto.randomUUID(),conversation_id:ids.chat,sender_id:ids.user,body:body.p_body,created_at:now()});return json(messages.at(-1).id)}
@@ -49,6 +52,7 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
       return json(null)
     }
     const table=url.pathname.split('/rest/v1/')[1]
+    if(delays.get(table))await new Promise(resolve=>setTimeout(resolve,delays.get(table)))
     const temporary=temporaryFailures.get(table)
     if(temporary?.remaining>0){temporary.remaining--;return json({code:'PGRST000',message:'Temporary fixture outage'},temporary.status)}
     if(failures.has(table))return json({code:'XX000',message:'Fixture database failure'},500)

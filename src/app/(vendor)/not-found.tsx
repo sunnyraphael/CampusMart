@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { EmptyState } from '@/components/vendor/Workspace'
+import StatusView from '@/components/feedback/StatusView'
 export default function VendorNotFound() {
-  return <section className="vx-panel"><EmptyState title="This page is unavailable" action={<Link className="vx-btn" href="/vendor/dashboard">Back to overview</Link>}>The listing, order, or conversation may have been removed, or you may not have access to it.</EmptyState></section>
+  return <StatusView kind="not-found" title="This page is unavailable" description="This listing, order, or conversation may have been removed, or you may not have access to it." actions={<Link className="cm-status-btn" href="/vendor/dashboard">Back to overview</Link>} />
 }

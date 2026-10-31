@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { ArrowRight, PackageSearch, TriangleAlert } from 'lucide-react'
+import { ArrowRight, PackageSearch } from 'lucide-react'
+import RecoveryScreen from '@/components/feedback/RecoveryScreen'
 import type { ReactNode } from 'react'
 
 export function BuyerPage({ title, description, children, actions }: { title: string; description: string; children: ReactNode; actions?: ReactNode }) {
@@ -14,5 +15,5 @@ export function EmptyState({ title, children, href = '/products', label = 'Brows
 }
 
 export function DataError({ message = 'Please try again. If this continues, contact support.' }: { message?: string }) {
-  return <div className="buyer-notice is-error" role="alert"><TriangleAlert size={20} aria-hidden="true" /><div><strong>We could not load this information.</strong><p>{message}</p><Link href="/contact">Contact support</Link></div></div>
+  return <RecoveryScreen compact message={message} />
 }

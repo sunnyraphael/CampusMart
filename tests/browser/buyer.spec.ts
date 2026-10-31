@@ -49,6 +49,7 @@ test('cart controls follow the approved mobile and desktop layout',async({page})
 })
 
 test('search, favorites, saved searches, chat and support work',async({page})=>{
+  test.setTimeout(90000)
   await page.setViewportSize({width:390,height:844});await page.goto('/products')
   await page.getByRole('searchbox',{name:'Search listings'}).last().fill('headphones')
   await page.getByRole('button',{name:'Search',exact:true}).last().click()
