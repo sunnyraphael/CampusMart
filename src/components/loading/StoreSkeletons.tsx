@@ -1,4 +1,5 @@
 import { Block, Button, Field, Frame, Heading, Lines, Panel, ProductCards, Rows } from './Primitives'
+import TrackingSkeleton from './TrackingSkeleton'
 import { SORT_OPTIONS } from '@/lib/products-query'
 
 export function HomeSkeleton() {
@@ -17,7 +18,12 @@ export function StorefrontSkeleton() {
   return <Frame variant="storefront"><Heading /><Panel><div className="buyer-actions"><Block width={44} height={44} className="sk-square" /><Block width={125} height={25} /></div><Lines count={2} /></Panel><ProductCards /></Frame>
 }
 export function OrdersSkeleton({ detail = false }: { detail?: boolean }) {
-  return <Frame variant={detail ? 'order-detail' : 'orders'}><Heading copy={detail ? "order-detail" : "orders"} actions={detail} />{Array.from({ length: detail ? 1 : 2 }, (_, i) => <Panel key={i}><div className="buyer-row"><div className="sk-lines"><Block width={185} height={25} /><Block width={145} height={12} /></div><Block width={100} height={24} /></div><div className="order-items">{[0, 1].map(n => <div className="order-item" key={n}><Block width={48} height={48} className="sk-square" /><div className="sk-lines"><Block width="60%" height={17} /><Block width="45%" height={14} /><Block width={110} height={24} /><div className="buyer-actions"><Button /><Button /></div></div></div>)}</div><footer className="buyer-row"><Block width="35%" height={14} /><Block width={110} height={22} />{!detail && <Button />}</footer></Panel>)}</Frame>
+  return <Frame variant={detail ? 'order-detail' : 'orders'}><Heading copy={detail ? 'order-detail' : 'orders'} actions={detail} actionWidths={[158,96]} />{Array.from({ length: detail ? 1 : 2 }, (_, i) => <Panel key={i}>
+    <div className="buyer-row"><div className="sk-lines"><Block width={185} height={25} /><Block width={145} height={12} /></div><Block width={100} height={24} /></div>
+    <div className="order-items">{[0, 1].map(n => <div className="order-item" key={n}><Block width={48} height={48} className="sk-square" /><div className="sk-lines"><Block width="60%" height={17} /><Block width="45%" height={14} /><Block width={110} height={24} /></div><div className="order-item-progress sk-lines">
+      {detail && <><TrackingSkeleton /><div className="ot-code-panel sk-lines"><Block width="65%" height={19}/><Lines count={2}/><Button width={180}/></div></>}
+      <div className="buyer-actions"><Button /><Button /></div></div></div>)}</div><footer className="buyer-row"><Block width="35%" height={14} /><Block width={110} height={22} />{!detail && <Button />}</footer>
+  </Panel>)}</Frame>
 }
 export function InboxSkeleton({ vendor = false }: { vendor?: boolean }) {
   return <Frame variant={vendor ? 'vendor-inbox' : 'inbox'} className={vendor ? 'vx-page' : 'buyer-page'}><Heading copy={vendor ? "vendor-inbox" : "inbox"} vendor={vendor} eyebrow={vendor} actions={false} />{vendor ? <div className="vx-conversations">{[0, 1, 2, 3].map(i => <div className="vx-conversation" key={i}><Block width={43} height={43} className="sk-square" /><div className="vx-conversation-main sk-lines"><Block width="38%" height={16} /><Block width="75%" height={12} /></div><Block width={40} height={12} /></div>)}</div> : <div className="buyer-stack">{[0, 1, 2, 3].map(i => <Panel key={i}><Rows count={1} image height={34} /></Panel>)}</div>}</Frame>
@@ -51,8 +57,8 @@ export function CartSkeleton({ bodyOnly = false }: { bodyOnly?: boolean }) {
   if (bodyOnly) return <div data-page-skeleton="cart-items" role="status" aria-label="Loading cart" aria-busy="true"><div aria-hidden="true">{content}</div></div>
   return <Frame variant="cart" className="ct-page"><div className="ct-wrap"><div className="ct-head"><Block width={34} height={34} /><Block width={160} height={32} /></div>{content}</div></Frame>
 }
-export function CheckoutSkeleton() {
-  return <Frame variant="checkout"><Heading copy="checkout" /><Block height={49} className="sk-input" /><div className="buyer-columns"><Panel><Block width={170} height={25} /><Field /><Field /><Field tall /></Panel><Panel><Block width={170} height={25} /><Block width="75%" height={20} /><Lines count={3} /><Rows count={4} height={36} /><Button width="100%" /><Lines count={2} /></Panel></div></Frame>
+export function CheckoutSkeleton({trial=process.env.NODE_ENV==='development'}:{trial?:boolean}={}) {
+  return <Frame variant="checkout"><Heading copy="checkout" /><div className="buyer-notice"><span className="sk-ink">{trial?'Trial checkout is on. This creates a test order for the delivery workflow. No payment is collected, no stock is reserved and no real vendor earnings are created.':'Online payment is not available yet. Your cart is saved and you have not been charged.'}</span></div><div className="buyer-columns"><Panel><Block width={170} height={25} /><Field /><Field /><Field tall /></Panel><Panel><Block width={170} height={25} /><Block width="75%" height={20} /><Lines count={3} /><Rows count={4} height={36} /><Button width="100%" /><Lines count={2} /></Panel></div></Frame>
 }
 export function AuthSkeleton({ mode = 'login' }: { mode?: 'login' | 'register' | 'forgot' | 'reset' }) {
   const fields = mode === 'register' ? 4 : mode === 'forgot' ? 1 : 2

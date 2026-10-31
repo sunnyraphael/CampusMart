@@ -8,6 +8,7 @@ import './globals.css'
 import './buyer.css'
 import './store-layouts.css'
 import './skeletons.css'
+import './order-tracking.css'
 
 const sora = Sora({
   subsets: ['latin'],

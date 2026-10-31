@@ -1,2 +1,3 @@
-import PageSkeleton from '@/components/loading/PageSkeleton'
-export default function Loading() { return <PageSkeleton kind="checkout" /> }
+import { CheckoutSkeleton } from '@/components/loading/StoreSkeletons'
+import { trialCheckoutEnabled } from '@/lib/orders/trial'
+export default function Loading() { return <CheckoutSkeleton trial={trialCheckoutEnabled(process.env)} /> }

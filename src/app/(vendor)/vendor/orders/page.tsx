@@ -34,7 +34,7 @@ export default async function VendorOrdersPage() {
   // Separate queries instead of joins, so we never depend on foreign key names
   const [ordersRes, productsRes] = await Promise.all([
     orderIds.length
-      ? supabase.from('orders').select('*').in('id', orderIds).eq('payment_status', 'paid')
+      ? supabase.from('orders').select('*').in('id', orderIds).or('payment_status.eq.paid,is_trial.eq.true')
       : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
     productIds.length
       ? supabase.from('products').select('*').in('id', productIds)

@@ -4,6 +4,7 @@ import DisputesClient from './DisputesClient'
 export const dynamic = 'force-dynamic'
 
 type Row = {
+  is_trial?: boolean
   item_id: string
   order_id: string
   product_title: string | null
@@ -28,11 +29,12 @@ export default async function DisputesPage({ searchParams }: { searchParams: Pro
   const resolved = view === 'resolved'
 
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc('admin_dispute_queue', { p_resolved: resolved })
+  const { data, error } = await supabase.rpc('cm_admin_order_disputes', { p_resolved: resolved })
   const rows = (data ?? []) as Row[]
 
   const items = rows.map((r) => ({
     itemId: r.item_id,
+    isTrial: r.is_trial===true,
     orderId: r.order_id,
     product: r.product_title ?? 'Product',
     quantity: r.quantity,
@@ -50,5 +52,5 @@ export default async function DisputesPage({ searchParams }: { searchParams: Pro
     note: r.admin_note,
   }))
 
-  return <DisputesClient items={items} resolved={resolved} loadError={error?.message ?? null} />
+  return <DisputesClient key={resolved?'resolved':'open'} items={items} resolved={resolved} loadError={error?.message ?? null} />
 }

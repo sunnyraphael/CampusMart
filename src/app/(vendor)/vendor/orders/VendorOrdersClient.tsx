@@ -17,19 +17,17 @@ import {
   Loader2,
   Inbox,
   Search,
+  KeyRound,
 } from 'lucide-react'
+import { nextDeliveryStep } from '@/lib/orders/tracking'
+import OrderRefresh from '@/components/orders/OrderRefresh'
+import DeliveryCodeEntry from '@/components/orders/DeliveryCodeEntry'
 import { createClient } from '@/lib/supabase/client'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>
 
 type Tab = 'todo' | 'awaiting' | 'completed' | 'disputed'
-
-const NEXT_STEP: Record<string, { to: string; label: string }> = {
-  pending: { to: 'confirmed', label: 'Confirm order' },
-  confirmed: { to: 'shipped', label: 'Mark as shipped' },
-  shipped: { to: 'delivered', label: 'Mark as delivered' },
-}
 
 const STEPS = ['pending', 'confirmed', 'shipped', 'delivered'] as const
 
@@ -54,7 +52,7 @@ function groupTab(items: Row[]): Tab {
   const s = items.map((i) => i.fulfillment_status)
   if (s.includes('disputed')) return 'disputed'
   if (s.some((x) => ['pending', 'confirmed', 'shipped'].includes(x))) return 'todo'
-  if (s.includes('delivered')) return 'awaiting'
+  if (items.some(i => ['delivered', 'received'].includes(i.fulfillment_status) && !i.released_at)) return 'awaiting'
   return 'completed'
 }
 
@@ -75,6 +73,8 @@ export default function VendorOrdersClient({
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [codeItemId, setCodeItemId] = useState<string|null>(null)
+  const [codeReported, setCodeReported] = useState(false)
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products])
 
@@ -101,15 +101,22 @@ export default function VendorOrdersClient({
     return c
   }, [groups])
 
-  const visible = groups.filter(g => g.tab === tab && (!query.trim() || `${g.order.id} ${g.items.map(i => productById.get(i.product_id)?.title ?? '').join(' ')}`.toLowerCase().includes(query.trim().replace(/^#/, '').toLowerCase())))
+  const canEnterCode = (item: Row) => ['shipped','delivered','received'].includes(item.fulfillment_status) && !item.released_at
+  const visible = groups.filter(g => (g.tab === tab || g.items.some(i=>i.id===codeItemId&&canEnterCode(i))) && (!query.trim() || `${g.order.id} ${g.items.map(i => productById.get(i.product_id)?.title ?? '').join(' ')}`.toLowerCase().includes(query.trim().replace(/^#/, '').toLowerCase())))
+
+  function revealCode(item: Row, status: string, reported: boolean) {
+    setCodeItemId(item.id);setCodeReported(reported)
+    setTab(groupTab(items.filter(i=>i.order_id===item.order_id).map(i=>i.id===item.id?{...i,fulfillment_status:status}:i)))
+  }
 
   async function advance(item: Row, to: string) {
     if (busyId || refreshing) return
     setBusyId(item.id)
     setError(null)
     try {
-      const { error: rpcError } = await supabase.rpc('vendor_update_item_status', { p_item_id: item.id, p_new_status: to })
+      const { error: rpcError } = await supabase.rpc('cm_vendor_update_delivery', { p_item_id: item.id, p_status: to })
       if (rpcError) { setError(rpcError.message); return }
+      if(to==='delivered')revealCode(item,to,true)
       startTransition(() => router.refresh())
     } catch { setError('The order could not be updated. Check your connection and try again.') }
     finally { setBusyId(null) }
@@ -117,7 +124,7 @@ export default function VendorOrdersClient({
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'todo', label: 'To do' },
-    { key: 'awaiting', label: 'Awaiting buyer' },
+    { key: 'awaiting', label: 'Delivery review' },
     { key: 'completed', label: 'Completed' },
     { key: 'disputed', label: 'Disputed' },
   ]
@@ -126,8 +133,8 @@ export default function VendorOrdersClient({
     <div className="vo-page">
 
 
-      <PageHeading eyebrow="From your store to their door" title="Your orders" description="A clear next step for every order. Confirm, prepare, and deliver." actions={<Link className="vx-btn vx-btn-secondary" href="/vendor/guide">Order &amp; payout guide</Link>} />
-      <div className="vx-listing-summary" aria-label="Order summary"><div className="vx-summary-item"><span>Need your attention</span><strong>{counts.todo}</strong></div><div className="vx-summary-item"><span>Awaiting confirmation</span><strong>{counts.awaiting}</strong></div><div className="vx-summary-item"><span>Completed orders</span><strong>{counts.completed}</strong></div></div>
+      <PageHeading eyebrow="From your store to their door" title="Your orders" description="A clear next step for every order. Confirm, prepare, and deliver." actions={<><OrderRefresh /><Link className="vx-btn vx-btn-secondary" href="/vendor/guide">Order &amp; payout guide</Link></>} />
+      <div className="vx-listing-summary" aria-label="Order summary"><div className="vx-summary-item"><span>Need your attention</span><strong>{counts.todo}</strong></div><div className="vx-summary-item"><span>Awaiting approval</span><strong>{counts.awaiting}</strong></div><div className="vx-summary-item"><span>Completed orders</span><strong>{counts.completed}</strong></div></div>
       <label className="vx-search vx-order-search"><Search size={15} /><input aria-label="Search orders" placeholder="Search order number or product…" value={query} onChange={e => setQuery(e.target.value)} type="search" /></label>
 
       <div className="vo-tabs" role="tablist" aria-label="Order status">
@@ -137,7 +144,7 @@ export default function VendorOrdersClient({
             role="tab"
             aria-selected={tab === t.key}
             className={`vo-tab ${tab === t.key ? 'is-active' : ''} ${t.key === 'disputed' && counts.disputed ? 'is-alert' : ''}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => {setTab(t.key);setCodeItemId(null);setCodeReported(false)}}
           >
             {t.label}
             <span className="vo-count">{counts[t.key]}</span>
@@ -166,6 +173,7 @@ export default function VendorOrdersClient({
             const address = pick(order, ['delivery_address', 'address', 'shipping_address'])
             return (
               <article key={order.id} className={`vo-card ${gTab === 'disputed' ? 'is-disputed' : ''}`}>
+                {order.is_trial&&<div className="vo-flag">TRIAL ORDER · No payment collected. Delivery and credit approval are simulated.</div>}
                 {gTab === 'disputed' && (
                   <div className="vo-flag">
                     <ShieldAlert size={18} aria-hidden />
@@ -195,7 +203,7 @@ export default function VendorOrdersClient({
                     const sub = itemSubtotal(it)
                     const payout = Number(it.payout_amount ?? sub * 0.95)
                     const status: string = it.fulfillment_status
-                    const step = NEXT_STEP[status]
+                    const step = nextDeliveryStep[status]
                     const stepIndex = STEPS.indexOf(status as (typeof STEPS)[number])
                     const busy = busyId !== null || refreshing
                     return (
@@ -224,29 +232,24 @@ export default function VendorOrdersClient({
                             </ol>
                           )}
 
-                          {status === 'delivered' && it.auto_release_at && (
-                            <p className="vo-release">
-                              <Clock size={14} aria-hidden /> Payout releases automatically on{' '}
-                              {fmtDate(it.auto_release_at)} unless the buyer confirms sooner or raises a dispute.
-                            </p>
+                          {['delivered', 'received'].includes(status) && !it.released_at && (
+                            <p className="vo-release"><Clock size={14} aria-hidden />Vendor credit is held until delivery is verified and admin approves it. Use Delivery code to verify the handover here.</p>
                           )}
-                          {status === 'received' && (
-                            <p className="vo-release ok">
-                              <PackageCheck size={14} aria-hidden /> Buyer confirmed receipt.
-                            </p>
-                          )}
+                          {it.released_at && <p className="vo-release ok"><PackageCheck size={14} aria-hidden />{order.is_trial?'Trial completed. Real wallet unchanged.':'Vendor wallet credited.'}</p>}
                         </div>
 
                         <div className="vo-item-side">
                           {step ? (
                             <button className="vo-btn" disabled={busy} onClick={() => advance(it, step.to)}>
                               {busy ? <Loader2 size={15} className="vo-spin" aria-hidden /> : <Truck size={15} aria-hidden />}
-                              {step.label}
+                              {method === 'pickup' && status === 'confirmed' ? 'Mark ready for pickup' : step.label}
                             </button>
                           ) : (
                             <span className={`vo-badge ${status}`}>{status}</span>
                           )}
+                          {canEnterCode(it)&&<button className="vo-btn-ghost" disabled={busy} aria-expanded={codeItemId===it.id} aria-controls={`delivery-code-${it.id}`} onClick={()=>{setCodeItemId(codeItemId===it.id?null:it.id);setCodeReported(false)}}><KeyRound size={15} aria-hidden />Delivery code</button>}
                         </div>
+                        {canEnterCode(it)&&codeItemId===it.id&&<div className="vo-code-panel" id={`delivery-code-${it.id}`}><DeliveryCodeEntry itemId={it.id} orderId={order.id} focusSignal={1} reported={codeReported} disabled={busyId!==null||refreshing} onBusyChange={working=>setBusyId(working?it.id:null)} onVerified={()=>revealCode(it,status==='shipped'?'delivered':status,false)}/></div>}
                       </li>
                     )
                   })}

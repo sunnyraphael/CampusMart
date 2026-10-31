@@ -39,7 +39,7 @@ export async function getVendorOrder(supabase: SupabaseClient, orderId: string, 
     .from('orders')
     .select('*')
     .eq('id', orderId)
-    .eq('payment_status', 'paid')
+    .or('payment_status.eq.paid,is_trial.eq.true')
     .maybeSingle()
   if (orderError) throw new Error('Could not load your order.')
   if (!order) return null

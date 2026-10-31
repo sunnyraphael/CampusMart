@@ -24,7 +24,7 @@ When changing the public offline assets, increment `OFFLINE_CACHE` in `public/sw
 
 ## Skeletons
 
-All 46 current page routes have explicit `loading.tsx` files. Buyer, vendor, auth, checkout, and admin templates cover:
+All 47 current page routes have explicit `loading.tsx` files. Buyer, vendor, auth, checkout, and admin templates cover:
 
 - Homepage hero, listing tiles, and information sections.
 - Catalog/category grids, deals, favorites, product gallery/detail, and public storefronts.

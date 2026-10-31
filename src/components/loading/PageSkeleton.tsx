@@ -1,6 +1,6 @@
 import type { SkeletonKind } from '@/lib/loading-routes'
 import { ArticleSkeleton, AuthSkeleton, CartSkeleton, CatalogSkeleton, CategoriesSkeleton, CheckoutSkeleton, ContactSkeleton, HelpSkeleton, HomeSkeleton, InboxSkeleton, NotificationsSkeleton, OrdersSkeleton, ProductSkeleton, ProfileSkeleton, SavedSkeleton, SettingsSkeleton, StorefrontSkeleton, ThreadSkeleton } from './StoreSkeletons'
-import { AdminSkeleton, EarningsSkeleton, GuideSkeleton, ListingFormSkeleton, OnboardingSkeleton, PackingSkeleton, VendorListingsSkeleton, VendorOrderSkeleton, VendorOrdersSkeleton, VendorOverviewSkeleton, VendorSettingsSkeleton, VerifySkeleton } from './VendorSkeletons'
+import { AdminDeliveriesSkeleton, AdminSkeleton, EarningsSkeleton, GuideSkeleton, ListingFormSkeleton, OnboardingSkeleton, PackingSkeleton, VendorListingsSkeleton, VendorOrderSkeleton, VendorOrdersSkeleton, VendorOverviewSkeleton, VendorSettingsSkeleton, VerifySkeleton } from './VendorSkeletons'
 
 export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
   switch (kind) {
@@ -40,6 +40,7 @@ export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
     case 'vendor-thread': return <ThreadSkeleton vendor />
     case 'admin-verifications': return <AdminSkeleton />
     case 'admin-disputes': return <AdminSkeleton kind="disputes" />
+    case 'admin-deliveries': return <AdminDeliveriesSkeleton />
     case 'admin-support': return <AdminSkeleton kind="support" />
   }
 }

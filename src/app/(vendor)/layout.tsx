@@ -54,8 +54,8 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       setSellerId(seller.id)
       setVendorName(seller.store_name || 'Your store')
       const { count } = await supabase.from('order_items')
-        .select('id, orders!inner(payment_status)', { count: 'exact', head: true })
-        .eq('seller_id', seller.id).in('fulfillment_status', ['pending', 'confirmed', 'shipped']).eq('orders.payment_status', 'paid')
+        .select('id, orders!inner(payment_status,is_trial)', { count: 'exact', head: true })
+        .eq('seller_id', seller.id).in('fulfillment_status', ['pending', 'confirmed', 'shipped']).or('payment_status.eq.paid,is_trial.eq.true',{referencedTable:'orders'})
       if (!cancelled) setTodoCount(count ?? 0)
     }
     load().catch(() => { if (!cancelled) setLoadError(true) })

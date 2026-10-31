@@ -1,18 +1,15 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { ArrowLeft, FileText, Package, ShieldAlert, Clock, MapPin, Phone, User, StickyNote } from 'lucide-react'
+import { ArrowLeft, FileText, Package, ShieldAlert, MapPin, Phone, User, StickyNote } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getVendorOrder, pick, naira, fmtDate, itemSubtotal } from '@/lib/vendor-orders'
-import ItemStatusButton from './ItemStatusButton'
+import VendorDeliveryControls from '@/components/orders/VendorDeliveryControls'
+import TrackingTimeline from '@/components/orders/TrackingTimeline'
+import OrderRefresh from '@/components/orders/OrderRefresh'
+import type { OrderTracking } from '@/lib/orders/tracking'
 import { PageHeading } from '@/components/vendor/Workspace'
 
 export const dynamic = 'force-dynamic'
-
-const NEXT_STEP: Record<string, { to: string; label: string }> = {
-  pending: { to: 'confirmed', label: 'Confirm order' },
-  confirmed: { to: 'shipped', label: 'Mark as shipped' },
-  shipped: { to: 'delivered', label: 'Mark as delivered' },
-}
 
 export default async function VendorOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params // Next.js 16: params is a Promise
@@ -25,6 +22,9 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
   const data = await getVendorOrder(supabase, id, user.id)
   if (!data) notFound()
   const { order, items, products } = data
+  const trackingResult = await supabase.rpc('cm_order_tracking', { p_order_id: id })
+  if (trackingResult.error) throw new Error('Could not load delivery tracking. Apply the delivery migration in Supabase and retry.')
+  const tracking = (trackingResult.data ?? []) as OrderTracking[]
 
   const productById = new Map(products.map((p) => [p.id, p]))
   const disputed = items.filter((i) => i.fulfillment_status === 'disputed')
@@ -44,10 +44,11 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
         <ArrowLeft size={16} aria-hidden /> All orders
       </Link>
 
-      <PageHeading eyebrow="Order details" title={`Order #${ref}`} description={`Placed ${fmtDate(order.created_at)}`} actions={<Link href={`/vendor/orders/${order.id}/slip`} className="vx-btn vx-btn-secondary">
+      <PageHeading eyebrow="Order details" title={`Order #${ref}`} description={`Placed ${fmtDate(order.created_at)}`} actions={<><OrderRefresh /><Link href={`/vendor/orders/${order.id}/slip`} className="vx-btn vx-btn-secondary">
           <FileText size={15} aria-hidden /> Print packing slip
-        </Link>} />
+        </Link></>} />
       <div className="vx-order-summary"><span><Package size={17} />{items.reduce((sum, i) => sum + Number(i.quantity ?? 0), 0)} units in your part of this order</span><strong>{naira(items.reduce((sum, i) => sum + itemSubtotal(i), 0))}</strong></div>
+      {order.is_trial&&<p className="buyer-notice">TRIAL ORDER · No payment collected. Test the delivery steps and code verification; this is not a paid sale and will not credit your real wallet.</p>}
 
       {disputed.length > 0 && (
         <section className="od-dispute" role="alert">
@@ -75,7 +76,7 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
             const sub = itemSubtotal(it)
             const payout = Number(it.payout_amount ?? sub * 0.95)
             const status: string = it.fulfillment_status
-            const step = NEXT_STEP[status]
+            const tracked = tracking.find(t => t.item_id === it.id)
             return (
               <article key={it.id} className={`od-card ${status === 'disputed' ? 'is-disputed' : ''}`}>
                 <div className="od-row">
@@ -86,7 +87,7 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
                     <h3>{p?.title ?? 'Product'}</h3>
                     <p className="od-meta">
                       {status === 'refunded' ? (
-                        <>Qty {it.quantity} · {naira(sub)} · Refunded to the buyer. No payout for this item.</>
+                        <>Qty {it.quantity} · {naira(sub)} · Refund approved; transfer handled separately. No payout for this item.</>
                       ) : (
                         <>
                           Qty {it.quantity} · {naira(sub)} · Platform fee {naira(sub - payout)} · You receive{' '}
@@ -98,18 +99,8 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
                   </div>
                 </div>
 
-                {status === 'delivered' && it.auto_release_at && (
-                  <p className="od-release">
-                    <Clock size={14} aria-hidden /> Payout releases automatically on {fmtDate(it.auto_release_at)}{' '}
-                    unless the buyer confirms sooner or raises a dispute.
-                  </p>
-                )}
-
-                {step && (
-                  <div className="od-act">
-                    <ItemStatusButton itemId={it.id} to={step.to} label={step.label} />
-                  </div>
-                )}
+                {tracked && <TrackingTimeline tracking={tracked} pickup={method === 'pickup'} />}
+                <VendorDeliveryControls itemId={it.id} status={status} pickup={method === 'pickup'} tracking={tracked} />
               </article>
             )
           })}

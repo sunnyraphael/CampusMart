@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const tabs = [
+  { href: '/admin/deliveries', label: 'Deliveries', ready: true },
   { href: '/admin/verifications', label: 'Verifications', ready: true },
   { href: '/admin/disputes', label: 'Disputes', ready: true },
   { href: '/admin/support', label: 'Support', ready: true },
@@ -36,8 +37,8 @@ export default function AdminNav() {
 }
 
 const css = `
-.an{display:flex;gap:4px;padding:3px;background:#070d1f;border:1px solid #1e3a5f;border-radius:10px}
-.an-tab{padding:7px 14px;border-radius:8px;color:#cfe0ff;font-size:.85rem;font-weight:500;text-decoration:none;opacity:.75}
+.an{display:flex;flex-wrap:wrap;gap:4px;padding:3px;background:var(--vx-card);border:1px solid var(--vx-border);border-radius:10px}
+.an-tab{padding:7px 14px;border-radius:8px;color:var(--vx-text);font-size:.85rem;font-weight:500;text-decoration:none;opacity:.85}
 .an-tab:hover{opacity:1}
 .an-tab.is-active{background:#2563eb;color:#fff;opacity:1}
 .an-tab.is-off{opacity:.4;cursor:not-allowed}

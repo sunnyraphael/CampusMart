@@ -1,9 +1,9 @@
 import { buyerSession } from '@/lib/buyer/server'
 import CheckoutClient from './CheckoutClient'
+import { trialCheckoutEnabled } from '@/lib/orders/trial'
 
 export default async function CheckoutPage() {
   await buyerSession('/checkout')
-  // Do not call the legacy create_order RPC: it can mark an unverified payment paid.
-  // This gate stays closed until payment initialization and verified webhooks are implemented.
-  return <CheckoutClient/>
+  // Trial creation has its own server-only RPC; legacy payment simulation remains unused.
+  return <CheckoutClient trialEnabled={trialCheckoutEnabled(process.env)}/>
 }

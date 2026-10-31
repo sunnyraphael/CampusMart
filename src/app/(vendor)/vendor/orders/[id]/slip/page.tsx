@@ -39,6 +39,7 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
       </div>
 
       <section className="slip">
+      {order.is_trial&&<p className="buyer-notice">TRIAL ORDER - No payment collected. This packing slip is for testing only.</p>}
         <header className="slip-head">
           <div>
             <p className="slip-label">CampusMart / Packing slip</p>

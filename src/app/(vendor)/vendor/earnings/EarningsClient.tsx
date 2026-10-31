@@ -24,7 +24,7 @@ type Props = {
   inProgress: number
   awaitingBuyer: number
   onHold: number
-  releasing: { id: string; amount: number; autoReleaseAt: string | null }[]
+  releasing: { id: string; amount: number; status: string; orderId: string }[]
   transactions: Tx[]
   txError: string | null
 }
@@ -48,15 +48,6 @@ const prettify = (s?: string) => {
   if (!s) return 'Transaction'
   if (TYPE_LABELS[s]) return TYPE_LABELS[s]
   return s.replace(/[_-]+/g, ' ').replace(/^./, (c) => c.toUpperCase())
-}
-
-// How long until an item is released automatically
-function releaseIn(iso: string | null) {
-  if (!iso) return 'Releases when the buyer confirms'
-  const ms = new Date(iso).getTime() - Date.now()
-  if (ms <= 0) return 'Releasing shortly'
-  const days = Math.ceil(ms / 86400000)
-  return days === 1 ? 'Auto-releases within a day' : `Auto-releases in ${days} days`
 }
 
 function statusTone(status?: string) {
@@ -125,7 +116,7 @@ export default function EarningsClient({
           </div>
           <strong className="er-stat-amount">{naira(comingSoon)}</strong>
           <span className="er-hint">
-            {naira(inProgress)} to deliver, {naira(awaitingBuyer)} awaiting buyers
+            {naira(inProgress)} to deliver, {naira(awaitingBuyer)} awaiting delivery approval
           </span>
         </div>
 
@@ -142,12 +133,12 @@ export default function EarningsClient({
       {releasing.length > 0 && (
         <section className="er-panel" aria-labelledby="er-release-title">
           <h2 id="er-release-title" className="er-panel-title">
-            <Hourglass size={16} aria-hidden /> Releasing soon
+            <Hourglass size={16} aria-hidden /> Awaiting delivery approval
           </h2>
           <ul className="er-release-list">
             {releasing.map((r) => (
               <li key={r.id}>
-                <span>{releaseIn(r.autoReleaseAt)}</span>
+                <Link href={`/vendor/orders/${r.orderId}`}>{r.status === 'received' ? 'Receipt confirmed · awaiting admin approval' : 'Awaiting buyer confirmation and admin approval'}</Link>
                 <strong>{naira(r.amount)}</strong>
               </li>
             ))}

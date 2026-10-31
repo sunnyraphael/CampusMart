@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Inbox, Phone, Banknote, Undo2, CheckCircle2, Info } from 'lucide-react'
+import { Loader2, AlertCircle, Inbox, Phone, ClipboardCheck, Undo2, CheckCircle2, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 type Item = {
+  isTrial?: boolean
   itemId: string
   orderId: string
   product: string
@@ -29,8 +30,6 @@ type Panel = { id: string; mode: 'release' | 'refund' } | null
 const naira = (n: number) => '₦' + n.toLocaleString('en-NG', { maximumFractionDigits: 2 })
 const fmt = (d: string | null) =>
   d ? new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
-// Same maths as the payout function: 5% commission rounded to 2 decimals
-const payoutOf = (subtotal: number) => subtotal - Math.round(subtotal * 5) / 100
 const tel = (p: string | null) => (p ? 'tel:' + p.replace(/[^\d+]/g, '') : undefined)
 
 export default function DisputesClient({
@@ -52,10 +51,12 @@ export default function DisputesClient({
   const [notice, setNotice] = useState<string | null>(null)
 
   async function decide(it: Item, decision: 'release' | 'refund') {
+    if (busy) return
     setError(null)
     if (note.trim().length < 5) return setError('Please write a note of at least 5 characters explaining your decision.')
     setBusy(it.itemId)
-    const { error: rpcErr } = await supabase.rpc('admin_resolve_dispute', {
+    try {
+    const { error: rpcErr } = await supabase.rpc('cm_admin_resolve_delivery_dispute', {
       p_item_id: it.itemId,
       p_decision: decision,
       p_note: note.trim(),
@@ -66,10 +67,11 @@ export default function DisputesClient({
     setPanel(null)
     setNote('')
     setNotice(
-      decision === 'refund'
-        ? `Decision saved. Now send ${naira(it.subtotal)} back to ${it.buyerName || 'the buyer'} from your Paystack dashboard. This step is still manual.`
-        : `Decision saved. ${naira(payoutOf(it.subtotal))} was added to ${it.store}'s wallet.`
+      it.isTrial ? 'Trial dispute decision saved. No real refund or vendor credit was sent.' : decision === 'refund'
+        ? `Decision saved. Now send ${naira(it.subtotal)} back to ${it.buyerName || 'the buyer'} through the payment provider after payment integration. No refund was sent by this action.`
+        : 'Dispute resolved. The order returns to delivery review. Buyer confirmation and a separate admin approval are still required before vendor credit.'
     )
+    } catch { setError('The decision could not be saved. Check your connection and retry.') } finally { setBusy(null) }
   }
 
   return (
@@ -79,7 +81,7 @@ export default function DisputesClient({
       <div className="dq-head">
         <div>
           <h1>Disputes</h1>
-          <p>{resolved ? 'Recently resolved disputes.' : items.length === 0 ? 'Nothing waiting.' : `${items.length} open. The money is frozen until you decide.`}</p>
+          <p>{resolved ? 'Recently resolved disputes.' : items.length === 0 ? 'Nothing waiting.' : `${items.length} shown. Real order credit stays held until you decide.`}</p>
         </div>
         <div className="dq-switch" role="tablist" aria-label="Dispute view">
           <Link href="/admin/disputes" className={!resolved ? 'is-active' : ''} role="tab" aria-selected={!resolved}>Open</Link>
@@ -87,6 +89,7 @@ export default function DisputesClient({
         </div>
       </div>
 
+      <p className="buyer-help">Showing up to 100 recent disputes in this view.</p>
       {notice && (
         <div className="dq-notice" role="status">
           <CheckCircle2 size={16} aria-hidden /> {notice}
@@ -117,11 +120,12 @@ export default function DisputesClient({
                 </div>
                 {resolved && (
                   <span className={`dq-pill ${it.resolution === 'refund' ? 'is-refund' : 'is-release'}`}>
-                    {it.resolution === 'refund' ? 'Refunded buyer' : 'Paid vendor'}
+                    {it.resolution === 'refund' ? 'Refund approved' : 'Returned to delivery review'}
                   </span>
                 )}
               </header>
 
+              {it.isTrial&&<p className="buyer-notice">TRIAL ORDER - Dispute decisions are simulated. No real money is owed, refunded or credited.</p>}
               <div className="dq-reason">
                 <strong>Buyer&apos;s reason</strong>
                 <p>{it.reason || 'No reason given.'}</p>
@@ -156,10 +160,10 @@ export default function DisputesClient({
                   {!open && (
                     <div className="dq-actions">
                       <button className="dq-btn dq-pay" onClick={() => { setPanel({ id: it.itemId, mode: 'release' }); setNote(''); setError(null); setNotice(null) }}>
-                        <Banknote size={16} aria-hidden /> Pay the vendor
+                        <ClipboardCheck size={16} aria-hidden /> Return to delivery review
                       </button>
                       <button className="dq-btn dq-refund" onClick={() => { setPanel({ id: it.itemId, mode: 'refund' }); setNote(''); setError(null); setNotice(null) }}>
-                        <Undo2 size={16} aria-hidden /> Refund the buyer
+                        <Undo2 size={16} aria-hidden /> Approve refund
                       </button>
                     </div>
                   )}
@@ -169,9 +173,9 @@ export default function DisputesClient({
                       <div className="dq-effect">
                         <Info size={16} aria-hidden />
                         <span>
-                          {open === 'release'
-                            ? `${it.store} receives ${naira(payoutOf(it.subtotal))} in their wallet (${naira(it.subtotal)} minus the 5% commission). The buyer is not refunded.`
-                            : `The buyer is owed ${naira(it.subtotal)} for this item. The vendor receives nothing. You must send the refund manually from Paystack for now. The 2% service fee and any delivery fee are not part of this amount.`}
+                          {it.isTrial ? 'This is a trial decision only. No real refund or vendor credit will be sent.' : open === 'release'
+                            ? 'This closes the dispute and returns the item to delivery review. The buyer must confirm receipt again. Vendor credit requires a verified delivery code, verified payment and a separate approval in Deliveries.'
+                            : `The buyer is owed ${naira(it.subtotal)} for this item. The vendor receives nothing. The refund transfer must be handled separately through the payment provider after integration. Any service fee or delivery fee is separate.`}
                         </span>
                       </div>
                       <label htmlFor={`note-${it.itemId}`}>Your note (saved with the decision)</label>
@@ -190,7 +194,7 @@ export default function DisputesClient({
                           onClick={() => decide(it, open)}
                         >
                           {working && <Loader2 size={16} className="dq-spin" aria-hidden />}
-                          {open === 'release' ? 'Confirm: pay the vendor' : 'Confirm: refund the buyer'}
+                          {open === 'release' ? 'Confirm: return to review' : 'Confirm refund decision'}
                         </button>
                         <button className="dq-ghost" disabled={working} onClick={() => setPanel(null)}>Cancel</button>
                       </div>

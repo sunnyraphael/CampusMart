@@ -61,7 +61,7 @@ test('vendor chat sends through the existing in-app conversation',async({page})=
 
 test('failed order update stays actionable and never claims success',async({page,request})=>{
   await request.post('http://127.0.0.1:54329/__vendor',{data:{itemStatus:'pending'}})
-  await request.post('http://127.0.0.1:54329/__fail',{data:{table:'vendor_update_item_status'}})
+  await request.post('http://127.0.0.1:54329/__fail',{data:{table:'cm_vendor_update_delivery'}})
   await page.goto('/vendor/orders');await page.getByRole('button',{name:'Confirm order',exact:true}).click()
   await expect(page.locator('.vo-error')).toBeVisible();await expect(page.getByRole('button',{name:'Confirm order',exact:true})).toBeEnabled()
 })
