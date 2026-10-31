@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { Home, LayoutGrid, List, ShoppingBag, Zap, HelpCircle, User, Search, Store } from 'lucide-react'
+import { useBuyerAccount } from '@/components/buyer/BuyerAccount'
+import SearchForm from './SearchForm'
+import { Home, LayoutGrid, List, ShoppingBag, Zap, HelpCircle, User, Store, Heart, MessageCircle } from 'lucide-react'
 
 const tabs = [
   { label: 'Home', href: '/', icon: Home },
@@ -13,58 +13,29 @@ const tabs = [
   { label: 'Orders', href: '/orders', icon: ShoppingBag },
   { label: 'Deals', href: '/deals', icon: Zap },
   { label: 'Profile', href: '/profile', icon: User },
+  { label: 'Favorites', href: '/wishlist', icon: Heart },
+  { label: 'Messages', href: '/messages', icon: MessageCircle },
   { label: 'Help', href: '/help', icon: HelpCircle },
 ]
 
-type VendorState = 'loading' | 'none' | 'buyer' | 'onboarding' | 'active'
-
 export function MobileTabBar() {
   const pathname = usePathname()
-  const [vendorState, setVendorState] = useState<VendorState>('loading')
+  const { vendorState } = useBuyerAccount()
 
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data }) => {
-      const user = data.user
-      if (!user) { setVendorState('none'); return }
-
-      const { data: userData } = await supabase
-        .from('users').select('role').eq('id', user.id).single()
-
-      if (!userData || userData.role === 'buyer') { setVendorState('buyer'); return }
-
-      const { data: seller } = await supabase
-        .from('sellers').select('store_name').eq('user_id', user.id).single()
-
-      setVendorState(seller?.store_name ? 'active' : 'onboarding')
-    })
-  }, [])
-
-  const showVendorBtn = vendorState === 'none' || vendorState === 'onboarding' || vendorState === 'active'
+  const showVendorBtn = vendorState !== 'loading'
   const vendorBtn = vendorState === 'active'
     ? { label: 'Dashboard', href: '/vendor/dashboard' }
     : vendorState === 'onboarding'
     ? { label: 'My Store', href: '/vendor/onboarding' }
-    : { label: 'Sell', href: '/register?role=vendor' }
+    : { label: 'Sell', href: '/start-selling' }
 
   return (
-    <div className="md:hidden sticky top-16 z-40"
+    <div className="xl:hidden sticky top-16 z-40"
       style={{ background: 'var(--navbar-bg)', borderBottom: '1px solid var(--navbar-border)' }}>
 
       {/* Mobile search bar */}
       <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--navbar-border)' }}>
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search for products or vendors..."
-            className="w-full pl-9 pr-4 py-2 rounded-full text-sm
-              bg-slate-100 focus:bg-white dark:bg-gray-800 dark:focus:bg-gray-800
-              border border-transparent focus:border-blue-400
-              text-gray-900 dark:text-gray-100
-              placeholder:text-gray-400 outline-none transition-all"
-          />
-        </div>
+        <SearchForm />
       </div>
 
       {/* Scrollable tab strip */}

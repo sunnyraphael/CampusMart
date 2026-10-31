@@ -8,59 +8,20 @@ import { useCartStore } from '@/store/cart'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import {
   ShoppingCart, Bell, Heart, MessageCircle,
-  Search, ShoppingBag, ChevronDown,
+  ShoppingBag, ChevronDown,
   User, Settings, LogOut, Package, Store
 } from 'lucide-react'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
-
-type VendorState = 'loading' | 'none' | 'buyer' | 'onboarding' | 'active'
+import { useBuyerAccount } from '@/components/buyer/BuyerAccount'
+import SearchForm from './SearchForm'
+import { toast } from 'sonner'
 
 export function Navbar() {
   const router = useRouter()
-  const [user, setUser] = useState<SupabaseUser | null>(null)
-  const [vendorState, setVendorState] = useState<VendorState>('loading')
+  const { user, vendorState, notifications, messages, refresh } = useBuyerAccount()
   const [profileOpen, setProfileOpen] = useState(false)
   const { items } = useCartStore()
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const supabase = createClient()
-
-  async function resolveVendorState(userId: string) {
-  // 1. Get role directly from the authenticated user's metadata
-  const { data: { user: authUser } } = await supabase.auth.getUser()
-  const role = authUser?.user_metadata?.role
-
-  if (!authUser || role !== 'vendor') {
-    setVendorState('buyer')
-    return
-  }
-
-  // 2. They're a vendor — check if they've completed onboarding
-  const { data: seller } = await supabase
-    .from('sellers')
-    .select('store_name')
-    .eq('user_id', userId)
-    .single()
-
-  if (seller?.store_name) setVendorState('active')
-  else setVendorState('onboarding')
-}
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const u = data.user
-      setUser(u)
-      if (u) resolveVendorState(u.id)
-      else setVendorState('none')
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      const u = session?.user ?? null
-      setUser(u)
-      if (u) resolveVendorState(u.id)
-      else setVendorState('none')
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -73,19 +34,21 @@ export function Navbar() {
   }, [])
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) { toast.error('Could not sign out. Please try again.'); return }
     setProfileOpen(false)
-    setVendorState('none')
+    refresh()
     router.push('/')
+    router.refresh()
   }
 
   // Button is hidden for buyers. Visible for signed-out users and vendors only.
-  const showVendorBtn = vendorState === 'none' || vendorState === 'onboarding' || vendorState === 'active'
+  const showVendorBtn = vendorState !== 'loading'
   const vendorBtn = vendorState === 'active'
     ? { label: 'Enter Dashboard', href: '/vendor/dashboard' }
     : vendorState === 'onboarding'
     ? { label: 'Open Your Store', href: '/vendor/onboarding' }
-    : { label: 'Open Your Store', href: '/register?role=vendor' }
+    : { label: 'Open Your Store', href: '/start-selling' }
 
   return (
     <header
@@ -111,29 +74,17 @@ export function Navbar() {
         </Link>
 
         {/* Desktop search */}
-        <div className="hidden md:flex flex-1 max-w-xl mx-4">
-          <div className="relative w-full">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search for items, categories or vendors"
-              className="w-full pl-10 pr-4 py-2.5 rounded-full text-sm
-                bg-slate-100 focus:bg-white dark:bg-gray-800 dark:focus:bg-gray-800
-                border border-transparent focus:border-blue-400 dark:focus:border-blue-500
-                text-gray-900 dark:text-gray-100
-                placeholder:text-gray-400 dark:placeholder:text-gray-500
-                outline-none transition-all"
-            />
-          </div>
+        <div className="hidden xl:flex flex-1 max-w-xl mx-4">
+          <SearchForm />
         </div>
 
         {/* Desktop right actions */}
-        <div className="hidden md:flex items-center gap-1 ml-auto">
+        <div className="hidden xl:flex items-center gap-1 ml-auto">
           <Link href="/messages"
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium
               text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <MessageCircle size={18} />
-            <span>Messages</span>
+            <span>Messages</span>{messages > 0 && <span className="site-badge">{messages > 99 ? '99+' : messages}</span>}
           </Link>
           <Link href="/wishlist"
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium
@@ -141,18 +92,18 @@ export function Navbar() {
             <Heart size={18} />
             <span>Favorites</span>
           </Link>
-          <Link href="/notifications"
+          <Link href="/notifications" aria-label="Notifications"
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium
               text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative">
             <Bell size={18} />
             <span>Notifications</span>
-            <span className="absolute top-1.5 left-5 w-2 h-2 bg-green-500 rounded-full border-2 border-white dark:border-[#060d1f]" />
+            {notifications > 0 && <span className="site-badge">{notifications > 99 ? '99+' : notifications}</span>}
           </Link>
 
           <ThemeToggle />
 
           {/* Cart */}
-          <Link href="/cart"
+          <Link href="/cart" aria-label="Shopping cart"
             className="relative w-9 h-9 flex items-center justify-center rounded-full
               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ml-1">
             <ShoppingCart size={20} className="text-gray-600 dark:text-gray-400" />
@@ -240,15 +191,15 @@ export function Navbar() {
         </div>
 
         {/* Mobile right icons */}
-        <div className="flex md:hidden items-center gap-1 ml-auto">
+        <div className="flex xl:hidden items-center gap-1 ml-auto">
           <ThemeToggle />
-          <Link href="/notifications"
+          <Link href="/notifications" aria-label="Notifications"
             className="relative w-9 h-9 flex items-center justify-center rounded-full
               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <Bell size={20} className="text-gray-600 dark:text-gray-400" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-green-500 rounded-full border-2 border-white dark:border-[#060d1f]" />
+            {notifications > 0 && <span className="site-badge absolute -top-1 -right-1">{notifications > 99 ? '99+' : notifications}</span>}
           </Link>
-          <Link href="/cart"
+          <Link href="/cart" aria-label="Shopping cart"
             className="relative w-9 h-9 flex items-center justify-center rounded-full
               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <ShoppingCart size={20} className="text-gray-600 dark:text-gray-400" />
@@ -264,7 +215,7 @@ export function Navbar() {
 
       {/* ── Desktop second nav bar ── */}
       <div
-        className="hidden md:block"
+        className="hidden xl:block"
         style={{ background: 'var(--navbar-bg)', borderTop: '1px solid var(--navbar-border)' }}
       >
         <SecondNav />

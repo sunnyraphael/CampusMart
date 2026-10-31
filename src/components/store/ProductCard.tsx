@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { BadgeCheck, Package, Star, Store } from 'lucide-react'
 import { DeliveryLine, ListingChips, PriceBlock, PromoCorner } from '@/components/store/ListingBits'
 import CardAddButton from '@/components/store/CardAddButton'
+import FavoriteButton from '@/components/buyer/FavoriteButton'
 
 // One listing card. It lives in its own file (not inside the page component) so React keeps
 // the same component between renders instead of rebuilding every card each time (issue 77).
@@ -52,6 +53,7 @@ export default function ProductCard({
 
   return (
     <article className="pc lift">
+      <div className="pc-save"><FavoriteButton productId={product.id} /></div>
       {/* The link wraps only the photo and text. The cart button is a sibling, because a button inside a link is invalid HTML. */}
       <Link href={`/products/${product.id}`} className="pc-link">
         <div className="pc-photo">
@@ -76,7 +78,6 @@ export default function ProductCard({
               {!!product.total_reviews && <span className="pc-reviews">({product.total_reviews})</span>}
             </span>
           )}
-          <span className="pc-price"><PriceBlock product={product} /></span>
           <ListingChips product={product} />
           <DeliveryLine product={product} />
           {vendor && (
@@ -95,12 +96,16 @@ export default function ProductCard({
       </Link>
 
       <div className="pc-foot">
+        <Link href={`/products/${product.id}`} className="pc-price" aria-label={`View ${product.title}`}>
+          <PriceBlock product={product} />
+        </Link>
         <CardAddButton
           id={product.id}
           title={product.title}
           price={product.price}
           imageUrl={src}
           vendorName={vendor}
+          stock={product.stock_quantity}
         />
       </div>
     </article>

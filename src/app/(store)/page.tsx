@@ -1,32 +1,7 @@
 import Link from 'next/link'
-import { PriceBlock, PromoCorner } from '@/components/store/ListingBits'
+import ProductCard, { type ProductCardData } from '@/components/store/ProductCard'
 import { createClient } from '@/lib/supabase/server'
-import {
-  BookOpen, Laptop, Armchair, Shirt, ShoppingBag,
-  Dumbbell, Sparkles, PenLine, ArrowRight, Star, Package,
-} from 'lucide-react'
-
-type Listing = {
-  id: string
-  title: string
-  price: number
-  images: string | string[] | null
-  avg_rating: number | null
-  stock_quantity: number
-  compare_at_price: number | null
-  sale_ends_at: string | null
-}
-
-const categories = [
-  { label: 'Books & Notes', icon: BookOpen, href: '/products?category=books' },
-  { label: 'Electronics', icon: Laptop, href: '/products?category=electronics' },
-  { label: 'Furniture', icon: Armchair, href: '/products?category=furniture' },
-  { label: 'Clothing', icon: Shirt, href: '/products?category=clothing' },
-  { label: 'Accessories', icon: ShoppingBag, href: '/products?category=accessories' },
-  { label: 'Sports & Fitness', icon: Dumbbell, href: '/products?category=sports' },
-  { label: 'Beauty & Health', icon: Sparkles, href: '/products?category=beauty' },
-  { label: 'Stationery', icon: PenLine, href: '/products?category=stationery' },
-]
+import { ArrowRight } from 'lucide-react'
 
 const steps = [
   { n: '01', title: 'Find what you need', text: 'Browse listings from student vendors on your campus.' },
@@ -55,20 +30,23 @@ function getImage(images: unknown): string | null {
 
 export default async function HomePage() {
   const supabase = await createClient()
-  const [{ data: { user } }, { data: rows }] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase
+  const { data: rows, error: listingError } = await supabase
       .from('products')
-      .select('id, title, price, images, avg_rating, stock_quantity, compare_at_price, sale_ends_at')
+      .select(`
+        id, title, price, images, avg_rating, total_reviews, stock_quantity,
+        compare_at_price, sale_ends_at, condition, availability, delivery_days,
+        categories(name, slug), sellers:public_vendors(store_name, is_verified)
+      `)
       .eq('status', 'active')
+      .gt('stock_quantity', 0)
       .order('avg_rating', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
-      .limit(6),
-  ])
+      .limit(6)
 
-  const listings = (rows ?? []) as Listing[]
+  const listings = (rows ?? []) as unknown as ProductCardData[]
   const mosaic = listings.map((l) => ({ l, src: getImage(l.images) })).filter((x) => x.src).slice(0, 4)
-  const vendorHref = user ? '/vendor/new' : '/register'
+  if (listingError) throw new Error('Homepage listings could not be loaded', { cause: listingError })
+  const vendorHref = '/start-selling'
 
   return (
     <>
@@ -104,29 +82,10 @@ export default async function HomePage() {
         .hm-more { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 13px; font-weight: 600; color: var(--vx-link); text-decoration: none; }
         .hm-more:hover { text-decoration: underline; }
 
-        /* Categories: 2 columns on phones, 4 on tablets, 8 on desktop */
-        .hm-cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-        @media (min-width: 480px) { .hm-cats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        @media (min-width: 1100px) { .hm-cats { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
-        .hm-cat { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px; background: var(--vx-card); border: 1px solid var(--vx-border); border-radius: 12px; text-decoration: none; transition: border-color .15s ease-out, transform .15s ease-out; }
-        .hm-cat:hover { border-color: var(--hm-accent); transform: translateY(-2px); }
-        .hm-cat-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: var(--vx-surface); color: var(--vx-link); }
-        .hm-cat-label { font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--vx-text); }
-
-        /* Listings: 2 columns on phones, 3 on tablets, 6 on desktop */
-        .hm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-        @media (min-width: 640px) { .hm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; } }
+        /* Compact listings keep two columns on phones. */
+        .hm-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        @media (min-width: 640px) { .hm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; } }
         @media (min-width: 1100px) { .hm-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-        .hm-card { display: flex; flex-direction: column; min-width: 0; background: var(--vx-card); border: 1px solid var(--vx-border); border-radius: 12px; overflow: hidden; color: inherit; text-decoration: none; transition: border-color .15s ease-out, transform .15s ease-out; }
-        .hm-card:hover { border-color: var(--hm-accent); transform: translateY(-2px); }
-        .hm-photo { position: relative; aspect-ratio: 1; background: var(--vx-surface); display: flex; align-items: center; justify-content: center; color: var(--vx-muted); }
-        .hm-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-        .hm-soldout { position: absolute; right: 8px; top: 8px; z-index: 1; padding: 3px 8px; border-radius: 999px; background: #0f172a; color: #fff; font: 700 11px/1.2 'DM Sans', sans-serif; }
-        .hm-body { display: flex; flex-direction: column; gap: 6px; padding: 12px; min-width: 0; }
-        .hm-card-title { font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--vx-text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-        .hm-price { font-family: var(--font-sora), Sora, sans-serif; font-size: 15px; font-weight: 700; color: var(--vx-text); }
-        .hm-rating { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--vx-muted); }
-        .hm-rating svg { color: var(--vx-warn); fill: currentColor; }
 
         /* How it works: hairline columns, no boxes */
         .hm-steps { display: grid; gap: 20px; }
@@ -174,22 +133,6 @@ export default async function HomePage() {
           )}
         </section>
 
-        {/* Categories */}
-        <section aria-labelledby="hm-cats">
-          <div className="hm-head">
-            <h2 id="hm-cats" className="hm-title">Shop by category</h2>
-            <Link href="/products" className="hm-more">All listings <ArrowRight size={14} aria-hidden="true" /></Link>
-          </div>
-          <div className="hm-cats">
-            {categories.map(({ label, icon: Icon, href }) => (
-              <Link key={label} href={href} className="hm-cat">
-                <span className="hm-cat-icon"><Icon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
-                <span className="hm-cat-label">{label}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
         {/* Top rated listings, real data */}
         {listings.length > 0 && (
           <section aria-labelledby="hm-top">
@@ -198,33 +141,9 @@ export default async function HomePage() {
               <Link href="/products" className="hm-more">View all <ArrowRight size={14} aria-hidden="true" /></Link>
             </div>
             <div className="hm-grid">
-              {listings.map((item) => {
-                const src = getImage(item.images)
-                const rated = item.avg_rating != null && item.avg_rating > 0
-                return (
-                  <Link key={item.id} href={`/products/${item.id}`} className="hm-card">
-                    <div className="hm-photo">
-                      {src ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={src} alt={item.title} loading="lazy" decoding="async" />
-                      ) : (
-                        <Package size={28} strokeWidth={1.5} aria-hidden="true" />
-                      )}
-                      {item.stock_quantity === 0 ? <span className="hm-soldout">Sold out</span> : <PromoCorner product={item} />}
-                    </div>
-                    <div className="hm-body">
-                      <span className="hm-card-title">{item.title}</span>
-                      <span className="hm-price"><PriceBlock product={item} /></span>
-                      {rated && (
-                        <span className="hm-rating">
-                          <Star size={12} aria-hidden="true" />
-                          {item.avg_rating!.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                )
-              })}
+              {listings.map((item) => (
+                <ProductCard key={item.id} product={item} showCategory={false} />
+              ))}
             </div>
           </section>
         )}

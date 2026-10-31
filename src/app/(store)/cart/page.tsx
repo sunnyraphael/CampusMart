@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useHydrated } from "@/hooks/useHydrated"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -27,8 +27,7 @@ export default function CartPage() {
 
   // The cart lives in the browser's storage, so the server cannot know what is in it.
   // Waiting until mounted avoids a flash of "Your cart is empty" and hydration errors.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useHydrated()
 
   const settled = !loading && !error
 

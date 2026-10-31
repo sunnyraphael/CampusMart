@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { AlertTriangle, ChevronLeft, ChevronRight, PackageSearch } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import ProductCard, { type ProductCardData } from '@/components/store/ProductCard'
+import SaveSearchButton from '@/components/buyer/SaveSearchButton'
 import SortSelect from '@/components/store/SortSelect'
 import { PAGE_SIZE, buildProductsHref, cleanSearch, parseSort } from '@/lib/products-query'
 
@@ -24,7 +25,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
   const categorySlug = first(sp.category)?.trim().toLowerCase() || null
   const q = cleanSearch(first(sp.q))
   const sort = parseSort(first(sp.sort))
-  const page = Math.max(1, Number.parseInt(first(sp.page) ?? '1', 10) || 1)
+  const page = Math.min(10000, Math.max(1, Number.parseInt(first(sp.page) ?? '1', 10) || 1))
 
   const supabase = await createClient()
 
@@ -51,7 +52,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
   else if (sort === 'price_desc') query = query.order('price', { ascending: false })
   else if (sort === 'top') query = query.order('avg_rating', { ascending: false, nullsFirst: false })
   // created_at is always the tie-breaker so pages never repeat or skip a listing.
-  query = query.order('created_at', { ascending: false }).range(from, from + PAGE_SIZE - 1)
+  query = query.order('created_at', { ascending: false }).order('id').range(from, from + PAGE_SIZE - 1)
 
   const { data, error, count } = await query
 
@@ -84,7 +85,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
             )}
           </p>
         </div>
-        <SortSelect sort={sort} category={activeCategory?.slug ?? null} q={q} />
+        <div className="buyer-actions"><SaveSearchButton query={q ?? ''} category={activeCategory?.slug ?? ''} sort={sort} /><SortSelect sort={sort} category={activeCategory?.slug ?? null} q={q} /></div>
       </header>
 
       <nav className="pl-chips" aria-label="Categories">

@@ -117,7 +117,7 @@ export default function ItemActions({
       {mode === "dispute" && (
         <div className="ia-panel">
           <p>
-            Tell us what went wrong. The vendor's payment is frozen right away while we review.
+            Tell us what went wrong. The vendor payment is frozen right away while we review.
           </p>
           <textarea
             value={reason}

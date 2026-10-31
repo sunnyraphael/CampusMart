@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import CleanupButton from './CleanupButton'
 import VendorListingsClient from './VendorListingsClient'
 
 export default async function VendorListingsPage({
@@ -28,9 +29,12 @@ export default async function VendorListingsPage({
     .order('created_at', { ascending: false })
 
   return (
+    <>
+    <CleanupButton />
     <VendorListingsClient
       products={products ?? []}
       notice={created ? 'created' : updated ? 'updated' : null}
     />
+    </>
   )
 }

@@ -24,10 +24,10 @@ export function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Shop</h3>
             <ul className="space-y-3">
-              {["All Products", "Electronics", "Books", "Food", "Fashion"].map((item) => (
-                <li key={item}>
-                  <Link href="/products" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                    {item}
+              {[{label:"All listings",href:"/products"},{label:"Categories",href:"/categories"},{label:"Current deals",href:"/deals"},{label:"Favorites",href:"/wishlist"},{label:"Saved searches",href:"/saved"}].map((item) => (
+                <li key={item.label}>
+                  <Link href={item.href} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                    {item.label}
                   </Link>
                 </li>
               ))}
@@ -38,7 +38,7 @@ export function Footer() {
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Sell</h3>
             <ul className="space-y-3">
               {[
-                { label: "Start Selling", href: "/vendor/onboarding" },
+                { label: "Start Selling", href: "/start-selling" },
                 { label: "Vendor Dashboard", href: "/vendor/dashboard" },
                 { label: "How it works", href: "/how-it-works" },
               ].map((item) => (

@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { deleteListing } from '@/lib/vendor/actions'
+import { toast } from 'sonner'
 import {
   Plus, Package, Trash2, Loader2, ImageOff, X, Pencil, CheckCircle2,
 } from 'lucide-react'
@@ -44,7 +45,6 @@ export default function VendorListingsClient({
   products: Product[]
   notice: Notice
 }) {
-  const supabase = createClient()
   const router = useRouter()
   const [items, setItems] = useState(products)
   const [filter, setFilter] = useState<Filter>('all')
@@ -81,14 +81,12 @@ export default function VendorListingsClient({
   async function handleDelete(id: string) {
     setDeletingId(id)
     setDeleteError(null)
-    const { error } = await supabase.from('products').delete().eq('id', id)
+    let result
+    try { result = await deleteListing(id) }
+    catch { setDeleteError('Could not delete this listing. Please try again.'); setDeletingId(null); return }
     setDeletingId(null)
-    if (error) {
-      setDeleteError(
-        "We couldn't delete this listing. If it already has orders, unpublish it from the edit page instead."
-      )
-      return
-    }
+    if ('error' in result) { setDeleteError(result.error); return }
+    if (result.cleanupPending) toast.info('Listing deleted. Some photos need another cleanup attempt; use Clean up unused photos.')
     setItems(prev => prev.filter(p => p.id !== id))
     closeModal()
   }

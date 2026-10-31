@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { vendorPageTitle } from '@/lib/vendor/navigation'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import {
   LayoutDashboard, Package, ShoppingBag, DollarSign,
-  Settings, Store, LogOut, HelpCircle, Menu, X, Bell, ArrowUpRight,
+  Settings, Store, MessageCircle, LogOut, HelpCircle, Menu, X, Bell, ArrowUpRight,
 } from 'lucide-react'
 
 // To add a page later (Customers, Reviews), build its page.tsx first,
@@ -16,6 +17,7 @@ const navItems = [
   { label: 'Overview',       href: '/vendor/dashboard', icon: LayoutDashboard },
   { label: 'Products',       href: '/vendor/listings',  icon: Package },
   { label: 'Orders',         href: '/vendor/orders',    icon: ShoppingBag, badge: 'todo' },
+  { label: 'Messages',       href: '/messages',          icon: MessageCircle },
   { label: 'Earnings',       href: '/vendor/earnings',  icon: DollarSign },
   { label: 'Store Settings', href: '/vendor/settings',  icon: Settings },
 ]
@@ -23,7 +25,9 @@ const navItems = [
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarPath, setSidebarPath] = useState<string | null>(null)
+  const sidebarOpen = sidebarPath === pathname
+  const setSidebarOpen = (open: boolean) => setSidebarPath(open ? pathname : null)
   const [vendorName, setVendorName] = useState('')
   const [vendorInitials, setVendorInitials] = useState('--')
   const [sellerId, setSellerId] = useState<string | null>(null)
@@ -55,7 +59,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         .maybeSingle()
       if (cancelled) return
 
-      if (!seller?.store_name) {
+      if (!seller) {
         if (pathname !== '/vendor/onboarding') router.push('/vendor/onboarding')
         return
       }
@@ -79,14 +83,14 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       .then(({ count }) => setTodoCount(count ?? 0))
   }, [pathname, sellerId])
 
-  useEffect(() => { setSidebarOpen(false) }, [pathname])
-
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [sidebarOpen])
 
   const firstName = vendorName.split(' ')[0]
+  const pageTitle = vendorPageTitle(pathname)
+  const storeHref = sellerId ? `/vendors/${sellerId}` : null
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -286,6 +290,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
               return (
                 <Link
                   key={href}
+                  onClick={() => setSidebarOpen(false)}
                   href={href}
                   className={`vs-nav-link${active ? ' active' : ''}`}
                   aria-current={active ? 'page' : undefined}
@@ -299,8 +304,8 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
           </nav>
 
           <div className="vs-bottom">
-            <Link href="/" className="vs-bottom-link">
-              <Store size={16} /> My Store
+            <Link href={storeHref ?? '/start-selling'} className="vs-bottom-link" onClick={() => setSidebarOpen(false)}>
+              <Store size={16} /> {storeHref ? 'My Store' : 'Set up store'}
             </Link>
             <Link href="/help" className="vs-bottom-link">
               <HelpCircle size={16} /> Help &amp; Support
@@ -317,7 +322,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
               <Menu size={22} />
             </button>
 
-            <p className="vs-topbar-title">Vendor Dashboard</p>
+            <p className="vs-topbar-title">{pageTitle}</p>
 
             <div className="vs-topbar-right">
               <ThemeToggle />
@@ -332,7 +337,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
 
               <div className="vs-avatar-info">
                 <span className="name">{firstName || '...'}</span>
-                <Link href="/" className="sub">View Store <ArrowUpRight size={12} /></Link>
+                {storeHref && <Link href={storeHref} className="sub">View Store <ArrowUpRight size={12} /></Link>}
               </div>
               <div className="vs-avatar">{vendorInitials}</div>
             </div>

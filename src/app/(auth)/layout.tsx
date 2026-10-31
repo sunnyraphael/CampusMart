@@ -25,7 +25,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Link href="/" style={{
           fontFamily: 'var(--font-dm-sans)',
           fontSize: '0.875rem',
-          color: 'var(--muted-foreground, #64748b)',
+          color: 'var(--vx-muted)',
           textDecoration: 'none',
         }}>
           ← Back to store

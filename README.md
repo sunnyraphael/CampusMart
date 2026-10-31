@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CampusMart
 
-## Getting Started
+A campus marketplace built with Next.js 16, React 19, TypeScript, Tailwind CSS 4, Supabase and Zustand.
 
-First, run the development server:
+## Development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Use Node.js 24 and run these commands from the project root:
+
+```powershell
+npm.cmd install
+npm.cmd run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local` from `.env.example` and supply the Supabase project URL and public anonymous key. Keep service-role and payment keys on the server; never expose them through NEXT_PUBLIC variables.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The application uses src/app route groups for the store, authentication, checkout and vendor area, plus a separate admin area. Shared listing rules and fee displays live in src/lib.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Buyer features and database setup
 
-## Learn More
+Read [the buyer implementation notes](docs/BUYER_FEATURES.md) for the feature list, required migration, authentication configuration and remaining launch work.
 
-To learn more about Next.js, take a look at the following resources:
+The new buyer features require [this migration](supabase/migrations/202610310001_buyer_features.sql) on the EXISTING CampusMart Supabase database. The user confirmed that this first migration was applied successfully. [The follow-up fixes](docs/BUG_FIXES_2026-10-31.md) require a separate second migration for vendor enrollment and image cleanup. Older database definitions from previous sessions are not yet captured in this repository.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Online checkout is intentionally gated until real payment initialization and verified webhooks are connected.** The app does not simulate successful payments or charge buyers.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Checks
 
-## Deploy on Vercel
+```powershell
+npm.cmd test
+npm.cmd run lint:buyer
+npm.cmd run test:e2e
+npm.cmd run build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Browser tests use installed Google Chrome, local fixture data and separate ports/build output. They do not contact the live Supabase project. Build-time Google Fonts downloads need network access. The full `npm.cmd run lint` also includes existing vendor code outside the buyer implementation.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [the implementation notes](docs/BUYER_FEATURES.md) for what each check covers and the limits of fixture testing.

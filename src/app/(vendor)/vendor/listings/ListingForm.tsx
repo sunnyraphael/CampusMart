@@ -3,6 +3,8 @@
 import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { cleanupListingImages } from '@/lib/vendor/actions'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import {
   ImagePlus, X, Loader2, ChevronLeft, AlertCircle, Star,
@@ -70,11 +72,6 @@ function lagosDay(iso: string) {
 }
 
 // Turns a public image URL back into its storage path so we can delete the file.
-function pathFromUrl(url: string) {
-  const marker = `/${BUCKET}/`
-  const i = url.indexOf(marker)
-  return i === -1 ? null : decodeURIComponent(url.slice(i + marker.length))
-}
 
 function deliveryText(availability: string, days: number) {
   if (availability === 'pre_order') return `Pre-order: ready within ${days} days of payment`
@@ -110,7 +107,6 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
   const [photos, setPhotos] = useState<PhotoSlot[]>(() =>
     (initial?.images ?? []).map(url => ({ kind: 'existing' as const, url }))
   )
-  const [removedUrls, setRemovedUrls] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<'draft' | 'active' | 'duplicate' | null>(null)
@@ -153,8 +149,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
 
   function removePhoto(index: number) {
     const slot = photos[index]
-    if (slot.kind === 'existing') setRemovedUrls(prev => [...prev, slot.url])
-    else URL.revokeObjectURL(slot.previewUrl)
+    if (slot.kind === 'new') URL.revokeObjectURL(slot.previewUrl)
     setPhotos(prev => prev.filter((_, i) => i !== index))
   }
 
@@ -187,25 +182,6 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
         return 'The sale end date cannot be in the past.'
     }
     return null
-  }
-
-  // Deletes photos the vendor removed, but only if no other listing still uses them.
-  async function cleanupRemovedPhotos(productId: string) {
-    const paths: string[] = []
-    for (const url of removedUrls) {
-      const path = pathFromUrl(url)
-      if (!path) continue
-      const { count, error: checkError } = await supabase
-        .from('products')
-        .select('id', { count: 'exact', head: true })
-        .contains('images', [url])
-        .neq('id', productId)
-      if (!checkError && count === 0) paths.push(path)
-    }
-    if (paths.length) {
-      const { error: removeError } = await supabase.storage.from(BUCKET).remove(paths)
-      if (removeError) console.warn('Photo cleanup skipped:', removeError.message)
-    }
   }
 
   async function submit(target: 'draft' | 'active') {
@@ -255,7 +231,8 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
         if (updateError) throw new Error(updateError.message)
         if (!data || data.length === 0) throw new Error('Could not save. This listing may no longer exist.')
         productId = initial.id
-        await cleanupRemovedPhotos(productId)
+        const cleanup = await cleanupListingImages()
+        if (cleanup.pending) toast.info('Listing saved. Unused photos can be retried from your listings page.')
       } else {
         const { data, error: insertError } = await supabase
           .from('products')
@@ -268,10 +245,10 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
 
       router.push(`/vendor/listings?${isEdit ? 'updated' : 'created'}=${productId}`)
       router.refresh()
-    } catch (err: any) {
+    } catch (err: unknown) {
       // The save failed, so remove the files we just uploaded to avoid orphans.
       if (uploadedPaths.length) await supabase.storage.from(BUCKET).remove(uploadedPaths)
-      showError(err.message ?? 'Something went wrong. Please try again.')
+      showError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       setBusy(null)
     }
   }
