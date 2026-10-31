@@ -315,3 +315,5 @@ a.pl-btn:hover { background: var(--vx-hover); }
 }
 @media (min-width: 640px) { .cat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 960px) { .cat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.site-admin-entry{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 12px;min-height:36px;border:1px solid var(--vx-border);border-radius:8px;background:var(--vx-hero);color:var(--vx-link);font:600 12px var(--font-dm-sans),sans-serif;text-decoration:none;white-space:nowrap;flex-shrink:0}.site-admin-entry:hover{border-color:var(--vx-link)}.site-admin-entry:focus-visible{outline:2px solid var(--vx-link);outline-offset:3px}

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { adminSession } from '@/lib/admin/server'
 import DisputesClient from './DisputesClient'
 
 export const dynamic = 'force-dynamic'
@@ -28,7 +28,7 @@ export default async function DisputesPage({ searchParams }: { searchParams: Pro
   const { view } = await searchParams
   const resolved = view === 'resolved'
 
-  const supabase = await createClient()
+  const {supabase} = await adminSession()
   const { data, error } = await supabase.rpc('cm_admin_order_disputes', { p_resolved: resolved })
   const rows = (data ?? []) as Row[]
 
@@ -52,5 +52,5 @@ export default async function DisputesPage({ searchParams }: { searchParams: Pro
     note: r.admin_note,
   }))
 
-  return <DisputesClient key={resolved?'resolved':'open'} items={items} resolved={resolved} loadError={error?.message ?? null} />
+  return <DisputesClient key={`${resolved}:${rows.map(r=>`${r.item_id}:${r.resolved_at}`).join(',')}`} items={items} resolved={resolved} loadError={error?.message ?? null} />
 }

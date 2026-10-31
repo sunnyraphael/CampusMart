@@ -5,7 +5,7 @@ export const loadingRoutes = {
   '/cart': 'cart', '/checkout': 'checkout', '/login': 'login', '/register': 'register', '/forgot-password': 'forgot', '/reset-password': 'reset',
   '/vendor/dashboard': 'vendor-overview', '/vendor/listings': 'vendor-listings', '/vendor/listings/new': 'listing-form', '/vendor/orders': 'vendor-orders',
   '/vendor/earnings': 'earnings', '/vendor/settings': 'vendor-settings', '/vendor/verify': 'verify', '/vendor/onboarding': 'onboarding', '/vendor/guide': 'guide', '/vendor/messages': 'vendor-inbox',
-  '/admin': 'admin-verifications', '/admin/verifications': 'admin-verifications', '/admin/disputes': 'admin-disputes', '/admin/support': 'admin-support', '/admin/deliveries': 'admin-deliveries',
+  '/admin': 'admin-overview', '/admin/verifications': 'admin-verifications', '/admin/disputes': 'admin-disputes', '/admin/support': 'admin-support', '/admin/deliveries': 'admin-deliveries',
 } as const
 export type SkeletonKind = typeof loadingRoutes[keyof typeof loadingRoutes] | 'product' | 'storefront' | 'order-detail' | 'thread' | 'vendor-order' | 'vendor-thread' | 'packing-slip'
 

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useBuyerAccount } from '@/components/buyer/BuyerAccount'
 import SearchForm from './SearchForm'
-import { Home, LayoutGrid, List, ShoppingBag, Zap, HelpCircle, User, Store, Heart, MessageCircle } from 'lucide-react'
+import { Home, LayoutGrid, List, ShoppingBag, Zap, HelpCircle, User, Store, Heart, MessageCircle, ShieldCheck } from 'lucide-react'
 
 const tabs = [
   { label: 'Home', href: '/', icon: Home },
@@ -20,7 +20,7 @@ const tabs = [
 
 export function MobileTabBar() {
   const pathname = usePathname()
-  const { vendorState } = useBuyerAccount()
+  const { vendorState, isAdmin } = useBuyerAccount()
 
   const showVendorBtn = vendorState !== 'loading'
   const vendorBtn = vendorState === 'active'
@@ -34,8 +34,9 @@ export function MobileTabBar() {
       style={{ background: 'var(--navbar-bg)', borderBottom: '1px solid var(--navbar-border)' }}>
 
       {/* Mobile search bar */}
-      <div className="px-4 py-2" style={{ borderBottom: '1px solid var(--navbar-border)' }}>
-        <SearchForm />
+      <div className="px-4 py-2 flex items-center gap-2" style={{ borderBottom: '1px solid var(--navbar-border)' }}>
+        <div className="min-w-0 flex-1"><SearchForm /></div>
+        {isAdmin&&<Link href="/admin" className="site-admin-entry"><ShieldCheck size={16} aria-hidden />Admin</Link>}
       </div>
 
       {/* Scrollable tab strip */}

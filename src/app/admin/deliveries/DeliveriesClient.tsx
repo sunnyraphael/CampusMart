@@ -8,7 +8,9 @@ import { createClient } from '@/lib/supabase/client'
 import { formatPrice } from '@/lib/utils/format'
 import { trackingDate, type OrderTracking, type TrackingEvent } from '@/lib/orders/tracking'
 import TrackingTimeline from '@/components/orders/TrackingTimeline'
-import OrderRefresh from '@/components/orders/OrderRefresh'
+import AdminRefresh from '@/components/admin/RefreshButton'
+import { AdminHeading, QueueSummary, QueueToolbar } from '@/components/admin/Workspace'
+import { deliveryReady, queueMatches } from '@/lib/admin/queues'
 
 export type DeliveryApproval = {
   is_trial?: boolean; item_id: string; order_id: string; quantity: number; subtotal: number; commission_amount: number; payout_amount: number
@@ -22,17 +24,24 @@ export type DeliveryApproval = {
   approved_at: string | null; approval_note: string | null; released_at: string | null; events: TrackingEvent[]
 }
 type View = 'pending' | 'held' | 'approved'
-export default function DeliveriesClient({ items, view, page, hasMore }: { items: DeliveryApproval[]; view: View; page: number; hasMore: boolean }) {
+export default function DeliveriesClient({ items, view, page, hasMore, loadedAt }: { loadedAt: number; items: DeliveryApproval[]; view: View; page: number; hasMore: boolean }) {
+  const [query,setQuery]=useState('')
+  const [filter,setFilter]=useState('all')
+  const followUp=(i:DeliveryApproval)=>!!i.review_after&&new Date(i.review_after).getTime()<=loadedAt&&!i.released_at
+  const shown=items.filter(i=>queueMatches(query,i.item_id,i.order_id,i.product_title,i.store_name,i.buyer_name,i.buyer_email)&&(filter==='all'||(filter==='ready'?deliveryReady(i):filter==='followup'?followUp(i):filter==='trial'?i.is_trial:!i.is_trial)))
   return <section className="ot-admin">
-    <header className="ot-admin-head"><div><h1>Delivery approvals</h1><p>Check payment, handover and buyer confirmation before crediting a vendor.</p></div><OrderRefresh /></header>
+    <AdminHeading title="Delivery approvals" description="Check payment, handover and buyer confirmation before crediting a vendor." actions={<AdminRefresh/>}/>
+    <QueueSummary items={[{label:'Items on this page',value:items.length},{label:'Ready for approval',value:items.filter(deliveryReady).length},{label:'Follow-up due',value:items.filter(followUp).length}]}/>
     <nav className="ot-admin-tabs" aria-label="Delivery approval views">{(['pending', 'held', 'approved'] as const).map(v => <Link key={v} className="buyer-btn" href={`/admin/deliveries?view=${v}`} aria-current={view === v ? 'page' : undefined}>{v === 'pending' ? 'Awaiting review' : v === 'held' ? 'On hold' : 'Approved'}</Link>)}</nav>
+    <QueueToolbar query={query} onQuery={setQuery} placeholder="Search current deliveries" count={`${shown.length} of ${items.length} on this page`}><select aria-label="Delivery review filter" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All items</option><option value="ready">Ready for approval</option><option value="followup">Follow-up due</option><option value="real">Real orders</option><option value="trial">Trial orders</option></select></QueueToolbar>
     <p className="buyer-notice"><ShieldCheck size={20} aria-hidden />Real vendor credit requires a server-verified payment, the buyer’s receipt confirmation, a verified handover code, and your approval. Bank transfers and refunds are separate. Orders never release automatically.</p>
     {!items.length && <div className="ot-admin-empty"><Inbox size={30} aria-hidden /><h2>No deliveries in this view</h2><p>Delivery reports and buyer confirmations will appear here.</p></div>}
-    {items.map(item => <ApprovalCard key={item.item_id} item={item} />)}
+    {!!items.length&&!shown.length&&<div className="ot-admin-empty"><h2>No matching deliveries</h2><p>Search applies to this page of the queue.</p><button className="buyer-btn" onClick={()=>{setQuery('');setFilter('all')}}>Clear filters</button></div>}
+    {shown.map(item => <ApprovalCard key={item.item_id} item={item} loadedAt={loadedAt} />)}
     <nav className="buyer-actions" aria-label="Delivery approval pages">{page > 1 && <Link className="buyer-btn" href={`/admin/deliveries?view=${view}&page=${page - 1}`}>Previous</Link>}{hasMore && <Link className="buyer-btn" href={`/admin/deliveries?view=${view}&page=${page + 1}`}>Next</Link>}</nav>
   </section>
 }
-function ApprovalCard({ item: i }: { item: DeliveryApproval }) {
+function ApprovalCard({ item: i, loadedAt }: { item: DeliveryApproval; loadedAt: number }) {
   const router = useRouter()
   const [refreshing, startTransition] = useTransition()
   const [busy, setBusy] = useState(false)
@@ -41,9 +50,9 @@ function ApprovalCard({ item: i }: { item: DeliveryApproval }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const verifiedPayment = i.payment_status === 'paid' && !!i.payment_verified_at && !!i.payment_verification_ref
-  const canApprove = (i.is_trial || verifiedPayment) && !!i.buyer_confirmed_at && !!i.code_verified_at && !i.held_at && i.fulfillment_status === 'received' && !i.released_at
+  const canApprove = deliveryReady(i)
   const t: OrderTracking = { ...i, status: i.fulfillment_status, created_at: null }
-  const overdue = !!i.review_after && new Date(i.review_after).getTime() <= Date.now() && !i.released_at
+  const overdue = !!i.review_after && new Date(i.review_after).getTime() <= loadedAt && !i.released_at
   const checks = [
     { label: i.is_trial ? 'Trial order - no payment collected; approval is simulated' : verifiedPayment ? `Payment verified · ${i.payment_verification_ref}` : 'Payment verification pending', done: !!i.is_trial||verifiedPayment },
     { label: i.buyer_confirmed_at ? `Buyer confirmed · ${trackingDate(i.buyer_confirmed_at)}` : 'Buyer confirmation pending', done: !!i.buyer_confirmed_at },
@@ -63,7 +72,7 @@ function ApprovalCard({ item: i }: { item: DeliveryApproval }) {
       setMode(null); setNote(''); startTransition(() => router.refresh())
     } catch { setError('The decision could not be saved. Check your connection and retry.') } finally { setBusy(false) }
   }
-  return <article className="ot-approval-card">
+  return <article id={`delivery-${i.item_id}`} className="ot-approval-card">
     <header><div><h2>{i.product_title ?? 'Purchased item'}</h2><p className="buyer-help">Order #{i.order_id.slice(0, 8).toUpperCase()} · Item {i.item_id.slice(-6)} · Quantity {i.quantity}</p></div><span className={`buyer-status ${i.released_at ? 'is-good' : 'is-warn'}`}>{i.released_at ? i.is_trial ? 'Trial completed' : 'Credited' : overdue ? 'Needs follow-up' : 'Under review'}</span></header>
     <div className="ot-admin-people"><div><strong>Buyer · {i.buyer_name || 'Name unavailable'}</strong><p>{i.buyer_email}</p><p>{i.buyer_phone}</p><p>{i.delivery_method === 'pickup' ? 'Campus pickup' : i.delivery_address || 'Delivery address unavailable'}</p></div><div><strong>Vendor · {i.store_name || 'Store unavailable'}</strong><p>Item subtotal: {formatPrice(Number(i.subtotal))}</p><p>CampusMart commission (5%): {formatPrice(Number(i.commission_amount))}</p><p><strong>{i.is_trial?'Simulated vendor credit':'Vendor credit'}: {formatPrice(Number(i.payout_amount))}</strong></p></div></div>
     {i.is_trial&&<p className="buyer-notice">TRIAL ORDER - Test the approval procedure. No payment was collected and approving this order will not credit a real vendor wallet.</p>}
@@ -71,7 +80,7 @@ function ApprovalCard({ item: i }: { item: DeliveryApproval }) {
     {i.hold_note && <p className="buyer-notice">Review note: {i.hold_note}</p>}
     {i.dispute_reason && i.fulfillment_status === 'disputed' && <p className="buyer-notice">Buyer’s report: {i.dispute_reason}</p>}
     {overdue && <p className="buyer-help">Follow up with the buyer and vendor. Reaching the review time does not release money.</p>}
-    <TrackingTimeline tracking={t} pickup={i.delivery_method === 'pickup'} />
+    <details className="aw-evidence"><summary>Delivery evidence &amp; tracking history</summary><TrackingTimeline tracking={t} pickup={i.delivery_method === 'pickup'} /></details>
     {i.events.some(e => e.admin_note) && <details className="ot-history"><summary>Admin decision notes</summary><ol>{i.events.filter(e => e.admin_note).map(e => <li key={e.id}><span>{e.admin_note}</span><time dateTime={e.created_at}>{trackingDate(e.created_at)}</time></li>)}</ol></details>}
     {i.released_at ? <p className="buyer-help">Approved {trackingDate(i.approved_at)} · {i.approval_note}</p> : i.fulfillment_status === 'disputed' ? <Link href="/admin/disputes" className="buyer-btn">Review buyer dispute</Link> : <div className="ot-admin-action">
       {!verifiedPayment && !i.is_trial && <p className="buyer-help">Credit stays blocked until payment integration supplies a verified payment reference.</p>}

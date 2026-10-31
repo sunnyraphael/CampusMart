@@ -3,6 +3,9 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Loader2, AlertCircle, Inbox, Phone, ClipboardCheck, Undo2, CheckCircle2, Info } from 'lucide-react'
+import { AdminHeading, QueueSummary, QueueToolbar } from '@/components/admin/Workspace'
+import AdminRefresh from '@/components/admin/RefreshButton'
+import { queueMatches } from '@/lib/admin/queues'
 import { createClient } from '@/lib/supabase/client'
 
 type Item = {
@@ -43,7 +46,10 @@ export default function DisputesClient({
 }) {
   const supabase = useMemo(() => createClient(), [])
 
-  const [items, setItems] = useState(initial)
+  const [removed,setRemoved] = useState<string[]>([])
+  const items=initial.filter(item=>!removed.includes(item.itemId))
+  const [query,setQuery]=useState('')
+  const [kind,setKind]=useState('all')
   const [panel, setPanel] = useState<Panel>(null)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -63,7 +69,7 @@ export default function DisputesClient({
     })
     setBusy(null)
     if (rpcErr) return setError(rpcErr.message)
-    setItems((list) => list.filter((i) => i.itemId !== it.itemId))
+    setRemoved(list=>[...list,it.itemId])
     setPanel(null)
     setNote('')
     setNotice(
@@ -74,21 +80,18 @@ export default function DisputesClient({
     } catch { setError('The decision could not be saved. Check your connection and retry.') } finally { setBusy(null) }
   }
 
+  const shown=items.filter(i=>queueMatches(query,i.product,i.itemId,i.orderId,i.buyerName,i.buyerEmail,i.store,i.reason)&&(kind==='all'||(kind==='trial'?i.isTrial:!i.isTrial)))
   return (
     <div className="dq">
 
 
-      <div className="dq-head">
-        <div>
-          <h1>Disputes</h1>
-          <p>{resolved ? 'Recently resolved disputes.' : items.length === 0 ? 'Nothing waiting.' : `${items.length} shown. Real order credit stays held until you decide.`}</p>
-        </div>
+      <AdminHeading title="Disputes" description="Review buyer reports, record your decision and keep delivery review connected." actions={<AdminRefresh/>}/>
+      <QueueSummary items={[{label:resolved?'Resolved in this view':'Open in this view',value:items.length},{label:'Real orders',value:items.filter(i=>!i.isTrial).length},{label:'Trial orders',value:items.filter(i=>i.isTrial).length}]}/>
         <div className="dq-switch" role="tablist" aria-label="Dispute view">
           <Link href="/admin/disputes" className={!resolved ? 'is-active' : ''} role="tab" aria-selected={!resolved}>Open</Link>
           <Link href="/admin/disputes?view=resolved" className={resolved ? 'is-active' : ''} role="tab" aria-selected={resolved}>Resolved</Link>
         </div>
-      </div>
-
+      <QueueToolbar query={query} onQuery={setQuery} placeholder="Search orders, buyers or vendors" count={`${shown.length} of ${items.length} loaded`}><select aria-label="Dispute order type" value={kind} onChange={e=>setKind(e.target.value)}><option value="all">All orders</option><option value="real">Real orders</option><option value="trial">Trial orders</option></select></QueueToolbar>
       <p className="buyer-help">Showing up to 100 recent disputes in this view.</p>
       {notice && (
         <div className="dq-notice" role="status">
@@ -101,6 +104,7 @@ export default function DisputesClient({
         </div>
       )}
 
+      {items.length>0&&!shown.length&&!loadError&&<div className="dq-empty"><h2>No matching disputes</h2><p>Try another reference or reset the filters.</p><button className="buyer-btn" onClick={()=>{setQuery('');setKind('all')}}>Clear filters</button></div>}
       {items.length === 0 && !loadError ? (
         <div className="dq-empty">
           <Inbox size={28} strokeWidth={1.5} aria-hidden />
@@ -108,11 +112,11 @@ export default function DisputesClient({
           <p>{resolved ? 'Decisions you make will be listed here.' : 'New disputes will appear here.'}</p>
         </div>
       ) : (
-        items.map((it) => {
+        shown.map((it) => {
           const open = panel?.id === it.itemId ? panel.mode : null
           const working = busy === it.itemId
           return (
-            <article key={it.itemId} className="dq-card">
+            <article key={it.itemId} id={`dispute-${it.itemId}`} className="dq-card">
               <header className="dq-card-head">
                 <div>
                   <h2>{it.product}</h2>
@@ -126,6 +130,7 @@ export default function DisputesClient({
               </header>
 
               {it.isTrial&&<p className="buyer-notice">TRIAL ORDER - Dispute decisions are simulated. No real money is owed, refunded or credited.</p>}
+              <Link className="aw-inline-link" style={{marginBottom:16}} href={resolved?'/admin/deliveries':'/admin/deliveries?view=held'}>Open delivery review queue</Link>
               <div className="dq-reason">
                 <strong>Buyer&apos;s reason</strong>
                 <p>{it.reason || 'No reason given.'}</p>
@@ -159,10 +164,10 @@ export default function DisputesClient({
                 <>
                   {!open && (
                     <div className="dq-actions">
-                      <button className="dq-btn dq-pay" onClick={() => { setPanel({ id: it.itemId, mode: 'release' }); setNote(''); setError(null); setNotice(null) }}>
+                      <button className="dq-btn dq-pay" disabled={!!busy} onClick={() => { setPanel({ id: it.itemId, mode: 'release' }); setNote(''); setError(null); setNotice(null) }}>
                         <ClipboardCheck size={16} aria-hidden /> Return to delivery review
                       </button>
-                      <button className="dq-btn dq-refund" onClick={() => { setPanel({ id: it.itemId, mode: 'refund' }); setNote(''); setError(null); setNotice(null) }}>
+                      <button className="dq-btn dq-refund" disabled={!!busy} onClick={() => { setPanel({ id: it.itemId, mode: 'refund' }); setNote(''); setError(null); setNotice(null) }}>
                         <Undo2 size={16} aria-hidden /> Approve refund
                       </button>
                     </div>

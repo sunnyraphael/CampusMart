@@ -1,11 +1,17 @@
-import { createClient } from '@/lib/supabase/server'
-import { BuyerPage, DataError, EmptyState } from '@/components/buyer/Page'
-import ReplyForm from './ReplyForm'
+import { adminSession } from '@/lib/admin/server'
+import SupportClient, { type SupportRequest } from './SupportClient'
+import { z } from 'zod'
 
-export default async function SupportQueuePage() {
-  const supabase=await createClient()
+export default async function SupportQueuePage({searchParams}:{searchParams:Promise<{request?:string}>}) {
+  const {supabase}=await adminSession()
+  const params=await searchParams
   const {data,error}=await supabase.from('support_requests').select('id,subject,body,status,admin_reply,created_at,order_id').order('created_at',{ascending:false}).limit(100)
-  return <BuyerPage title="Support requests" description="Review buyer requests and send a response to their support history.">
-    {error?<DataError/>:!data?.length?<EmptyState title="No requests to review">New support requests will appear here.</EmptyState>:data.map((r)=><article className="buyer-panel buyer-stack" key={r.id}><h2>{r.subject}</h2><p className="buyer-help">Reference {r.id.slice(0,8).toUpperCase()}{r.order_id&&` · Order ${r.order_id.slice(0,8).toUpperCase()}`}</p><p className="buyer-preserve-lines">{r.body}</p><ReplyForm id={r.id} status={r.status} reply={r.admin_reply??''}/></article>)}
-  </BuyerPage>
+  const items=(data??[]) as SupportRequest[]
+  const focused=z.uuid().safeParse(params.request)
+  if(!error&&focused.success&&!items.some(item=>item.id===focused.data)){
+    const result=await supabase.from('support_requests').select('id,subject,body,status,admin_reply,created_at,order_id').eq('id',focused.data).maybeSingle()
+    if(result.error)return <SupportClient items={items} loadError/>
+    if(result.data)items.unshift(result.data as SupportRequest)
+  }
+  return <SupportClient items={items} loadError={!!error}/>
 }

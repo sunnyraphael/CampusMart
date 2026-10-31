@@ -1,6 +1,7 @@
+import { AdminOverviewSkeleton, AdminQueueSkeleton } from './AdminSkeletons'
 import type { SkeletonKind } from '@/lib/loading-routes'
 import { ArticleSkeleton, AuthSkeleton, CartSkeleton, CatalogSkeleton, CategoriesSkeleton, CheckoutSkeleton, ContactSkeleton, HelpSkeleton, HomeSkeleton, InboxSkeleton, NotificationsSkeleton, OrdersSkeleton, ProductSkeleton, ProfileSkeleton, SavedSkeleton, SettingsSkeleton, StorefrontSkeleton, ThreadSkeleton } from './StoreSkeletons'
-import { AdminDeliveriesSkeleton, AdminSkeleton, EarningsSkeleton, GuideSkeleton, ListingFormSkeleton, OnboardingSkeleton, PackingSkeleton, VendorListingsSkeleton, VendorOrderSkeleton, VendorOrdersSkeleton, VendorOverviewSkeleton, VendorSettingsSkeleton, VerifySkeleton } from './VendorSkeletons'
+import { EarningsSkeleton, GuideSkeleton, ListingFormSkeleton, OnboardingSkeleton, PackingSkeleton, VendorListingsSkeleton, VendorOrderSkeleton, VendorOrdersSkeleton, VendorOverviewSkeleton, VendorSettingsSkeleton, VerifySkeleton } from './VendorSkeletons'
 
 export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
   switch (kind) {
@@ -38,9 +39,10 @@ export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
     case 'guide': return <GuideSkeleton />
     case 'vendor-inbox': return <InboxSkeleton vendor />
     case 'vendor-thread': return <ThreadSkeleton vendor />
-    case 'admin-verifications': return <AdminSkeleton />
-    case 'admin-disputes': return <AdminSkeleton kind="disputes" />
-    case 'admin-deliveries': return <AdminDeliveriesSkeleton />
-    case 'admin-support': return <AdminSkeleton kind="support" />
+    case 'admin-overview': return <AdminOverviewSkeleton />
+    case 'admin-verifications': return <AdminQueueSkeleton kind="verifications" />
+    case 'admin-disputes': return <AdminQueueSkeleton kind="disputes" />
+    case 'admin-deliveries': return <AdminQueueSkeleton kind="deliveries" />
+    case 'admin-support': return <AdminQueueSkeleton kind="support" />
   }
 }

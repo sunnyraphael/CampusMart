@@ -1,46 +1,26 @@
 'use client'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useRef } from 'react'
+import { LayoutDashboard, PackageCheck, ShieldCheck, ShieldAlert, LifeBuoy } from 'lucide-react'
 
-const tabs = [
-  { href: '/admin/deliveries', label: 'Deliveries', ready: true },
-  { href: '/admin/verifications', label: 'Verifications', ready: true },
-  { href: '/admin/disputes', label: 'Disputes', ready: true },
-  { href: '/admin/support', label: 'Support', ready: true },
+export const adminSections = [
+  { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin/deliveries', label: 'Deliveries', icon: PackageCheck },
+  { href: '/admin/verifications', label: 'Verifications', icon: ShieldCheck },
+  { href: '/admin/disputes', label: 'Disputes', icon: ShieldAlert },
+  { href: '/admin/support', label: 'Support', icon: LifeBuoy },
 ]
-
 export default function AdminNav() {
   const pathname = usePathname()
-
-  return (
-    <nav className="an" aria-label="Admin sections">
-      <style>{css}</style>
-      {tabs.map((t) =>
-        t.ready ? (
-          <Link
-            key={t.href}
-            href={t.href}
-            className={`an-tab ${pathname.startsWith(t.href) ? 'is-active' : ''}`}
-            aria-current={pathname.startsWith(t.href) ? 'page' : undefined}
-          >
-            {t.label}
-          </Link>
-        ) : (
-          <span key={t.href} className="an-tab is-off" aria-disabled="true">
-            {t.label} (soon)
-          </span>
-        )
-      )}
-    </nav>
-  )
+  const ref=useRef<HTMLElement>(null)
+  useEffect(()=>{
+    const nav=ref.current
+    const active=nav?.querySelector<HTMLElement>('[aria-current="page"]')
+    if(nav&&active&&nav.scrollWidth>nav.clientWidth)nav.scrollTo({left:Math.max(0,active.offsetLeft-nav.clientWidth/2+active.offsetWidth/2)})
+  },[pathname])
+  return <nav ref={ref} className="aw-nav" aria-label="Admin sections">{adminSections.map(({ href, label, icon: Icon }) => {
+    const active = href === '/admin' ? pathname === href : pathname === href || pathname.startsWith(href + '/')
+    return <Link key={href} href={href} className={`aw-nav-item${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined}><Icon size={19} aria-hidden /><span>{label}</span></Link>
+  })}</nav>
 }
-
-const css = `
-.an{display:flex;flex-wrap:wrap;gap:4px;padding:3px;background:var(--vx-card);border:1px solid var(--vx-border);border-radius:10px}
-.an-tab{padding:7px 14px;border-radius:8px;color:var(--vx-text);font-size:.85rem;font-weight:500;text-decoration:none;opacity:.85}
-.an-tab:hover{opacity:1}
-.an-tab.is-active{background:#2563eb;color:#fff;opacity:1}
-.an-tab.is-off{opacity:.4;cursor:not-allowed}
-.an-tab:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
-`

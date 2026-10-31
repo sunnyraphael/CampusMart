@@ -9,7 +9,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import {
   ShoppingCart, Bell, Heart, MessageCircle,
   ShoppingBag, ChevronDown,
-  User, Settings, LogOut, Package, Store
+  User, Settings, LogOut, Package, Store, ShieldCheck
 } from 'lucide-react'
 import { useBuyerAccount } from '@/components/buyer/BuyerAccount'
 import SearchForm from './SearchForm'
@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 
 export function Navbar() {
   const router = useRouter()
-  const { user, vendorState, notifications, messages, refresh } = useBuyerAccount()
+  const { user, isAdmin, vendorState, notifications, messages, refresh } = useBuyerAccount()
   const [profileOpen, setProfileOpen] = useState(false)
   const { items } = useCartStore()
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0)
@@ -150,6 +150,7 @@ export function Navbar() {
               {profileOpen && (
                 <div className="absolute right-0 top-12 w-48 rounded-xl border border-gray-200 dark:border-[#1e3a5f]
                   bg-white dark:bg-[#0f1a35] shadow-xl z-50 overflow-hidden py-1">
+                  {isAdmin&&<Link href="/admin" onClick={()=>setProfileOpen(false)} className="site-admin-entry"><ShieldCheck size={16} aria-hidden />Admin workspace</Link>}
                   <Link href="/profile" onClick={() => setProfileOpen(false)}
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300
                       hover:bg-gray-50 dark:hover:bg-[#1e3a5f] transition-colors">
@@ -236,6 +237,7 @@ const desktopLinks = [
 ]
 
 function SecondNav() {
+  const {isAdmin}=useBuyerAccount()
   const pathname = usePathname()
   return (
     <div className="max-w-screen-2xl mx-auto px-4 flex items-center gap-1 h-10">
@@ -263,6 +265,7 @@ function SecondNav() {
           </Link>
         )
       })}
+      {isAdmin&&<Link href="/admin" className="site-admin-entry" style={{marginLeft:'auto'}}><ShieldCheck size={16} aria-hidden />Admin workspace</Link>}
     </div>
   )
 }

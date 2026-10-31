@@ -28,6 +28,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const router = useRouter()
   const [sidebarPath, setSidebarPath] = useState<string | null>(null)
   const sidebarOpen = sidebarPath === pathname
+  const [isAdmin,setIsAdmin]=useState(false)
   const [vendorName, setVendorName] = useState('Your store')
   const [sellerId, setSellerId] = useState<string | null>(null)
   const [todoCount, setTodoCount] = useState(0)
@@ -53,6 +54,8 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       }
       setSellerId(seller.id)
       setVendorName(seller.store_name || 'Your store')
+      const admin=await supabase.rpc('is_admin')
+      if(!cancelled)setIsAdmin(!admin.error&&admin.data===true)
       const { count } = await supabase.from('order_items')
         .select('id, orders!inner(payment_status,is_trial)', { count: 'exact', head: true })
         .eq('seller_id', seller.id).in('fulfillment_status', ['pending', 'confirmed', 'shipped']).or('payment_status.eq.paid,is_trial.eq.true',{referencedTable:'orders'})
@@ -112,6 +115,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       <div className="vs-store-card"><span className="vs-store-initials">{initials}</span><div><strong>{vendorName}</strong><span>Your campus business</span></div></div>
       <nav className="vs-nav" aria-label="Vendor navigation"><p className="vs-nav-label">Manage</p>{links(navItems)}<p className="vs-nav-label vs-nav-label-spaced">Your store</p>{links(storeItems)}</nav>
       <div className="vs-bottom">
+        {isAdmin&&<Link href="/admin" className="vs-bottom-link"><ShieldCheck size={18} aria-hidden />Admin workspace</Link>}
         <Link href={storeHref ?? '/start-selling'} className="vs-bottom-link"><Store size={18} />{storeHref ? 'My Store' : 'Set up store'}<ArrowUpRight size={14} className="vs-push" /></Link>
         <Link href="/" className="vs-bottom-link"><ShoppingBasket size={18} />Back to shopping</Link>
         <Link href="/contact" className="vs-bottom-link"><HelpCircle size={18} />Help &amp; support</Link>

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { adminSession } from '@/lib/admin/server'
 import VerificationsClient from './VerificationsClient'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +15,7 @@ type QueueRow = {
 }
 
 export default async function VerificationsPage() {
-  const supabase = await createClient()
+  const {supabase} = await adminSession()
 
   // The database function re-checks that the caller is an admin
   const { data, error } = await supabase.rpc('admin_kyc_queue')
