@@ -7,12 +7,15 @@ import { trialCheckoutEnabled, trialOrderSchema } from '@/lib/orders/trial'
 
 export async function placeTrialOrder(input: unknown): Promise<{ error: string } | { id: string; total: number }> {
   if (!trialCheckoutEnabled(process.env)) return { error: 'Trial checkout is switched off. You have not been charged.' }
+  if(typeof input!=='object'||input===null||!('orderTermsAccepted'in input)||input.orderTermsAccepted!==true)return {error:'Review the total and accept the order terms before placing an order.'}
   const parsed = trialOrderSchema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Check your order details.' }
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return { error: 'Please sign in again before placing your trial order.' }
+    const permission=await supabase.rpc('cm_consent_status')
+    if(permission.error||permission.data?.eligible!==true)return {error:'Review your account permissions before placing an order. Open Account permissions from Settings.'}
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     if (!key || !url) return { error: 'Trial checkout setup is incomplete. Please contact the site administrator.' }

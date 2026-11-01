@@ -29,5 +29,9 @@ export async function GET(request: Request) {
   if(searchParams.get('role')==='vendor' && existing?.role!=='vendor') {
     return NextResponse.redirect(new URL('/start-selling',origin))
   }
+  if(!next.startsWith('/consent')){
+    const permission=await supabase.rpc('cm_consent_status')
+    if(permission.error||permission.data?.eligible!==true)return NextResponse.redirect(new URL(`/consent?next=${encodeURIComponent(next)}`,origin))
+  }
   return NextResponse.redirect(new URL(next,origin))
 }

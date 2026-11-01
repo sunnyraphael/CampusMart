@@ -11,7 +11,7 @@ export default async function OrderPage({params}:{params:Promise<{id:string}>}) 
   const {id}=await params
   if(!uuid.safeParse(id).success)notFound()
   const {supabase,user}=await buyerSession(`/orders/${id}`)
-  const {data,error}=await supabase.from('orders').select('*,order_items(*,products(title,images))').eq('id',id).eq('user_id',user.id).maybeSingle()
+  const {data,error}=await supabase.from('orders').select('id,is_trial,created_at,status,payment_status,total_amount,delivery_address,delivery_method,delivery_notes,order_items(id,quantity,unit_price,subtotal,product_id,seller_id,fulfillment_status,released_at,dispute_reason,products(title,images))').eq('id',id).eq('user_id',user.id).maybeSingle()
   if(error)return <DataError/>
   if(!data)notFound()
   const tracking=await supabase.rpc('cm_order_tracking',{p_order_id:id})

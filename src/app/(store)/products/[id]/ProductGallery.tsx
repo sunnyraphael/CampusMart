@@ -14,7 +14,7 @@ export default function ProductGallery({
   const [active, setActive] = useState(0)
   const touchStartX = useRef<number | null>(null)
 
-  const go = (next: number) => setActive((next + list.length) % list.length)
+  const go = (next: number) => { if(list.length) setActive((next + list.length) % list.length) }
 
   // Swipe: compare where the finger started and where it ended
   const onTouchStart = (e: React.TouchEvent) => {
@@ -83,6 +83,8 @@ export default function ProductGallery({
 
       <div
         className="pg-main"
+        role="region"
+        aria-roledescription="photo gallery"
         tabIndex={0}
         onKeyDown={onKeyDown}
         onTouchStart={onTouchStart}
@@ -91,7 +93,7 @@ export default function ProductGallery({
       >
         {list.length > 0 ? (
           // key={active} makes React replay the fade animation each time the photo changes
-          <img key={active} src={list[active]} alt={`${title} ${active + 1}`} />
+          <img referrerPolicy="no-referrer" key={active} src={list[active]} alt={`${title} ${active + 1}`} />
         ) : (
           <Package size={80} color="#cbd5e1" />
         )}
@@ -119,7 +121,7 @@ export default function ProductGallery({
               aria-label={`Show photo ${i + 1}`}
               aria-current={i === active}
             >
-              <img src={img} alt="" />
+              <img referrerPolicy="no-referrer" src={img} alt="" />
             </button>
           ))}
         </div>

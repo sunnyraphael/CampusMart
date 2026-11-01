@@ -1,0 +1,15 @@
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import type { GuardianReview } from './page'
+export default function GuardianReviews({items}:{items:GuardianReview[]}){
+  const [busy,setBusy]=useState(''),[error,setError]=useState('')
+  const router=useRouter()
+  async function decide(id:string,approved:boolean,verified:boolean,note:string){if(busy)return;setBusy(id);setError('');try{const {error}=await createClient().rpc('cm_admin_review_guardian',{p_id:id,p_approved:approved,p_verified:verified,p_note:note.trim()});if(error)setError(error.code==='P0001'?error.message:'The review could not be saved. Please retry.');else router.refresh()}catch{setError('The review could not be saved. Please retry.')}finally{setBusy('')}}
+  return <div className="buyer-stack" style={{marginTop:20}}>{error&&<p className="buyer-notice is-error" role="alert">{error}</p>}{!items.length?<div className="dq-empty"><h2>No guardian requests awaiting review</h2><p>New requests appear here after an adult guardian submits permission.</p></div>:items.map(item=><ReviewCard item={item} busy={!!busy} key={item.id} decide={decide}/>)}<p className="buyer-help">Showing up to 100 pending requests. The guardian can withdraw permission at any time.</p></div>
+}
+function ReviewCard({item,busy,decide}:{item:GuardianReview;busy:boolean;decide:(id:string,approved:boolean,verified:boolean,note:string)=>Promise<void>}){
+  const [verified,setVerified]=useState(false),[note,setNote]=useState(''),[decision,setDecision]=useState('approve')
+  return <article className="buyer-panel buyer-stack"><header><h2>{item.guardian_name||'Guardian request'}</h2><p>{item.guardian_email} · {item.relationship.replace('_',' ')} · {new Date(item.created_at).toLocaleDateString('en-NG',{timeZone:'Africa/Lagos'})}</p><p><strong>{item.allows_selling?'Buyer access and store operation':'Buyer access only'}</strong></p><p className="buyer-help">Reference <code style={{overflowWrap:'anywhere'}}>{item.id}</code></p></header><form className="buyer-form" onSubmit={e=>{e.preventDefault();void decide(item.id,decision==='approve',verified,note)}}><label>Decision<select className="buyer-input" value={decision} onChange={e=>setDecision(e.target.value)}><option value="approve">Approve permission</option><option value="reject">Decline permission</option></select></label>{decision==='approve'&&<label className="by-check"><input type="checkbox" checked={verified} required onChange={e=>setVerified(e.target.checked)}/><span>I checked the guardian&apos;s identity, authority and explicit permission for this student.</span></label>}<label>Verification method and reason<textarea className="buyer-input" minLength={10} maxLength={1000} required value={note} onChange={e=>setNote(e.target.value)}/><span className="buyer-help">Shared with the guardian. Do not include identity document numbers or images.</span></label><button className="buyer-btn is-primary" disabled={busy||(decision==='approve'&&!verified)}>{busy?'Saving…':'Save guardian review'}</button></form></article>
+}

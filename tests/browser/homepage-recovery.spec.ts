@@ -5,7 +5,7 @@ test.beforeEach(async({request})=>{await request.post('http://127.0.0.1:54329/__
 test('signed-out homepage recovers from a temporary listing outage',async({page,request})=>{
   await request.post('http://127.0.0.1:54329/__fail',{data:{table:'products',times:1,status:503}})
   await page.goto('/')
-  await expect(page.getByRole('heading',{name:'Buy and sell with students on your campus.'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:/Your campus.*Your next find/})).toBeVisible()
   await expect(page.locator('.hm-grid .pc')).toHaveCount(1)
   await expect(page.getByRole('heading',{name:'Listings are temporarily unavailable'})).toHaveCount(0)
 })
@@ -13,7 +13,7 @@ test('signed-out homepage recovers from a temporary listing outage',async({page,
 test('homepage stays usable on a persistent listing failure and retry restores the cards',async({page,request})=>{
   await request.post('http://127.0.0.1:54329/__fail',{data:{table:'products'}})
   await page.goto('/')
-  await expect(page.getByRole('heading',{name:'Buy and sell with students on your campus.'})).toBeVisible()
+  await expect(page.getByRole('heading',{name:/Your campus.*Your next find/})).toBeVisible()
   await expect(page.getByRole('heading',{name:'Listings are temporarily unavailable'})).toBeVisible()
   await expect(page.getByRole('link',{name:'Browse listings',exact:true})).toBeVisible()
   await expect(page.getByRole('heading',{name:'This page could not load'})).toHaveCount(0)

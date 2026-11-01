@@ -3,6 +3,7 @@ import { BadgeCheck, Package, Star, Store } from 'lucide-react'
 import { DeliveryLine, ListingChips, PriceBlock, PromoCorner } from '@/components/store/ListingBits'
 import CardAddButton from '@/components/store/CardAddButton'
 import FavoriteButton from '@/components/buyer/FavoriteButton'
+import { listingImages } from '@/lib/buyer/images'
 
 // One listing card. It lives in its own file (not inside the page component) so React keeps
 // the same component between renders instead of rebuilding every card each time (issue 77).
@@ -23,23 +24,6 @@ export type ProductCardData = {
   sellers: { store_name: string; is_verified: boolean | null } | null
 }
 
-// images can arrive as an array or as a JSON string depending on how the row was saved.
-function firstImage(images: unknown): string | null {
-  if (Array.isArray(images)) {
-    const first = images[0]
-    return typeof first === 'string' && first ? first : null
-  }
-  if (typeof images === 'string') {
-    try {
-      const parsed = JSON.parse(images)
-      if (Array.isArray(parsed) && typeof parsed[0] === 'string') return parsed[0]
-    } catch {
-      return images.startsWith('http') ? images : null
-    }
-  }
-  return null
-}
-
 export default function ProductCard({
   product,
   showCategory = true,
@@ -47,8 +31,8 @@ export default function ProductCard({
   product: ProductCardData
   showCategory?: boolean
 }) {
-  const src = firstImage(product.images)
-  const rated = product.avg_rating != null && product.avg_rating > 0
+  const src = listingImages(product.images)[0]??null
+  const rated = (product.total_reviews??0)>0 && product.avg_rating != null && product.avg_rating >= 1 && product.avg_rating <= 5
   const vendor = product.sellers?.store_name ?? null
 
   return (
@@ -59,7 +43,7 @@ export default function ProductCard({
         <div className="pc-photo">
           {src ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={src} alt={product.title} loading="lazy" decoding="async" />
+            <img referrerPolicy="no-referrer" src={src} alt={product.title} loading="lazy" decoding="async" />
           ) : (
             <Package size={32} strokeWidth={1.5} aria-hidden="true" />
           )}

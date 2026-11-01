@@ -31,6 +31,7 @@ test('buyer enables vendor access explicitly before seeing onboarding',async({pa
   await page.goto('/vendor/onboarding')
   await expect(page).toHaveURL(/\/start-selling$/)
   await expect(page.locator('.ob-page')).toHaveCount(0)
+  await page.getByRole('checkbox',{name:/I am 18 or older/}).check()
   await page.getByRole('button',{name:'Continue to store setup'}).click()
   await expect(page).toHaveURL(/\/vendor\/onboarding$/,{timeout:30000})
   await expect(page.locator('.ob-page')).toBeVisible({timeout:30000})

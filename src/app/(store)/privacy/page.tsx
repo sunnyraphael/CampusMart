@@ -1,2 +1,3 @@
-import InformationPage from '@/components/buyer/InformationPage'
-export default function Page() { return <InformationPage kind="privacy"/> }
+import PolicyPage from '@/components/privacy/PolicyPage'
+export const metadata={title:'Privacy policy | CampusMart'}
+export default function Page() { return <PolicyPage kind="privacy"/> }

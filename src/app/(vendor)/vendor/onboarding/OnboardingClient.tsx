@@ -9,18 +9,6 @@ import {
   ShieldCheck, CreditCard, AlertCircle,
 } from 'lucide-react'
 
-const NIGERIAN_BANKS = [
-  'Access Bank', 'Citibank', 'Ecobank', 'Fidelity Bank',
-  'First Bank of Nigeria', 'First City Monument Bank (FCMB)',
-  'Globus Bank', 'Guaranty Trust Bank (GTB)', 'Heritage Bank',
-  'Keystone Bank', 'Kuda Bank', 'Moniepoint',
-  'Opay', 'Palmpay', 'Parallex Bank', 'Polaris Bank',
-  'Providus Bank', 'Stanbic IBTC Bank', 'Standard Chartered',
-  'Sterling Bank', 'Suntrust Bank', 'Titan Trust Bank',
-  'Union Bank', 'United Bank for Africa (UBA)', 'Unity Bank',
-  'VFD Microfinance Bank', 'Wema Bank', 'Zenith Bank',
-]
-
 const STORE_CATEGORIES = [
   'Electronics & Gadgets',
   'Books & Stationery',
@@ -46,7 +34,7 @@ const NIGERIAN_STATES = [
 const steps = [
   { number: 1, label: 'Store Info',   icon: Store },
   { number: 2, label: 'Contact',      icon: User },
-  { number: 3, label: 'Bank Details', icon: Building2 },
+  { number: 3, label: 'Payout setup', icon: Building2 },
   { number: 4, label: 'Agreement',    icon: FileCheck },
 ]
 
@@ -59,16 +47,10 @@ interface FormData {
   phone: string
   state: string
   campus: string
-  // Step 3
-  bank_name: string
-  account_number: string
-  account_name: string
   // Step 4
-  is_18: boolean
   items_genuine: boolean
   agree_terms: boolean
   agree_commission: boolean
-  signature: string
 }
 
 export default function VendorOnboardingPage() {
@@ -80,9 +62,7 @@ export default function VendorOnboardingPage() {
   const [form, setForm] = useState<FormData>({
     store_name: '', description: '', category: '',
     phone: '', state: '', campus: '',
-    bank_name: '', account_number: '', account_name: '',
-    is_18: false, items_genuine: false, agree_terms: false,
-    agree_commission: false, signature: '',
+    items_genuine: false, agree_terms: false, agree_commission: false,
   })
 
   function update(field: keyof FormData, value: string | boolean) {
@@ -105,17 +85,10 @@ export default function VendorOnboardingPage() {
       if (!form.state) return 'Please select your state'
       if (!form.campus.trim()) return 'Campus or location is required'
     }
-    if (currentStep === 3) {
-      if (!form.bank_name) return 'Please select your bank'
-      if (!/^\d{10}$/.test(form.account_number)) return 'Account number must be exactly 10 digits'
-      if (form.account_name.trim().length < 3) return 'Enter the account name exactly as your bank has it'
-    }
     if (currentStep === 4) {
-      if (!form.is_18) return 'You must confirm you are 18 years or older'
       if (!form.items_genuine) return 'You must confirm your items are genuine'
       if (!form.agree_terms) return 'You must agree to the Terms of Service'
       if (!form.agree_commission) return 'You must acknowledge the commission structure'
-      if (!form.signature.trim()) return 'Please type your full name as signature'
     }
     return null
   }
@@ -169,9 +142,6 @@ export default function VendorOnboardingPage() {
             phone: form.phone.trim(),
             state: form.state,
             campus: form.campus.trim(),
-            bank_name: form.bank_name,
-            account_number: form.account_number,
-            account_name: form.account_name.trim(),
           })
 
         if (insertError) throw insertError
@@ -298,7 +268,7 @@ export default function VendorOnboardingPage() {
                   type="tel"
                   maxLength={14}
                 />
-                <p className="ob-hint">Must be a valid Nigerian number. Buyers will contact you on this.</p>
+                <p className="ob-hint">Used to coordinate orders and contact you about your store.</p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -333,115 +303,25 @@ export default function VendorOnboardingPage() {
           {/* ── Step 3: Bank Details ── */}
           {currentStep === 3 && (
             <>
-              <h2 className="ob-card-title">Bank details</h2>
-              <p className="ob-card-sub">Save the bank account to use for payouts. This setup does not initiate a withdrawal.</p>
-
-              <div className="ob-info-box">
-                <div className="ob-info-row">
-                  <CreditCard size={16} />
-                  <p>
-                    Each sale is added to your CampusMart wallet once the buyer confirms delivery,
-                    or 3 days after you mark the item delivered if they do not respond.
-                    CampusMart charges a <strong>5% commission</strong> on each sale, so you receive 95%.
-                  </p>
-                </div>
-              </div>
-
-              <div className="ob-field">
-                <label className="ob-label" htmlFor="ob-bank">Bank name <span>*</span></label>
-                <select
-                  id="ob-bank"
-                  className="ob-select"
-                  value={form.bank_name}
-                  onChange={e => update('bank_name', e.target.value)}
-                >
-                  <option value="">Select your bank...</option>
-                  {NIGERIAN_BANKS.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="ob-field">
-                <label className="ob-label" htmlFor="ob-account-number">Account number <span>*</span></label>
-                <input
-                  id="ob-account-number"
-                  className="ob-input"
-                  placeholder="10-digit account number"
-                  value={form.account_number}
-                  onChange={e => update('account_number', e.target.value.replace(/\D/g, ''))}
-                  maxLength={10}
-                  type="tel"
-                />
-              </div>
-
-              <div className="ob-field">
-                <label className="ob-label" htmlFor="ob-account-name">Account name <span>*</span></label>
-                <input
-                  id="ob-account-name"
-                  className="ob-input"
-                  placeholder="Exactly as it appears on your bank account"
-                  value={form.account_name}
-                  onChange={e => update('account_name', e.target.value)}
-                />
-                <p className="ob-hint">
-                  This should match the name on your school ID. We check this when you verify your identity.
-                </p>
-              </div>
+              <h2 className="ob-card-title">Payout information</h2>
+              <p className="ob-card-sub">You can open your store without providing a bank account today.</p>
+              <div className="ob-info-box"><div className="ob-info-row"><CreditCard size={18} aria-hidden/><div><p>Online payments and bank payouts are not enabled yet. We will ask for payout details when they are needed. Do not send bank credentials, PINs or card details.</p><p>For real sales, vendor credit requires verified payment, a delivery code, buyer receipt confirmation and a separate admin approval.</p><p>CampusMart deducts a <strong>5% commission</strong> from the item subtotal on an approved completed real sale. Trial orders do not create real earnings.</p></div></div></div>
+              <p className="ob-hint">Your bank details are not collected in this setup. <Link href="/vendor-terms">Review vendor terms</Link> and the <Link href="/refunds">refund policy</Link> before you continue.</p>
             </>
           )}
 
-          {/* ── Step 4: Legal Agreement ── */}
+          {/* Agreement is separate from the age and terms records checked on the server. */}
           {currentStep === 4 && (
             <>
               <h2 className="ob-card-title">Review & agree</h2>
               <p className="ob-card-sub">Please read and confirm each statement before submitting.</p>
 
+              <p className="ob-hint">Opening a store requires an adult account or reviewed guardian permission that explicitly allows selling. Review these commitments before opening your store.</p>
               {[
-                {
-                  field: 'is_18' as keyof FormData,
-                  text: 'I confirm that I am <strong>18 years or older</strong>, or that I have the consent of a parent or guardian to use this platform.',
-                },
-                {
-                  field: 'items_genuine' as keyof FormData,
-                  text: 'I confirm that all products I list on CampusMart are <strong>genuine, accurately described, and legally obtained</strong>. I will not list counterfeit, stolen, or prohibited items.',
-                },
-                {
-                  field: 'agree_terms' as keyof FormData,
-                  text: 'I have read and agree to <strong>CampusMart\'s Vendor Terms of Service</strong>, including the refund policy, dispute resolution process, and account suspension rules.',
-                },
-                {
-                  field: 'agree_commission' as keyof FormData,
-                  text: 'I understand that <strong>CampusMart charges a 5% commission</strong> on every completed sale. This is deducted automatically before my earnings are added to my wallet.',
-                },
-              ].map(({ field, text }) => (
-                <label
-                  key={field}
-                  className={`ob-check-row${form[field] ? ' checked' : ''}`}
-                >
-                  <input type="checkbox" checked={Boolean(form[field])} onChange={e => update(field, e.target.checked)} />
-                  <span
-                    className="ob-check-label"
-                    dangerouslySetInnerHTML={{ __html: text }}
-                  />
-                </label>
-              ))}
-
-              <div className="ob-field" style={{ marginTop: '20px' }}>
-                <label className="ob-label" htmlFor="ob-signature">
-                  Digital signature <span>*</span>
-                </label>
-                <input
-                  id="ob-signature"
-                  className="ob-input"
-                  placeholder="Type your full legal name"
-                  value={form.signature}
-                  onChange={e => update('signature', e.target.value)}
-                />
-                <p className="ob-hint">
-                  By typing your name, you confirm the statements above. <Link href="/terms">Read the marketplace terms</Link>.
-                </p>
-              </div>
+                {field:'items_genuine' as const,label:<>I will list products that are <strong>genuine, accurately described and legally obtained</strong>, and will not list counterfeit, stolen or prohibited items.</>},
+                {field:'agree_terms' as const,label:<>I have read and agree to the <Link href="/vendor-terms">vendor terms</Link>, the <Link href="/refunds">refund policy</Link> and the <Link href="/privacy">privacy policy</Link>.</>},
+                {field:'agree_commission' as const,label:<>I understand the <strong>5% sales commission</strong> and that vendor credit requires delivery review and admin approval. Trial orders never create real earnings.</>},
+              ].map(({field,label})=><label key={field} className={`ob-check-row${form[field]?' checked':''}`}><input type="checkbox" checked={form[field]} onChange={e=>update(field,e.target.checked)}/><span className="ob-check-label">{label}</span></label>)}
             </>
           )}
 

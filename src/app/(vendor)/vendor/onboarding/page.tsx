@@ -1,12 +1,10 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { requireMarketplacePermission } from '@/lib/privacy/consent-server'
 import { DataError } from '@/components/buyer/Page'
 import OnboardingClient from './OnboardingClient'
 
 export default async function VendorOnboardingPage() {
-  const supabase=await createClient()
-  const {data:{user}}=await supabase.auth.getUser()
-  if(!user)redirect('/login?redirectTo=%2Fstart-selling')
+  const {supabase,user}=await requireMarketplacePermission('/vendor/onboarding',true)
   const profile=await supabase.from('users').select('role').eq('id',user.id).maybeSingle()
   if(profile.error||!profile.data)return <DataError/>
   if(profile.data.role!=='vendor')redirect('/start-selling')

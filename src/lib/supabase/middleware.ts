@@ -9,7 +9,7 @@ function isUnder(path: string, route: string) {
   return path === route || path.startsWith(route + "/")
 }
 
-const PROTECTED_ROUTES = ["/checkout", "/orders", "/profile", "/settings", "/wishlist", "/saved", "/messages", "/notifications", "/start-selling", "/vendor", "/admin"]
+const PROTECTED_ROUTES = ["/checkout", "/orders", "/profile", "/settings", "/wishlist", "/saved", "/messages", "/notifications", "/consent", "/guardian-permission", "/start-selling", "/vendor", "/admin"]
 const AUTH_PAGES = ["/login", "/register"]
 
 export async function updateSession(request: NextRequest) {
@@ -57,6 +57,12 @@ export async function updateSession(request: NextRequest) {
   // Gate 1: must be logged in
   if (!user && PROTECTED_ROUTES.some((route) => isUnder(path, route))) {
     return redirectTo("/login", { redirectTo: path + request.nextUrl.search })
+  }
+
+  // Closed accounts retain privacy controls and support; database guards remain authoritative.
+  if(user&&PROTECTED_ROUTES.some(route=>isUnder(path,route))&&!isUnder(path,'/settings/account')&&!isUnder(path,'/admin')){
+    const {data:active}=await supabase.rpc('cm_account_is_active')
+    if(active===false)return redirectTo('/settings/account')
   }
 
   // Gate 2: /vendor needs the vendor role, read from the database

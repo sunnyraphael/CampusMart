@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
-import { LayoutDashboard, PackageCheck, ShieldCheck, ShieldAlert, LifeBuoy } from 'lucide-react'
+import { LayoutDashboard, PackageCheck, ShieldCheck, ShieldAlert, LifeBuoy, UserRoundCheck, UserRoundCog } from 'lucide-react'
 
 export const adminSections = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
@@ -10,6 +10,8 @@ export const adminSections = [
   { href: '/admin/verifications', label: 'Verifications', icon: ShieldCheck },
   { href: '/admin/disputes', label: 'Disputes', icon: ShieldAlert },
   { href: '/admin/support', label: 'Support', icon: LifeBuoy },
+  { href: '/admin/account-requests', label: 'Account requests', icon: UserRoundCog },
+  { href: '/admin/guardian-permissions', label: 'Guardian permissions', icon: UserRoundCheck },
 ]
 export default function AdminNav() {
   const pathname = usePathname()

@@ -232,7 +232,7 @@ const desktopLinks = [
   { label: 'Categories', href: '/categories' },
   { label: 'All Listings', href: '/products' },
   { label: 'My Orders', href: '/orders' },
-  { label: 'Campus Deals', href: '/deals', badge: 'New' },
+  { label: 'Vendor offers', href: '/deals', badge: undefined },
   { label: 'Help Center', href: '/help' },
 ]
 

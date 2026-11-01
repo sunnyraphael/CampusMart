@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import ProductCard, { type ProductCardData } from '@/components/store/ProductCard'
 import SaveSearchButton from '@/components/buyer/SaveSearchButton'
 import SortSelect from '@/components/store/SortSelect'
+import FeeDisclosure from '@/components/store/FeeDisclosure'
 import { PAGE_SIZE, buildProductsHref, cleanSearch, parseSort } from '@/lib/products-query'
 
 // Server component: the database does the filtering, sorting and paging, and the browser
@@ -70,8 +71,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
 
   return (
     <section className="pl" aria-labelledby="pl-title">
-      <header className="pl-head">
+      <header className="pl-head sh-catalog-head">
         <div className="pl-head-text">
+          <p className="sh-eyebrow">Find your next campus essential</p>
           <h1 id="pl-title" className="pl-title">{heading}</h1>
           <p className="pl-count">
             {error
@@ -88,6 +90,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
         <div className="buyer-actions"><SaveSearchButton query={q ?? ''} category={activeCategory?.slug ?? ''} sort={sort} /><SortSelect sort={sort} category={activeCategory?.slug ?? null} q={q} /></div>
       </header>
 
+      <FeeDisclosure/>
       <nav className="pl-chips" aria-label="Categories">
         <Link
           href={hrefFor({})}
@@ -119,7 +122,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
         <div className="pl-state is-error" role="alert">
           <AlertTriangle size={28} strokeWidth={1.5} aria-hidden="true" />
           <h2>Listings could not be loaded</h2>
-          <p>{error.message}</p>
+          <p>Please try again. If the problem continues, contact support.</p>
+          <Link href="/products" className="pl-btn">Try again</Link>
         </div>
       ) : products.length === 0 ? (
         <div className="pl-state">

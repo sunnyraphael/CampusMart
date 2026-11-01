@@ -28,6 +28,7 @@ export default function CheckoutClient({trialEnabled=false}:{trialEnabled?:boole
   const [address,setAddress]=useState('')
   const [phone,setPhone]=useState('')
   const [note,setNote]=useState('')
+  const [agreed,setAgreed]=useState(false)
   const [busy,setBusy]=useState(false)
   const busyRef=useRef(false)
   const memoryAttempt=useRef<{fingerprint:string;id:string}|null>(null)
@@ -40,6 +41,7 @@ export default function CheckoutClient({trialEnabled=false}:{trialEnabled?:boole
   // Preview only. A future payment endpoint must calculate the authoritative delivery fee.
   const delivery=method==='delivery'?500:0
   async function submit() {
+    if(!agreed){setSubmitError('Review the total and accept the order terms before continuing.');return}
     if(busyRef.current||!ready||unavailable||!items.length||!trialEnabled)return
     const payload={items:items.map(i=>({product_id:i.id,quantity:i.quantity})).sort((a,b)=>a.product_id.localeCompare(b.product_id)),deliveryMethod:method,address:method==='delivery'?address.trim():'',phone:phone.trim(),note:note.trim(),expectedTotal:subtotal+fee+delivery}
     const checked=trialCheckoutSchema.safeParse(payload)
@@ -54,7 +56,7 @@ export default function CheckoutClient({trialEnabled=false}:{trialEnabled?:boole
       const requestId=digest&&attempt?.digest===digest&&attempt.id?attempt.id:memoryAttempt.current?.fingerprint===fingerprint?memoryAttempt.current.id:checkoutNonce()
       memoryAttempt.current={fingerprint,id:requestId}
       if(digest)try {sessionStorage.setItem('campusmart-trial-checkout',JSON.stringify({digest,id:requestId}))}catch{}
-      const result=await placeTrialOrder({...payload,requestId})
+      const result=await placeTrialOrder({...payload,requestId,orderTermsAccepted:agreed})
       if('error'in result){setSubmitError(result.error);return}
       setReceipt(result)
       const bought=new Map(payload.items.map(i=>[i.product_id,i.quantity]))
@@ -71,7 +73,7 @@ export default function CheckoutClient({trialEnabled=false}:{trialEnabled?:boole
     {loading&&<p role="status">Checking the latest prices and stock...</p>}
     {error&&<div className="buyer-notice is-error" role="alert">{error}<button className="buyer-btn" onClick={retry}>Try again</button></div>}
     {unavailable&&<div className="buyer-notice is-error" role="alert">Some items are unavailable or exceed current stock. <Link href="/cart">Update your cart</Link> before continuing.</div>}
-    <form onSubmit={e=>{e.preventDefault();void submit()}} className="buyer-columns"><section className="buyer-panel buyer-stack"><h2>Delivery details</h2>
+    <form onSubmit={e=>{e.preventDefault();void submit()}} className="buyer-columns"><section className="buyer-panel buyer-stack"><h2>Delivery details</h2><p className="buyer-help">Only your selected delivery details are shared for this order. Pickup does not require a home address. <Link href="/privacy">How we use order details</Link></p>
       <label className="buyer-label">Delivery method<select disabled={busy} className="buyer-input" value={method} onChange={(e)=>setMethod(e.target.value)}><option value="pickup">Campus pickup - free</option><option value="delivery">Campus delivery - estimated {formatPrice(500)}</option></select></label>
       {method==='delivery'&&<label className="buyer-label">Delivery address<textarea disabled={busy} className="buyer-input" value={address} onChange={(e)=>setAddress(e.target.value)} required={trialEnabled} minLength={5} maxLength={500} placeholder="Hall, room or campus meeting point"/></label>}
       <label className="buyer-label">Contact phone<input disabled={busy} required={trialEnabled} className="buyer-input" type="tel" autoComplete="tel" value={phone} onChange={(e)=>setPhone(e.target.value)} maxLength={14} placeholder="08012345678"/></label>
@@ -79,6 +81,6 @@ export default function CheckoutClient({trialEnabled=false}:{trialEnabled?:boole
     </section><section className="buyer-panel buyer-stack"><h2>Order summary</h2>{items.map((item)=>{
       const listing=live[item.id]
       return <div key={item.id} className="buyer-stack"><strong>{item.title}</strong><span className="buyer-help">Quantity {item.quantity}</span><PriceBlock product={listing??{price:item.price,stock_quantity:0}}/>{listing&&<><ListingChips product={listing}/><DeliveryLine product={listing} variant="long"/></>}</div>
-    })}<div className="buyer-row"><span>Items</span><strong>{formatPrice(subtotal)}</strong></div><div className="buyer-row"><span>Service fee</span><span>{formatPrice(fee)}</span></div><div className="buyer-row"><span>Estimated delivery</span><span>{formatPrice(delivery)}</span></div><div className="buyer-row"><strong>Estimated total</strong><strong>{formatPrice(subtotal+fee+delivery)}</strong></div><ServiceFeeNote subtotal={subtotal}/><button type="submit" className="buyer-btn is-primary" disabled={!trialEnabled||busy||!ready||unavailable}>{busy?'Placing trial order...':trialEnabled?'Place trial order':'Payment unavailable'}</button>{submitError&&<div className="buyer-notice is-error" role="alert">{submitError}<button type="button" className="buyer-btn" disabled={busy} onClick={retry}>Refresh prices</button></div>}<p className="buyer-help">{trialEnabled?'Trial amounts are for testing only. This button does not charge your card or credit a real wallet.':'The final amount will be confirmed before any payment is made.'}</p></section></form>
+    })}<div className="buyer-row"><span>Items</span><strong>{formatPrice(subtotal)}</strong></div><div className="buyer-row"><span>Service fee</span><span>{formatPrice(fee)}</span></div><div className="buyer-row"><span>Estimated delivery</span><span>{formatPrice(delivery)}</span></div><div className="buyer-row"><strong>Estimated total</strong><strong>{formatPrice(subtotal+fee+delivery)}</strong></div><ServiceFeeNote subtotal={subtotal}/><label className="by-check"><input type="checkbox" checked={agreed} required onChange={e=>setAgreed(e.target.checked)}/><span>I have reviewed the item, service and delivery amounts and agree to the <Link href="/terms">order terms</Link> and <Link href="/refunds">refund policy</Link>. This trial does not collect payment.</span></label><button type="submit" className="buyer-btn is-primary" disabled={!trialEnabled||busy||!ready||unavailable||!agreed}>{busy?'Placing trial order...':trialEnabled?'Place trial order':'Payment unavailable'}</button>{submitError&&<div className="buyer-notice is-error" role="alert">{submitError}<button type="button" className="buyer-btn" disabled={busy} onClick={retry}>Refresh prices</button></div>}<p className="buyer-help">{trialEnabled?'Trial amounts are for testing only. This button does not charge your card or credit a real wallet.':'The final amount will be confirmed before any payment is made.'}</p></section></form>
   </BuyerPage>
 }

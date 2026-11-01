@@ -11,6 +11,7 @@ async function checkout(page:import('@playwright/test').Page){
   await page.goto('/products')
   await page.locator('.pc-add').first().click()
   await page.goto('/checkout')
+  await page.getByRole('checkbox',{name:/I have reviewed/}).check()
   await expect(page.getByRole('button',{name:'Place trial order',exact:true})).toBeEnabled()
   await page.getByLabel('Contact phone',{exact:true}).fill('08012345678')
 }

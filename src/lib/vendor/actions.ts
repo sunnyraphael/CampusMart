@@ -12,9 +12,12 @@ async function session() {
   return {supabase,user}
 }
 
-export async function enrollVendor():Promise<{ok:true}|{error:string}> {
+export async function enrollVendor(accepted:boolean):Promise<{ok:true}|{error:string}> {
   try {
     const {supabase}=await session()
+    if(accepted!==true)return {error:'Read and accept the vendor terms before opening a store.'}
+    const consent=await supabase.rpc('cm_accept_vendor_terms',{p_accepted:true})
+    if(consent.error)return {error:consent.error.code==='P0001'?consent.error.message:'Review your account permissions before starting vendor setup.'}
     const {error}=await supabase.rpc('cm_enroll_vendor')
     if(error)throw error
     revalidatePath('/','layout')

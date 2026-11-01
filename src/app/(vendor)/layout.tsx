@@ -29,6 +29,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const [sidebarPath, setSidebarPath] = useState<string | null>(null)
   const sidebarOpen = sidebarPath === pathname
   const [isAdmin,setIsAdmin]=useState(false)
+  const [permissionsNeeded,setPermissionsNeeded]=useState(false)
   const [vendorName, setVendorName] = useState('Your store')
   const [sellerId, setSellerId] = useState<string | null>(null)
   const [todoCount, setTodoCount] = useState(0)
@@ -54,8 +55,8 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       }
       setSellerId(seller.id)
       setVendorName(seller.store_name || 'Your store')
-      const admin=await supabase.rpc('is_admin')
-      if(!cancelled)setIsAdmin(!admin.error&&admin.data===true)
+      const [admin,permission]=await Promise.all([supabase.rpc('is_admin'),supabase.rpc('cm_consent_status')])
+      if(!cancelled){setIsAdmin(!admin.error&&admin.data===true);setPermissionsNeeded(!!permission.error||permission.data?.eligible!==true||permission.data?.vendor_terms!==true||permission.data?.selling_eligible!==true)}
       const { count } = await supabase.from('order_items')
         .select('id, orders!inner(payment_status,is_trial)', { count: 'exact', head: true })
         .eq('seller_id', seller.id).in('fulfillment_status', ['pending', 'confirmed', 'shipped']).or('payment_status.eq.paid,is_trial.eq.true',{referencedTable:'orders'})
@@ -124,7 +125,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     </aside>
     <div className="vs-main" inert={sidebarOpen || undefined}>
       <header className="vs-topbar"><div className="vs-topbar-left"><button ref={menuRef} className="vs-hamburger" onClick={() => setSidebarPath(pathname)} aria-label="Open menu" aria-expanded={sidebarOpen} aria-controls="vendor-navigation"><Menu size={22} /></button><span className="vs-topbar-context">Workspace <span>/</span></span><p className="vs-topbar-title">{vendorPageTitle(pathname)}</p></div><div className="vs-topbar-right">{storeHref && <Link className="vs-store-link" href={storeHref}>View Store <ArrowUpRight size={15} /></Link>}<ThemeToggle /><Link href="/vendor/settings" className="vs-avatar" aria-label="Store settings">{initials}</Link></div></header>
-      <main id="vendor-content" className="vs-content" tabIndex={-1}>{loadError && <p className="vx-notice" role="alert">We couldn’t complete that request. Please refresh and try again.</p>}{children}</main>
+      <main id="vendor-content" className="vs-content" tabIndex={-1}>{loadError && <p className="vx-notice" role="alert">We couldn’t complete that request. Please refresh and try again.</p>}{permissionsNeeded&&<p className="buyer-notice">Review your account and vendor permissions before accepting new orders or publishing listings. <Link href={`/consent?next=${encodeURIComponent(pathname)}&vendor=1`}>Review permissions</Link></p>}{children}</main>
       {!onboarding && <nav className="vs-mobile-nav" aria-label="Quick navigation"><Link href="/vendor/dashboard" aria-current={pathname === '/vendor/dashboard' ? 'page' : undefined}><LayoutDashboard size={20} />Overview</Link><Link href="/vendor/listings" aria-current={pathname.startsWith('/vendor/listings') ? 'page' : undefined}><Package size={20} />Listings</Link><Link href="/vendor/listings/new" className="vs-mobile-add" aria-label="Create listing"><Plus size={23} /></Link><Link href="/vendor/orders" aria-current={pathname.startsWith('/vendor/orders') ? 'page' : undefined}><ShoppingBag size={20} />Orders</Link><Link href="/vendor/messages" aria-current={pathname.startsWith('/vendor/messages') ? 'page' : undefined}><MessageCircle size={20} />Messages</Link></nav>}
     </div>
   </div>

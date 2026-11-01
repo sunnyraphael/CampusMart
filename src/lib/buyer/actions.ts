@@ -13,7 +13,7 @@ async function session() {
 }
 
 function fail(error: unknown): { error: string } {
-  console.error('Buyer action failed', error)
+  console.error('Buyer action failed', {code:typeof error==='object'&&error!==null&&'code'in error?String(error.code).slice(0,20):'unknown'})
   if (error instanceof z.ZodError) return { error: error.issues[0]?.message ?? 'Please check the form.' }
   if (error instanceof Error && error.message === 'Please log in to continue.') return { error: error.message }
   return { error: 'We could not save that change. Please try again or contact support.' }
@@ -81,6 +81,8 @@ export async function startConversation(vendorId: string, productId?: string) {
     uuid.parse(vendorId)
     if (productId) uuid.parse(productId)
     const { supabase } = await session()
+    const permission=await supabase.rpc('cm_consent_status')
+    if(permission.error||permission.data?.eligible!==true)return {error:'Review your account permissions before starting a conversation.'}
     const { data, error } = await supabase.rpc('cm_start_conversation', { p_vendor_id: vendorId, p_product_id: productId ?? null })
     if (error) throw error
     if (typeof data !== 'string') throw new Error('No conversation returned')
@@ -94,6 +96,8 @@ export async function sendMessage(id: string, body: string) {
     uuid.parse(id)
     const text = messageSchema.parse(body)
     const { supabase } = await session()
+    const permission=await supabase.rpc('cm_consent_status')
+    if(permission.error||permission.data?.eligible!==true)return {error:'Review your account permissions before sending messages.'}
     const { error } = await supabase.rpc('cm_send_message', { p_conversation_id: id, p_body: text })
     if (error) throw error
     revalidatePath('/messages')

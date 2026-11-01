@@ -34,8 +34,9 @@ export default async function CategoriesPage() {
     <section className="cat-page" aria-labelledby="categories-title">
       <header className="cat-head">
         <div>
+          <p className="sh-eyebrow">A place for every campus find</p>
           <h1 id="categories-title">Shop by category</h1>
-          <p>From lecture essentials to everyday finds.</p>
+          <p>Choose a category and explore what vendors have available.</p>
         </div>
         <Link href="/products" className="pl-btn">All listings <ArrowUpRight size={16} aria-hidden="true" /></Link>
       </header>
@@ -51,14 +52,12 @@ export default async function CategoriesPage() {
             const { icon: Icon, description } = categoryStyle(category.slug, category.name)
             return (
               <Link key={category.id} href={buildProductsHref({ category: category.slug })} className="cat-tile lift">
-                <span className="cat-tile-top">
-                  <span className="cat-icon"><Icon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
-                  <ArrowUpRight size={16} className="cat-arrow" aria-hidden="true" />
-                </span>
+                <span className="cat-icon"><Icon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
                 <span className="cat-copy">
                   <span className="cat-name">{category.name}</span>
                   <span className="cat-description">{description}</span>
                 </span>
+                <ArrowUpRight size={16} className="cat-arrow" aria-hidden="true" />
               </Link>
             )
           })}

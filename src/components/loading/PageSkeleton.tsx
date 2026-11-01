@@ -1,16 +1,20 @@
+import { AccountControlsSkeleton,ConsentSkeleton,GuardianPermissionSkeleton,AdminAccountRequestsSkeleton,AdminGuardianSkeleton } from './PrivacySkeletons'
+import PolicySkeleton from '@/components/privacy/PolicySkeleton'
+import SettingsSkeleton from '@/components/account/SettingsSkeleton'
+import { ShoppingHomeSkeleton,ShoppingCatalogSkeleton,ShoppingCategoriesSkeleton,ShoppingProductSkeleton,ShoppingStorefrontSkeleton } from './ShoppingSkeletons'
 import { AdminOverviewSkeleton, AdminQueueSkeleton } from './AdminSkeletons'
 import type { SkeletonKind } from '@/lib/loading-routes'
-import { ArticleSkeleton, AuthSkeleton, CartSkeleton, CatalogSkeleton, CategoriesSkeleton, CheckoutSkeleton, ContactSkeleton, HelpSkeleton, HomeSkeleton, InboxSkeleton, NotificationsSkeleton, OrdersSkeleton, ProductSkeleton, ProfileSkeleton, SavedSkeleton, SettingsSkeleton, StorefrontSkeleton, ThreadSkeleton } from './StoreSkeletons'
+import { ArticleSkeleton, AuthSkeleton, CartSkeleton, CheckoutSkeleton, ContactSkeleton, HelpSkeleton, InboxSkeleton, NotificationsSkeleton, OrdersSkeleton, ProfileSkeleton, SavedSkeleton, ThreadSkeleton } from './StoreSkeletons'
 import { EarningsSkeleton, GuideSkeleton, ListingFormSkeleton, OnboardingSkeleton, PackingSkeleton, VendorListingsSkeleton, VendorOrderSkeleton, VendorOrdersSkeleton, VendorOverviewSkeleton, VendorSettingsSkeleton, VerifySkeleton } from './VendorSkeletons'
 
 export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
   switch (kind) {
-    case 'homepage': return <HomeSkeleton />
-    case 'catalog': return <CatalogSkeleton />
-    case 'deals': case 'favorites': return <CatalogSkeleton kind={kind} />
-    case 'categories': return <CategoriesSkeleton />
-    case 'product': return <ProductSkeleton />
-    case 'storefront': return <StorefrontSkeleton />
+    case 'homepage': return <ShoppingHomeSkeleton />
+    case 'catalog': return <ShoppingCatalogSkeleton kind="catalog" />
+    case 'deals': case 'favorites': return <ShoppingCatalogSkeleton kind={kind} />
+    case 'categories': return <ShoppingCategoriesSkeleton />
+    case 'product': return <ShoppingProductSkeleton />
+    case 'storefront': return <ShoppingStorefrontSkeleton />
     case 'orders': return <OrdersSkeleton />
     case 'order-detail': return <OrdersSkeleton detail />
     case 'inbox': return <InboxSkeleton />
@@ -21,6 +25,7 @@ export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
     case 'settings': return <SettingsSkeleton />
     case 'contact': return <ContactSkeleton />
     case 'help': return <HelpSkeleton />
+    case 'policy': return <PolicySkeleton />
     case 'article': return <ArticleSkeleton />
     case 'enrollment': return <ArticleSkeleton enrollment />
     case 'cart': return <CartSkeleton />
@@ -39,6 +44,11 @@ export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
     case 'guide': return <GuideSkeleton />
     case 'vendor-inbox': return <InboxSkeleton vendor />
     case 'vendor-thread': return <ThreadSkeleton vendor />
+    case 'account-controls': return <AccountControlsSkeleton />
+    case 'consent': return <ConsentSkeleton />
+    case 'guardian-permission': return <GuardianPermissionSkeleton />
+    case 'admin-account-requests': return <AdminAccountRequestsSkeleton />
+    case 'admin-guardian-permissions': return <AdminGuardianSkeleton />
     case 'admin-overview': return <AdminOverviewSkeleton />
     case 'admin-verifications': return <AdminQueueSkeleton kind="verifications" />
     case 'admin-disputes': return <AdminQueueSkeleton kind="disputes" />

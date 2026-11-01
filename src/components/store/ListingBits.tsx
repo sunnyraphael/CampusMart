@@ -6,7 +6,6 @@ import {
   formatLagosDay,
   getDelivery,
   getPromo,
-  lowStockLabel,
 } from '@/lib/listing-display'
 
 // Presentational pieces shared by the product cards, product page, storefront,
@@ -27,16 +26,16 @@ export function PriceBlock({
     <span className="ld-price">
       <span className="ld-top">
         <span className="ld-now">{formatPrice(product.price)}</span>
-        {badge && promo && <span className="ld-badge">{promo.percentOff}% off</span>}
+        {badge && promo && <span className="ld-badge">Vendor offer</span>}
       </span>
       {promo && (
         <span className="ld-was-row">
-          <del className="ld-was">
-            <span className="sr-only">Original price </span>
+          <span className="sh-reference-label">Vendor reference</span><del className="ld-was">
+            <span className="sr-only">Vendor reference price </span>
             {formatPrice(promo.original)}
           </del>
           {showSaleEnd && promo.endsAt && (
-            <span className="ld-end">Sale ends {formatLagosDay(promo.endsAt)}</span>
+            <span className="ld-end">Vendor offer ends {formatLagosDay(promo.endsAt)}</span>
           )}
         </span>
       )}
@@ -44,11 +43,11 @@ export function PriceBlock({
   )
 }
 
-// Solid red pill that sits on the corner of a product photo.
+// Vendor-supplied comparison offer; no independently verified price-history claim.
 export function PromoCorner({ product }: { product: ListingFields }) {
   const promo = getPromo(product)
   if (!promo) return null
-  return <span className="ld-corner">{promo.percentOff}% off</span>
+  return <span className="ld-corner">Vendor offer</span>
 }
 
 export function ListingChips({
@@ -62,7 +61,7 @@ export function ListingChips({
 }) {
   const condition = product.condition
   const cond = condition && (showNew || condition !== 'new') ? conditionLabel(condition) : null
-  const low = lowStock ? lowStockLabel(product.stock_quantity) : null
+  const low = lowStock && product.stock_quantity>0 && product.stock_quantity<=3 ? `${product.stock_quantity} in stock` : null
   if (!cond && !low) return null
   return (
     <span className="ld-chips">
@@ -85,7 +84,7 @@ export function DeliveryLine({
   return (
     <span className={`ld-delivery${variant === 'long' ? ' is-long' : ''}`}>
       <Icon size={variant === 'long' ? 16 : 12} strokeWidth={1.75} aria-hidden="true" />
-      <span>{variant === 'long' ? info.long : info.short}</span>
+      <span>{variant === 'long' ? `Vendor estimate: ${info.long}` : info.short.replace('Delivers in ', 'Est. ').replace('Same day delivery', 'Est. same day').replace('Pre-order, ', 'Pre-order est. ')}</span>
     </span>
   )
 }

@@ -1,5 +1,5 @@
 import { CheckCircle2, Info } from "lucide-react"
-import { SERVICE_FEE_WAIVED_FROM, amountToWaive } from "@/lib/fees"
+import { SERVICE_FEE_WAIVED_FROM, SERVICE_FEE_RATE } from "@/lib/fees"
 
 const naira = (n: number) => "₦" + Math.round(n).toLocaleString("en-NG")
 
@@ -17,7 +17,7 @@ export default function ServiceFeeNote({ subtotal }: { subtotal: number }) {
       <span>
         {waived
           ? `Service fee waived. Orders of ${naira(SERVICE_FEE_WAIVED_FROM)} or more pay none.`
-          : `Spend ${naira(amountToWaive(subtotal))} more to remove the service fee. It is waived on orders of ${naira(SERVICE_FEE_WAIVED_FROM)} or more.`}
+          : `A ${SERVICE_FEE_RATE*100}% service fee applies below ${naira(SERVICE_FEE_WAIVED_FROM)}. Delivery, if selected, is listed separately before placing your order.`}
       </span>
     </div>
   )

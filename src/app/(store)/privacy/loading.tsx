@@ -1,2 +1,1 @@
-import PageSkeleton from '@/components/loading/PageSkeleton'
-export default function Loading() { return <PageSkeleton kind="article" /> }
+export { default } from '@/components/privacy/PolicySkeleton'

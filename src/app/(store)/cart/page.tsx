@@ -124,7 +124,7 @@ export default function CartPage() {
                   </div>
                   <div className="ct-row">
                     <span>Delivery</span>
-                    <span>Added at checkout</span>
+                    <span>Pickup: free; delivery: NGN 500 estimate</span>
                   </div>
                   <div className="ct-row">
                     <span>Service fee{serviceFee === 0 && counted.length > 0 ? " (waived)" : " (2%)"}</span>
@@ -135,7 +135,7 @@ export default function CartPage() {
                   <hr className="ct-divider" />
 
                   <div className="ct-total">
-                    <span>Total</span>
+                    <span>Total before delivery</span>
                     <span>{formatPrice(total)}</span>
                   </div>
 
@@ -241,7 +241,7 @@ function CartLine({
           <p className="ct-note is-warn">
             <TriangleAlert size={14} strokeWidth={1.75} aria-hidden="true" />
             <span>
-              Only {live.stock_quantity} left.{" "}
+              {live.stock_quantity} available.{" "}
               <button type="button" className="ct-linkbtn" onClick={() => onQty(live.stock_quantity)}>
                 Set quantity to {live.stock_quantity}
               </button>
@@ -257,7 +257,8 @@ function CartLine({
               <button
                 type="button"
                 aria-label="Decrease quantity"
-                onClick={() => (item.quantity > 1 ? onQty(item.quantity - 1) : onRemove())}
+                disabled={item.quantity<=1}
+                onClick={() => onQty(item.quantity - 1)}
               >
                 <Minus size={16} strokeWidth={1.75} aria-hidden="true" />
               </button>

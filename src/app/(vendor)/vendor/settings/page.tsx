@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SettingsClient from './SettingsClient'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,5 +24,5 @@ export default async function SettingsPage() {
   if (error) throw new Error('Could not load your store settings.')
   if (!seller) redirect('/vendor/onboarding')
 
-  return <SettingsClient seller={seller} />
+  return <><SettingsClient seller={seller}/><section className="vx-panel" style={{marginTop:24}}><h2>Store permissions and closure</h2><p className="buyer-help">Review the current vendor terms or close your store while keeping your buyer account. Existing orders, disputes and payouts remain your responsibility.</p><div className="buyer-actions"><Link className="buyer-btn" href="/consent?next=%2Fvendor%2Fsettings&vendor=1">Review vendor terms</Link><Link className="buyer-btn" href="/settings#account-controls">Privacy and account controls</Link></div></section></>
 }
