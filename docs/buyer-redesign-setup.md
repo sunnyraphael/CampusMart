@@ -10,6 +10,8 @@ Apply these complete files in Supabase SQL Editor **once, in order**, after the 
 2. `supabase/migrations/202611010002_marketplace_consent.sql`
 3. `supabase/migrations/202611010003_review_integrity.sql`
 
+The subsequent mobile-navigation/cancellation update also needs `supabase/migrations/202611010004_buyer_order_cancellation.sql`, applied once after these files. See [the website review](website-review-2026-11-01.md) for its behavior, live-payment limitations and remaining launch findings.
+
 The coding agent has not applied these to the live database. The new controls need these migrations; without them, permissions and account-change screens report that the service is unavailable and new checkout actions fail closed. The three migrations are also tested together in an isolated database.
 
 Existing buyers must review `/consent` before new orders or messages. Existing vendors must also accept vendor terms; their workspace shows a reminder with a review link. A listing's vendor needs current selling permission before a new order item can be created. Existing order fulfilment, receipt, dispute and support actions remain available when guardian permission is withdrawn.

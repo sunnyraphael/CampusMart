@@ -5,10 +5,10 @@ export default function TrackingTimeline({ tracking: t, pickup = false }: { trac
   const current = deliverySteps.findIndex(s => s.status === t.status)
   const link = safeTrackingUrl(t.tracking_url)
   return <section className="ot-tracking" aria-label="Delivery tracking">
-    <ol className="ot-steps" aria-label="Delivery stages">{deliverySteps.map((step, index) => <li key={step.status} className={current >= index ? 'is-done' : ''} aria-current={index === current ? 'step' : undefined}>
+    {t.status!=='cancelled'&&<ol className="ot-steps" aria-label="Delivery stages">{deliverySteps.map((step, index) => <li key={step.status} className={current >= index ? 'is-done' : ''} aria-current={index === current ? 'step' : undefined}>
       <span className="ot-step-dot" aria-hidden>{current >= index ? <CheckCircle2 size={16} /> : <Clock size={16} />}</span>
       <span>{pickup && step.status === 'shipped' ? 'Ready for pickup' : step.label}</span>
-    </li>)}</ol>
+    </li>)}</ol>}
     <div className="ot-facts">
       {t.expected_by && <p><strong>Estimated {pickup ? 'pickup' : 'delivery'}:</strong> {trackingDate(t.expected_by)}</p>}
       {t.courier && <p><strong>Courier:</strong> {t.courier}</p>}

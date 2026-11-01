@@ -20,6 +20,7 @@ export function StorefrontSkeleton() {
 export function OrdersSkeleton({ detail = false }: { detail?: boolean }) {
   return <Frame variant={detail ? 'order-detail' : 'orders'}><Heading copy={detail ? 'order-detail' : 'orders'} actions={detail} actionWidths={[158,96]} />{Array.from({ length: detail ? 1 : 2 }, (_, i) => <Panel key={i}>
     <div className="buyer-row"><div className="sk-lines"><Block width={185} height={25} /><Block width={145} height={12} /></div><Block width={100} height={24} /></div>
+    {detail&&<div className="buyer-actions"><Button width={180}/></div>}
     <div className="order-items">{[0, 1].map(n => <div className="order-item" key={n}><Block width={48} height={48} className="sk-square" /><div className="sk-lines"><Block width="60%" height={17} /><Block width="45%" height={14} /><Block width={110} height={24} /></div><div className="order-item-progress sk-lines">
       {detail && <><TrackingSkeleton /><div className="ot-code-panel sk-lines"><Block width="65%" height={19}/><Lines count={2}/><Button width={180}/></div></>}
       <div className="buyer-actions"><Button /><Button /></div></div></div>)}</div><footer className="buyer-row"><Block width="35%" height={14} /><Block width={110} height={22} />{!detail && <Button />}</footer>

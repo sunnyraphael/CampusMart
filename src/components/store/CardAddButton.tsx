@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, ShoppingCart } from 'lucide-react'
 import { useCartStore } from '@/store/cart'
 import { toast } from 'sonner'
+import { useHydrated } from '@/hooks/useHydrated'
 
 // The only interactive piece of a product card that needs the browser (it talks to the cart store).
 // Everything else on the card stays a server component, so the list ships very little JavaScript.
@@ -17,6 +18,7 @@ type Props = {
 }
 
 export default function CardAddButton({ id, title, price, imageUrl, vendorName, stock }: Props) {
+  const hydrated = useHydrated()
   const addItem = useCartStore((s) => s.addItem)
   const [added, setAdded] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -34,7 +36,7 @@ export default function CardAddButton({ id, title, price, imageUrl, vendorName, 
   }
 
   return (
-    <button type="button" className={`pc-add${added ? ' is-added' : ''}`} onClick={handleClick} disabled={stock <= 0}
+    <button type="button" className={`pc-add${added ? ' is-added' : ''}`} onClick={handleClick} disabled={!hydrated || stock <= 0}
       aria-label={`Add ${title} to cart`} title={added ? 'Added to cart' : 'Add to cart'}>
       {added ? <Check size={20} strokeWidth={2} aria-hidden="true" /> : <ShoppingCart size={20} strokeWidth={1.75} aria-hidden="true" />}
       <span className="pc-add-label" aria-hidden="true">{stock <= 0 ? 'Out of stock' : added ? 'Added' : 'Add to cart'}</span>

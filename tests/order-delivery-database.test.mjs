@@ -47,6 +47,7 @@ before(async()=>{
   assert.equal(Number((await db.query('select count(*) n from public.orders where is_trial')).rows[0].n),0)
   assert.equal(Number((await db.query('select count(*) n from public.trial_checkout_requests')).rows[0].n),0)
   await db.exec(await readFile(new URL('../supabase/migrations/202610310005_order_update_notifications.sql',import.meta.url),'utf8'))
+  await db.exec(await readFile(new URL('../supabase/migrations/202611010004_buyer_order_cancellation.sql',import.meta.url),'utf8'))
   await db.exec(`alter table public.orders enable row level security;alter table public.order_items enable row level security;
     create policy base_orders_read on public.orders for select to authenticated using(user_id=auth.uid());
     create policy base_orders_update on public.orders for update to authenticated using(user_id=auth.uid()) with check(user_id=auth.uid());`)
@@ -307,4 +308,64 @@ test('an unpaid trial dispute is visible to admin and refund approval cannot sen
     assert.ok(!(await rpc('cm_admin_order_disputes',[false])).some(i=>i.item_id===id))
   })
   assert.equal((await db.query('select * from public.transactions where order_item_id=$1',[id])).rows.length,0)
+})
+
+async function cancellationOrder({age=0,status='pending',trial=true,count=2}={}) {
+  const id=crypto.randomUUID(),items=[]
+  await db.query(`insert into public.orders(id,user_id,payment_status,status,is_trial,total_amount,created_at) values($1,$2,$3,'pending',$4,2500,now()-($5*interval '1 minute'))`,[id,buyer,trial?'unpaid':'paid',trial,age])
+  for(let index=0;index<count;index++){
+    const itemId=crypto.randomUUID();items.push(itemId)
+    await db.query('insert into public.order_items(id,order_id,seller_id,product_id,quantity,unit_price,subtotal,fulfillment_status) values($1,$2,$3,$4,1,1234.56,1234.56,$5)',[itemId,id,seller,product,status])
+  }
+  return {id,items}
+}
+test('buyer cancellation is owner-only and never exposes the private audit table',async()=>{
+  const {id}=await cancellationOrder()
+  await as(other,()=>assert.rejects(rpc('cm_order_cancellation_quote',[id]),/not available/))
+  await as(vendor,()=>assert.rejects(rpc('cm_cancel_buyer_order',[id]),/not available/))
+  await as(buyer,()=>assert.rejects(db.query('select * from public.order_cancellations'),/permission denied/))
+  assert.equal((await as(buyer,()=>rpc('cm_order_cancellation_quote',[id]))).can_cancel,true)
+  await as(buyer,()=>assert.rejects(db.query("update public.orders set created_at=now()-interval '1 minute' where id=$1",[id]),/placement time/))
+  await as(buyer,()=>assert.rejects(db.query("update public.orders set status='cancelled' where id=$1",[id]),/cancellation action/))
+  await as(buyer,()=>assert.rejects(db.query('update public.orders set user_id=$1 where id=$2',[other,id]),/placement time/))
+})
+test('whole trial cancellation is atomic, idempotent and never creates money or stock',async()=>{
+  const {id,items}=await cancellationOrder({status:'confirmed'})
+  const beforeStock=(await db.query('select stock_quantity from public.products where id=$1',[product])).rows[0].stock_quantity
+  const beforeMoney=(await db.query('select count(*) n from public.transactions')).rows[0].n
+  const result=await as(buyer,()=>rpc('cm_cancel_buyer_order',[id,'Changed plans']))
+  assert.equal(result.cancelled,true);assert.equal(result.refund_amount,0);assert.equal(result.retained_service_fee,0);assert.equal(result.refund_status,'not_charged')
+  await as(buyer,()=>assert.rejects(db.query("update public.orders set status='pending' where id=$1",[id]),/cancellation action/))
+  assert.equal((await db.query('select status from public.orders where id=$1',[id])).rows[0].status,'cancelled')
+  assert.deepEqual((await db.query('select fulfillment_status from public.order_items where order_id=$1',[id])).rows.map(row=>row.fulfillment_status),['cancelled','cancelled'])
+  await db.query("update public.orders set created_at=now()-interval '1 hour' where id=$1",[id])
+  assert.equal((await as(buyer,()=>rpc('cm_cancel_buyer_order',[id]))).cancelled,true)
+  assert.equal(Number((await db.query('select count(*) n from public.order_tracking_events where item_id=any($1::uuid[])',[items])).rows[0].n),2)
+  assert.equal(Number((await db.query('select count(*) n from public.notifications where order_id=$1 and user_id=$2',[id,vendor])).rows[0].n),2)
+  assert.equal((await db.query('select stock_quantity from public.products where id=$1',[product])).rows[0].stock_quantity,beforeStock)
+  assert.equal((await db.query('select count(*) n from public.transactions')).rows[0].n,beforeMoney)
+  await as(vendor,()=>assert.rejects(rpc('cm_vendor_update_delivery',[items[0],'confirmed']),/locked/))
+  await as(buyer,()=>assert.rejects(rpc('cm_issue_delivery_code',[items[0]]),/available when/))
+})
+test('the server enforces the 30-minute boundary and dispatch for every item',async()=>{
+  for(const options of [{age:30},{age:31},{status:'shipped'},{status:'delivered'},{status:'disputed'},{count:0}]){
+    const {id}=await cancellationOrder(options)
+    assert.equal((await as(buyer,()=>rpc('cm_order_cancellation_quote',[id]))).can_cancel,false)
+    await as(buyer,()=>assert.rejects(rpc('cm_cancel_buyer_order',[id]),/window|item|order/i))
+    assert.equal((await db.query('select status from public.orders where id=$1',[id])).rows[0].status,'pending')
+  }
+  const {id,items}=await cancellationOrder()
+  assert.equal((await as(buyer,()=>rpc('cm_order_cancellation_quote',[id]))).can_cancel,true)
+  await as(vendor,()=>rpc('cm_vendor_update_delivery',[items[1],'confirmed']))
+  await as(vendor,()=>rpc('cm_vendor_update_delivery',[items[1],'shipped']))
+  await as(buyer,()=>assert.rejects(rpc('cm_cancel_buyer_order',[id]),/dispatched/))
+  assert.equal(Number((await db.query('select count(*) n from public.order_cancellations where order_id=$1',[id])).rows[0].n),0)
+})
+test('real paid cancellation fails closed until payment and inventory integration is connected',async()=>{
+  const {id}=await cancellationOrder({trial:false})
+  const quote=await as(buyer,()=>rpc('cm_order_cancellation_quote',[id]))
+  assert.equal(quote.can_cancel,false);assert.match(quote.reason,/integration/)
+  await as(buyer,()=>assert.rejects(rpc('cm_cancel_buyer_order',[id]),/integration/))
+  const row=(await db.query('select status,payment_status from public.orders where id=$1',[id])).rows[0]
+  assert.equal(row.status,'pending');assert.equal(row.payment_status,'paid')
 })

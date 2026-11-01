@@ -215,10 +215,10 @@ export default function VendorOrdersClient({
                         <div className="vo-item-main">
                           <h3>{p?.title ?? 'Product'}</h3>
                           <p className="vo-meta">
-                            Qty {it.quantity} · {naira(sub)} · You receive <strong>{naira(payout)}</strong>
+                            Qty {it.quantity} · {naira(sub)} · {status==='cancelled'?'Cancelled · no earnings':<>You receive <strong>{naira(payout)}</strong></>}
                           </p>
 
-                          {status === 'disputed' ? (
+                          {status === 'cancelled' ? <p className="vo-reason">The buyer cancelled this order. Do not prepare or dispatch it.</p> : status === 'disputed' ? (
                             <p className="vo-reason">
                               Reason given: {it.dispute_reason || 'No reason provided'}
                             </p>

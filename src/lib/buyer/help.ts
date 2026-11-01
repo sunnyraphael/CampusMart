@@ -1,4 +1,5 @@
 export const helpTopics = [
+  { question: 'Can I cancel an order?', answer: 'For a trial order, open My orders, choose Track order, then Cancellation options. You can cancel within 30 minutes of placement, before any item is dispatched or ready for pickup. The confirmation shows that no money was charged and no service fee is retained. Real paid online cancellation will need payment and refund integration. After the window, contact support; your consumer rights still apply.' },
   { question: 'How do I find items on my campus?', answer: 'Browse Categories or use the search bar. Open a listing to check its condition, vendor, stock and delivery estimate before adding it to your cart.' },
   { question: 'Why did the price in my cart change?', answer: 'Vendors can update prices and promotions can expire. Your cart checks the latest listing data. Always review the total again at checkout.' },
   { question: 'What does a pre-order mean?', answer: 'A pre-order is not ready for immediate campus delivery. The listing shows the vendor’s estimated number of calendar days. Message the vendor if you need more detail.' },

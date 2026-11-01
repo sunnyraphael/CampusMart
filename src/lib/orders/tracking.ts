@@ -26,6 +26,7 @@ export function safeTrackingUrl(value?: string | null) {
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : undefined } catch { return undefined }
 }
 export function creditLabel(t: Pick<OrderTracking, 'released_at' | 'held_at' | 'buyer_confirmed_at' | 'is_trial'>, status: string) {
+  if (status === 'cancelled') return t.is_trial ? 'Trial cancelled · no payment collected or vendor credit' : 'Order cancelled · check refund status with support'
   if (t.is_trial && t.released_at) return 'Trial completed · no real vendor credit'
   if (t.is_trial && status === 'refunded') return 'Trial refund approved · no real refund sent'
   if (t.is_trial && (t.held_at || status === 'disputed')) return 'Trial approval on hold'

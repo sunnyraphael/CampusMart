@@ -6,6 +6,7 @@ import { formatPrice } from '@/lib/utils/format'
 import { listingImages } from '@/lib/buyer/images'
 import TrackingTimeline from '@/components/orders/TrackingTimeline'
 import BuyerDeliveryCode from '@/components/orders/BuyerDeliveryCode'
+import CancelOrder from '@/components/orders/CancelOrder'
 import type { OrderTracking } from '@/lib/orders/tracking'
 
 export type BuyerOrderItem = {id:string;quantity:number;unit_price:number;subtotal:number;product_id:string|null;seller_id:string|null;fulfillment_status?:string;released_at?:string|null;expected_by?:string|null;dispute_reason?:string|null;products:{title:string;images:unknown}|null}
@@ -17,6 +18,7 @@ export default function OrderCard({order,detail=false,tracking=[]}:{order:BuyerO
   return <article className="buyer-panel buyer-stack" id={`order-${order.id}`}>
     <header className="buyer-row"><div><h2>Order {order.id.slice(0,8).toUpperCase()}</h2><time className="buyer-time">{order.created_at?new Date(order.created_at).toLocaleString('en-NG',{timeZone:'Africa/Lagos'}):''}</time></div><span className={`buyer-status ${paid&&!order.is_trial?'is-good':'is-warn'}`}>{order.is_trial?'Trial · no charge':paid?'Paid':order.payment_status==='refunded'?'Refunded':'Payment not completed'}</span></header>
     {order.is_trial&&<p className="buyer-notice">Trial order for testing the delivery procedure. No payment was collected and no real vendor earnings will be created.</p>}
+    {detail&&<div className="buyer-actions"><CancelOrder orderId={order.id}/>{order.status==='cancelled'&&<span className="buyer-status">Order cancelled</span>}</div>}
     <div className="order-items">{order.order_items.map((item)=>{
       const image=listingImages(item.products?.images)[0]
       const stage=stages[item.fulfillment_status??'pending']??{name:'Processing',tone:''}

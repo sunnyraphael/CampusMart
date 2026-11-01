@@ -173,6 +173,13 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
       }
       if(rpc==='cm_vendor_delivery_holds')return json(delivery.held_at?[order.order_items[0].id]:[])
       if(rpc==='cm_order_tracking')return json([track()])
+      if(rpc==='cm_order_cancellation_quote'||rpc==='cm_cancel_buyer_order'){
+        if(!signedIn||body.p_order_id!==ids.order)return rejected('This order is not available.')
+        const cancelled=itemStatus==='cancelled'
+        const reason=!trial?'Online cancellation of real orders is not enabled until payment and refund integration is connected. Contact support.':!['pending','confirmed'].includes(itemStatus)?'An item is already dispatched or ready for pickup. Contact support.':null
+        if(rpc==='cm_cancel_buyer_order'&&!cancelled){if(reason)return rejected(reason);itemStatus='cancelled'}
+        return json({cancelled:itemStatus==='cancelled',can_cancel:itemStatus!=='cancelled'&&!reason,reason,is_trial:trial,deadline:new Date(Date.now()+30*60000).toISOString(),refund_amount:0,retained_service_fee:0,refund_status:itemStatus==='cancelled'?'not_charged':undefined})
+      }
       if(rpc==='cm_vendor_update_delivery'){itemStatus=body.p_status;for(const key of ['expected_by','courier','tracking_number','tracking_url'])if(body['p_'+key]!=null)delivery[key]=body['p_'+key];if(body.p_note!=null)delivery.delivery_note=body.p_note;return json(null)}
       if(rpc==='cm_issue_delivery_code'){handoverCode='482731';return json({code:handoverCode,expires_at:new Date(Date.now()+1800000).toISOString()})}
       if(rpc==='cm_verify_delivery_code'){if(body.p_code!==handoverCode)return json({ok:false,message:'That code does not match. Check with the buyer before trying again.'});delivery.code_verified_at=now();if(itemStatus==='shipped')itemStatus='delivered';return json({ok:true})}

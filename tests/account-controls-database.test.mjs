@@ -29,6 +29,10 @@ before(async()=>{
     insert into public.products values('${product}','${store}','active');
     insert into public.orders values('${order}','${buyer}');`)
   await db.exec(await readFile(new URL('../supabase/migrations/202611010001_account_controls.sql',import.meta.url),'utf8'))
+  await db.exec(`alter table public.orders add column is_trial boolean default false,add column status text default 'pending',add column created_at timestamptz default now();
+    alter table public.order_items add column auto_release_at timestamptz;
+    create function public.cm_delivery_event(uuid,text,text) returns void language sql as $$select$$;`)
+  await db.exec(await readFile(new URL('../supabase/migrations/202611010004_buyer_order_cancellation.sql',import.meta.url),'utf8'))
 })
 after(()=>db.close())
 
@@ -98,4 +102,18 @@ test('data removal review never pretends to erase data, and review history is re
   assert.equal(row.status,'in_review');assert.equal(row.events.length,2)
   assert.equal((await db.query('select count(*) n from public.users where id=$1',[stranger])).rows[0].n,1)
   await as(stranger,()=>assert.rejects(rpc('cm_cancel_account_change',[id]),/Only a pending request/))
+})
+
+test('a cancelled trial permits account closure, but an unaudited cancelled order still blocks it',async()=>{
+  const sid=crypto.randomUUID(),oid=crypto.randomUUID()
+  await db.query('insert into public.sellers(id,user_id,store_name) values($1,$2,$3)',[sid,admin,'Another store'])
+  await db.query("insert into public.orders(id,user_id,is_trial) values($1,$2,true)",[oid,stranger])
+  await db.query("insert into public.order_items(order_id,seller_id,fulfillment_status) values($1,$2,'pending')",[oid,sid])
+  const request=await as(stranger,()=>rpc('cm_request_account_change',['close_account','Close after cancellation']))
+  await db.query("update public.order_items set fulfillment_status='cancelled' where order_id=$1",[oid])
+  await as(admin,()=>assert.rejects(rpc('cm_admin_review_account_change',[request,'approve_closure','Must not bypass settlement checks.']),/Resolve open orders/))
+  await db.query("update public.order_items set fulfillment_status='pending' where order_id=$1",[oid])
+  await as(stranger,()=>rpc('cm_cancel_buyer_order',[oid]))
+  await as(admin,()=>rpc('cm_admin_review_account_change',[request,'approve_closure','Cancelled trial has no remaining financial obligation.']))
+  assert.equal((await as(stranger,()=>rpc('cm_account_status'))).active,false)
 })

@@ -159,6 +159,7 @@ for(const theme of ['light','dark'])for(const width of [320,1440])test(`buyer re
   await page.setViewportSize({width,height:950})
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message))
   await page.goto('/products');await page.locator('.pc-add').first().click()
+  await expect(page.locator('.pc-add').first()).toHaveAttribute('title','Added to cart')
   const paths=['/','/categories','/products','/deals','/wishlist','/saved','/messages',`/messages/${ids.chat}`,'/notifications','/profile','/settings','/settings/account','/orders',`/orders/${ids.order}`,`/products/${ids.product}`,`/vendors/${ids.vendor}`,'/cart','/checkout','/help','/contact','/privacy','/terms','/refunds','/cookies','/vendor-terms','/how-it-works','/start-selling','/consent','/guardian-permission']
   for(const path of paths){
     const response=await page.goto(path)
