@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { reconcilePayments } from '@/lib/paystack'
 export const runtime='nodejs'
+export const maxDuration=60
 export async function GET(request:Request){
   const secret=process.env.CRON_SECRET,provided=request.headers.get('authorization')??''
   const expected=`Bearer ${secret??''}`

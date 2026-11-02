@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X, Undo2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { formatPrice } from '@/lib/utils/format'
+import { cancelPaidOrder } from '@/app/(checkout)/checkout/payment-actions'
 
-type Quote={cancelled:boolean;can_cancel:boolean;reason?:string;deadline?:string;is_trial?:boolean;refund_status?:string;refund_amount:number;retained_service_fee:number}
+type Quote={cancelled:boolean;can_cancel:boolean;reason?:string;deadline?:string;is_trial?:boolean;mode?:string;refund_status?:string;refund_amount:number;retained_service_fee:number}
 export default function CancelOrder({orderId}:{orderId:string}) {
   const router=useRouter()
   const [open,setOpen]=useState(false)
@@ -27,6 +29,11 @@ export default function CancelOrder({orderId}:{orderId:string}) {
     if(busy||refreshing||!quote?.can_cancel)return
     setBusy(true);setError('')
     try{
+      if(quote.is_trial===false){
+        const result=await cancelPaidOrder(orderId,reason.trim())
+        if('error'in result){setError(result.error??'Cancellation could not be confirmed.');return}
+        setQuote(result.quote as Quote);startTransition(()=>router.refresh());return
+      }
       const result=await createClient().rpc('cm_cancel_buyer_order',{p_order_id:orderId,p_reason:reason.trim()||null})
       if(result.error){setError(result.error.code==='P0001'?result.error.message:'Cancellation could not be confirmed. Retry to check its result, or refresh your order.');return}
       setQuote(result.data as Quote)
@@ -39,8 +46,8 @@ export default function CancelOrder({orderId}:{orderId:string}) {
       <Dialog.Title>{quote?.cancelled?'Order cancelled':'Cancel this order?'}</Dialog.Title>
       <Dialog.Description>Self-service cancellation is available within 30 minutes of placing an order, before dispatch or pickup readiness. Returns and problems with an item are handled separately.</Dialog.Description>
       {busy&&!quote&&<p role="status">Checking your order…</p>}
-      {quote?.cancelled?<p role="status" className="buyer-notice">Trial order cancelled. No payment was collected, no service fee was retained and no bank refund is needed.</p>:quote?.can_cancel?<>
-        <p className="buyer-notice">This is a trial order. Refund: ₦0. Service fee retained: ₦0. No money was charged. Cancellation stops every item in this order.</p>
+      {quote?.cancelled?<p role="status" className="buyer-notice">{quote.is_trial!==false?'Trial order cancelled. No payment was collected, no service fee was retained and no bank refund is needed.':`Order cancelled. Refund requested: ${formatPrice(quote.refund_amount)}. CampusMart service fee retained: ${formatPrice(quote.retained_service_fee)}. ${quote.mode==='test'?'TEST mode: no real refund.':'Check payment and refund status below; bank credit is not yet confirmed.'}`}</p>:quote?.can_cancel?<>
+        <p className="buyer-notice">{quote.is_trial!==false?'This is a trial order. Refund: ₦0. Service fee retained: ₦0. No money was charged. Cancellation stops every item in this order.':`Refund: ${formatPrice(quote.refund_amount)}. CampusMart service fee retained: ${formatPrice(quote.retained_service_fee)}. Paystack’s processing fee is not additionally deducted. Cancellation stops every item. The refund is submitted for processing; bank credit is not instant.${quote.mode==='test'?' TEST mode: no real refund.':''}`}</p>
         {quote.deadline&&<p className="buyer-help">Cancel before {new Date(quote.deadline).toLocaleTimeString('en-NG',{timeZone:'Africa/Lagos',hour:'2-digit',minute:'2-digit'})} (Lagos time). Availability is checked again when you confirm.</p>}
         <label className="buyer-form">Reason (optional)<textarea className="buyer-input" rows={2} maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></label>
         <div className="buyer-actions"><button className="buyer-btn is-danger" disabled={busy||refreshing} onClick={()=>void cancel()}>{busy?'Cancelling…':'Confirm cancellation'}</button><Dialog.Close className="buyer-btn" disabled={busy}>Keep order</Dialog.Close></div>

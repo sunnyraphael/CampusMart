@@ -45,7 +45,7 @@ export default async function EarningsPage() {
   // Only count items from orders that were really paid
   const orderIds = [...new Set(openItems.map((i) => i.order_id))]
   const { data: paidOrders, error: ordersError } = orderIds.length
-    ? await supabase.from('orders').select('id').in('id', orderIds).eq('payment_status', 'paid').eq('is_trial', false)
+    ? await supabase.from('orders').select('id').in('id', orderIds).eq('payment_status', 'paid').eq('is_trial', false).or('payment_environment.is.null,payment_environment.eq.live')
     : { data: [] as { id: string }[], error: null }
   if (ordersError) throw new Error('Could not verify your pending earnings.')
   const paidIds = new Set((paidOrders ?? []).map((o) => o.id))

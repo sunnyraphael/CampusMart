@@ -74,7 +74,7 @@ export default function DisputesClient({
     setNote('')
     setNotice(
       it.isTrial ? 'Trial dispute decision saved. No real refund or vendor credit was sent.' : decision === 'refund'
-        ? `Decision saved. Now send ${naira(it.subtotal)} back to ${it.buyerName || 'the buyer'} through the payment provider after payment integration. No refund was sent by this action.`
+        ? `Decision saved. Now send ${naira(it.subtotal)} back to ${it.buyerName || 'the buyer'} by reviewing the scope and fee treatment in Payments & refunds. This decision does not itself send a bank refund.`
         : 'Dispute resolved. The order returns to delivery review. Buyer confirmation and a separate admin approval are still required before vendor credit.'
     )
     } catch { setError('The decision could not be saved. Check your connection and retry.') } finally { setBusy(null) }
@@ -85,6 +85,7 @@ export default function DisputesClient({
     <div className="dq">
 
 
+      <Link className="buyer-btn" href="/admin/payments">Open payments &amp; refunds</Link>
       <AdminHeading title="Disputes" description="Review buyer reports, record your decision and keep delivery review connected." actions={<AdminRefresh/>}/>
       <QueueSummary items={[{label:resolved?'Resolved in this view':'Open in this view',value:items.length},{label:'Real orders',value:items.filter(i=>!i.isTrial).length},{label:'Trial orders',value:items.filter(i=>i.isTrial).length}]}/>
         <div className="dq-switch" role="tablist" aria-label="Dispute view">

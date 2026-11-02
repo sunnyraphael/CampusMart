@@ -173,7 +173,7 @@ export default function VendorOrdersClient({
             const address = pick(order, ['delivery_address', 'address', 'shipping_address'])
             return (
               <article key={order.id} className={`vo-card ${gTab === 'disputed' ? 'is-disputed' : ''}`}>
-                {order.is_trial&&<div className="vo-flag">TRIAL ORDER · No payment collected. Delivery and credit approval are simulated.</div>}
+                {order.payment_environment==='test'&&<p className="buyer-notice">PAYSTACK TEST ? Do not fulfil as a real sale. No real funds or vendor wallet credit.</p>}{order.is_trial&&<div className="vo-flag">TRIAL ORDER · No payment collected. Delivery and credit approval are simulated.</div>}
                 {gTab === 'disputed' && (
                   <div className="vo-flag">
                     <ShieldAlert size={18} aria-hidden />
@@ -235,7 +235,7 @@ export default function VendorOrdersClient({
                           {['delivered', 'received'].includes(status) && !it.released_at && (
                             <p className="vo-release"><Clock size={14} aria-hidden />Vendor credit is held until delivery is verified and admin approves it. Use Delivery code to verify the handover here.</p>
                           )}
-                          {it.released_at && <p className="vo-release ok"><PackageCheck size={14} aria-hidden />{order.is_trial?'Trial completed. Real wallet unchanged.':'Vendor wallet credited.'}</p>}
+                          {it.released_at && <p className="vo-release ok"><PackageCheck size={14} aria-hidden />{(order.is_trial||order.payment_environment==='test')?'Test completed. Real wallet unchanged.':'Vendor wallet credited.'}</p>}
                         </div>
 
                         <div className="vo-item-side">

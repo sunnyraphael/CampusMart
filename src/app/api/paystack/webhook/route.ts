@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { paymentConfig,paymentService } from '@/lib/paystack/config'
 import { validSignature } from '@/lib/paystack/protocol'
 import { verifyPayment,processRefund } from '@/lib/paystack'
+import { processTransfer } from '@/lib/paystack/transfers'
 export const runtime='nodejs'
 export async function POST(request:Request){
   try{
@@ -20,12 +21,20 @@ export async function POST(request:Request){
     const previous=await service.from('paystack_events').select('processed_at').eq('id',id).single()
     if(previous.error)throw new Error('Event lookup unavailable')
     if(previous.data.processed_at)return new Response('OK')
-    if(event.event==='charge.success'&&reference)await verifyPayment(reference)
+    if(event.event==='charge.success'&&reference&&/^cm-[a-f0-9]{32}$/.test(reference)){
+      const known=await service.from('paystack_payments').select('reference').eq('reference',reference).maybeSingle()
+      if(known.error)throw new Error('Payment lookup unavailable')
+      if(known.data)await verifyPayment(reference)
+    }
     else if(event.event.startsWith('refund.')&&event.data?.id){
       const job=await service.from('paystack_refunds').select('id').eq('provider_id',String(event.data.id)).maybeSingle()
       if(job.error)throw new Error('Refund lookup unavailable')
       if(job.data)await processRefund(job.data.id)
       // If POST-result persistence raced this event, cron reconciles by merchant-note marker.
+    }else if(event.event.startsWith('transfer.')&&reference){
+      const job=await service.from('paystack_transfers').select('id').eq('reference',reference).maybeSingle()
+      if(job.error)throw new Error('Transfer lookup unavailable')
+      if(job.data)await processTransfer(job.data.id)
     }else if(event.event.startsWith('charge.dispute.')){
       let ref=reference
       if(!ref&&typeof event.data?.transaction==='number'){

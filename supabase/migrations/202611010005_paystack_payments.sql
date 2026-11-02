@@ -1,20 +1,21 @@
 -- Apply once after 202611010004. Secrets stay in the application environment.
 begin;
 alter table public.orders add column payment_environment text check(payment_environment in ('test','live'));
+grant select(payment_environment) on public.orders to authenticated;
 create table public.paystack_payments(
   order_id uuid primary key references public.orders(id),user_id uuid not null references public.users(id),
-  request_id uuid not null,payload_hash text not null,reference text not null unique,
+  request_id uuid not null,payload_hash text not null,reference text not null unique,payment_terms_version text not null default '2026-11-01-payments-v1',payment_terms_accepted_at timestamptz not null default now(),last_checked_at timestamptz,
   amount_kobo bigint not null check(amount_kobo>0),email text not null,mode text not null check(mode in ('test','live')),
   state text not null default 'created' check(state in ('created','pending','paid','expired','review','refunded')),
   authorization_url text,provider_id text unique,created_at timestamptz not null default now(),expires_at timestamptz not null default now()+interval '30 minutes',
-  stock_released boolean not null default false,retain_fee_kobo bigint not null default 0 check(retain_fee_kobo>=0),
+  stock_released boolean not null default false,retain_fee_kobo bigint not null default 0 check(retain_fee_kobo>=0),provider_fee_kobo bigint check(provider_fee_kobo>=0),
   unique(user_id,request_id)
 );
 create table public.paystack_refunds(
   id uuid primary key default gen_random_uuid(),order_id uuid not null references public.paystack_payments(order_id),
   item_id uuid references public.order_items(id),dedup_key text not null unique,
   amount_kobo bigint not null check(amount_kobo>0),note text not null,
-  state text not null default 'queued' check(state in ('queued','submitting','pending','processing','needs-attention','failed','processed','uncertain')),
+  state text not null default 'queued' check(state in ('queued','submitting','pending','processing','needs-attention','failed','processed','uncertain','rejected')),
   provider_id text unique,created_at timestamptz not null default now(),updated_at timestamptz not null default now()
 );
 create table public.paystack_events(id text primary key,event text not null,reference text,created_at timestamptz not null default now(),processed_at timestamptz);
@@ -40,7 +41,7 @@ create trigger cm_protect_payment_order before insert or update on public.orders
 
 create function public.cm_create_paystack_order(p_user_id uuid,p_request_id uuid,p_items jsonb,p_delivery_method text,p_address text,p_phone text,p_note text,p_expected_total numeric,p_mode text,p_retain_fee boolean default false) returns jsonb
 language plpgsql security definer set search_path='' as $$
-declare v_order uuid:=gen_random_uuid();v_ref text:='cm_'||replace(gen_random_uuid()::text,'-','');v_hash text;v_items jsonb;r record;p public.products;
+declare v_order uuid:=gen_random_uuid();v_ref text:='cm-'||replace(gen_random_uuid()::text,'-','');v_hash text;v_items jsonb;r record;p public.products;
   v_sub numeric:=0;v_fee numeric;v_delivery numeric;v_total numeric;v_email text;existing public.paystack_payments;
 begin
   if p_mode is null or p_mode not in ('test','live') or not public.cm_consent_allows_trade(p_user_id) or not exists(select 1 from public.marketplace_consents where user_id=p_user_id and age_band='adult') then raise exception 'Paid checkout requires an eligible adult account.'; end if;
@@ -59,9 +60,11 @@ begin
     return to_jsonb(existing);
   end if;
   if (select count(*) from public.paystack_payments where user_id=p_user_id and created_at>now()-interval '1 hour')>=10 then raise exception 'Too many payment attempts. Wait before starting another checkout.'; end if;
+  perform 1 from public.users where id in (select p_user_id union select s.user_id from public.sellers s join public.products q on q.seller_id=s.id join jsonb_to_recordset(v_items) as x(product_id uuid,quantity int) on x.product_id=q.id) order by id for share;
+  perform 1 from public.sellers where id in (select q.seller_id from public.products q join jsonb_to_recordset(v_items) as x(product_id uuid,quantity int) on x.product_id=q.id) order by id for share;
   for r in select * from jsonb_to_recordset(v_items) as x(product_id uuid,quantity int) order by product_id loop
     select * into p from public.products where id=r.product_id for update;
-    if not found or p.status is distinct from 'active' or p.stock_quantity<r.quantity or p.price is null or p.price<=0 or p.price<>round(p.price,2) then raise exception 'An item is unavailable. Refresh your cart.'; end if;
+    if not found or p.status is distinct from 'active' or coalesce(p.stock_quantity,0)<r.quantity or p.price is null or p.price<=0 or p.price<>round(p.price,2) then raise exception 'An item is unavailable. Refresh your cart.'; end if;
     if not exists(select 1 from public.sellers s join public.marketplace_consents c on c.user_id=s.user_id where s.id=p.seller_id and c.age_band='adult' and public.cm_consent_allows_selling(s.user_id)) then raise exception 'A vendor is not eligible for paid orders.'; end if;
     v_sub:=v_sub+p.price*r.quantity;
   end loop;
@@ -72,7 +75,7 @@ begin
   for r in select * from jsonb_to_recordset(v_items) as x(product_id uuid,quantity int) order by product_id loop
     select * into p from public.products where id=r.product_id;
     update public.products set stock_quantity=stock_quantity-r.quantity where id=p.id;
-    insert into public.order_items(order_id,product_id,seller_id,quantity,unit_price,subtotal,fulfillment_status) values(v_order,p.id,p.seller_id,r.quantity,p.price,p.price*r.quantity,'pending');
+    insert into public.order_items(id,order_id,product_id,seller_id,quantity,unit_price,subtotal,fulfillment_status) values(gen_random_uuid(),v_order,p.id,p.seller_id,r.quantity,p.price,p.price*r.quantity,'pending');
   end loop;
   insert into public.paystack_payments(order_id,user_id,request_id,payload_hash,reference,amount_kobo,email,mode,retain_fee_kobo)
     values(v_order,p_user_id,p_request_id,v_hash,v_ref,(v_total*100)::bigint,v_email,p_mode,case when p_retain_fee then (v_fee*100)::bigint else 0 end) returning * into existing;
@@ -89,23 +92,31 @@ begin
   update public.paystack_payments set stock_released=true where order_id=p_order;
 end $$;
 
-create function public.cm_verify_paystack_payment(p_reference text,p_provider_id text,p_amount bigint,p_email text,p_currency text,p_mode text) returns uuid
+create function public.cm_verify_paystack_payment(p_reference text,p_provider_id text,p_amount bigint,p_email text,p_currency text,p_mode text,p_provider_fee bigint default null) returns uuid
 language plpgsql security definer set search_path='' as $$
 declare p public.paystack_payments;r record;
 begin
-  select * into p from public.paystack_payments where reference=p_reference for update;
+  select * into p from public.paystack_payments where reference=p_reference;
   if not found then raise exception 'Payment reference not found.'; end if;
+  perform 1 from public.order_items where order_id=p.order_id order by id for update;
+  perform 1 from public.orders where id=p.order_id for update;
+  select * into p from public.paystack_payments where reference=p_reference for update;
   if p_amount is distinct from p.amount_kobo or lower(p_email) is distinct from lower(p.email) or p_currency is distinct from 'NGN' or p_mode is distinct from p.mode or nullif(p_provider_id,'') is null then raise exception 'Payment verification did not match the order.'; end if;
   if p.provider_id is not null then
     if p.provider_id<>p_provider_id then raise exception 'A different transaction is already attached.'; end if;
     return p.order_id;
   end if;
-  update public.paystack_payments set provider_id=p_provider_id,state=case when p.state='expired' then 'review' else 'paid' end where order_id=p.order_id;
+  if p.expires_at<=now() and p.state in ('created','pending') then
+    perform public.cm_expire_paystack_payment(p.reference);
+    select * into p from public.paystack_payments where reference=p_reference;
+  end if;
+  if p_provider_fee is not null and (p_provider_fee<0 or p_provider_fee>p_amount) then raise exception 'Invalid provider processing fee.'; end if;
+  update public.paystack_payments set provider_id=p_provider_id,provider_fee_kobo=p_provider_fee,state=case when p.state='expired' then 'review' else 'paid' end where order_id=p.order_id;
+  update public.orders set payment_status='paid',payment_ref=p.reference,payment_verified_at=now(),payment_verification_ref=p.reference where id=p.order_id;
   if p.state='expired' then
     insert into public.paystack_refunds(order_id,dedup_key,amount_kobo,note) values(p.order_id,'expired:'||p.order_id,p.amount_kobo,'Payment arrived after the stock reservation expired. Full refund.') on conflict do nothing;
     return p.order_id;
   end if;
-  update public.orders set payment_status='paid',payment_ref=p.reference,payment_verified_at=now(),payment_verification_ref=p.reference where id=p.order_id;
   if p.mode='test' and not p.stock_released then perform public.cm_paystack_restore_stock(p.order_id); end if;
   for r in select id from public.order_items where order_id=p.order_id loop
     perform public.cm_delivery_event(r.id,'paid',case when p.mode='test' then 'PAYSTACK TEST payment verified. No real money was collected. Do not fulfil as a real sale.' else 'Payment verified. The vendor can prepare your order.' end);
@@ -117,6 +128,10 @@ end $$;
 create function public.cm_expire_paystack_payment(p_reference text) returns void language plpgsql security definer set search_path='' as $$
 declare p public.paystack_payments;
 begin
+  select * into p from public.paystack_payments where reference=p_reference;
+  if not found then return; end if;
+  perform 1 from public.order_items where order_id=p.order_id order by id for update;
+  perform 1 from public.orders where id=p.order_id for update;
   select * into p from public.paystack_payments where reference=p_reference for update;
   if not found or p.provider_id is not null or p.state not in ('created','pending') or p.expires_at>now() then return; end if;
   if not p.stock_released then perform public.cm_paystack_restore_stock(p.order_id); end if;
@@ -171,8 +186,12 @@ create function public.cm_paystack_refund_result(p_id uuid,p_provider_id text,p_
 declare r public.paystack_refunds;p public.paystack_payments;
 begin
   if p_state is null or p_state not in ('pending','processing','needs-attention','failed','processed','uncertain') then raise exception 'Invalid refund state.'; end if;
-  select * into r from public.paystack_refunds where id=p_id for update;
+  select * into r from public.paystack_refunds where id=p_id;
   if not found then raise exception 'Refund not found.'; end if;
+  perform 1 from public.order_items where order_id=r.order_id order by id for update;
+  perform 1 from public.orders where id=r.order_id for update;
+  perform 1 from public.paystack_payments where order_id=r.order_id for update;
+  select * into r from public.paystack_refunds where id=p_id for update;
   if r.provider_id is not null and p_provider_id is not null and r.provider_id<>p_provider_id then raise exception 'Refund reference mismatch.'; end if;
   if r.state='processed' then return; end if;
   update public.paystack_refunds set provider_id=coalesce(provider_id,p_provider_id),state=p_state,updated_at=now() where id=r.id;
@@ -200,10 +219,13 @@ begin
   end if;
   return new;
 end $$;
-create trigger cm_queue_dispute_refund after update of dispute_resolution on public.order_items for each row execute function public.cm_queue_dispute_refund();
+-- Dispute decisions remain review outcomes. The admin finance action confirms
+-- the actual refund scope and any lawful fee deduction before creating a job.
 
 create function public.cm_paystack_hold(p_reference text) returns void language plpgsql security definer set search_path='' as $$
 begin
+  perform 1 from public.order_items where order_id=(select order_id from public.paystack_payments where reference=p_reference) order by id for update;
+  perform 1 from public.orders where id=(select order_id from public.paystack_payments where reference=p_reference) for update;
   update public.paystack_payments set state='review' where reference=p_reference and state<>'refunded';
   insert into public.order_deliveries(item_id,held_at,hold_note)
     select i.id,now(),'Payment provider review. Do not release vendor funds.' from public.order_items i join public.paystack_payments p on p.order_id=i.order_id where p.reference=p_reference

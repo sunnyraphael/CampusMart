@@ -369,3 +369,162 @@ test('real paid cancellation fails closed until payment and inventory integratio
   const row=(await db.query('select status,payment_status from public.orders where id=$1',[id])).rows[0]
   assert.equal(row.status,'pending');assert.equal(row.payment_status,'paid')
 })
+
+test('Paystack payment, refund and payout migrations preserve financial invariants',async t=>{
+  await db.exec(`create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
+    create table public.marketplace_consents(user_id uuid primary key,age_band text);
+    insert into auth.users select id,email,now() from public.users;
+    insert into public.marketplace_consents select id,'adult' from public.users;
+    create function public.cm_consent_allows_trade(p_user uuid) returns boolean language sql stable as $$select exists(select 1 from auth.users where id=p_user and email_confirmed_at is not null)$$;
+    create function public.cm_consent_allows_selling(p_user uuid) returns boolean language sql stable as $$select public.cm_consent_allows_trade(p_user)$$;
+    alter table public.sellers add column is_kyc_verified boolean default true,add column kyc_status text default 'approved';`)
+  for(const file of ['202611010001_account_controls.sql','202611010005_paystack_payments.sql','202611010006_paystack_refunds_and_payouts.sql'])await db.exec(await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'))
+  const create=async(mode='test',requestId=crypto.randomUUID(),expected=10200,quantity=1)=>{
+    await db.exec("update public.paystack_payments set created_at=now()-interval '2 hours'")
+    await db.query("update public.products set price=10000,stock_quantity=10,status='active' where id=$1",[product])
+    return rpc('cm_create_paystack_order',[buyer,requestId,[{product_id:product,quantity}],'pickup','','08012345678','Paystack test',expected,mode,true])
+  }
+  const verify=async(p,id=String(Math.floor(Math.random()*1000000000)+1))=>rpc('cm_verify_paystack_payment',[p.reference,id,Number(p.amount_kobo),'buyer@example.test','NGN',p.mode,25000])
+  await t.test('server prices, reservations, adult checks and private grants',async()=>{
+    const p=await create()
+    assert.equal(Number(p.amount_kobo),1020000);assert.equal(Number(p.retain_fee_kobo),20000)
+    assert.equal((await db.query('select stock_quantity from public.products where id=$1',[product])).rows[0].stock_quantity,9)
+    const retry=await rpc('cm_create_paystack_order',[buyer,p.request_id,[{product_id:product,quantity:1}],'pickup','','08012345678','Paystack test',10200,'test',true])
+    assert.equal(retry.order_id,p.order_id)
+    await assert.rejects(create('test',crypto.randomUUID(),1),/Prices changed/)
+    await as(buyer,()=>assert.rejects(db.query('select * from public.paystack_payments'),/permission denied/))
+    await as(buyer,()=>assert.rejects(rpc('cm_verify_paystack_payment',[p.reference,'10',Number(p.amount_kobo),'buyer@example.test','NGN','test']),/permission denied/))
+    await db.query("update public.marketplace_consents set age_band='under_18' where user_id=$1",[buyer])
+    await assert.rejects(create(),/adult/)
+    await db.query("update public.marketplace_consents set age_band='adult' where user_id=$1",[buyer])
+  })
+  await t.test('verification rejects wrong amount, payer, currency or mode and is replay-safe',async()=>{
+    const p=await create()
+    for(const args of [[1,'buyer@example.test','NGN','test'],[1020000,'other@example.test','NGN','test'],[1020000,'buyer@example.test','USD','test'],[1020000,'buyer@example.test','NGN','live']])await assert.rejects(rpc('cm_verify_paystack_payment',[p.reference,'100',...args]),/match/)
+    await verify(p,'101');await verify(p,'101')
+    await assert.rejects(verify(p,'102'),/different transaction/)
+    assert.equal((await db.query('select payment_status from public.orders where id=$1',[p.order_id])).rows[0].payment_status,'paid')
+    assert.equal((await db.query('select stock_quantity from public.products where id=$1',[product])).rows[0].stock_quantity,10)
+    await as(buyer,()=>assert.rejects(db.query("update public.orders set payment_status='refunded' where id=$1",[p.order_id]),/payment service/))
+  })
+  await t.test('late verified payments queue full refunds without fulfilling or restoring stock twice',async()=>{
+    const p=await create('live')
+    await db.query("update public.paystack_payments set expires_at=now()-interval '1 minute' where order_id=$1",[p.order_id])
+    await rpc('cm_expire_paystack_payment',[p.reference]);await rpc('cm_expire_paystack_payment',[p.reference])
+    const before=(await db.query('select stock_quantity from public.products where id=$1',[product])).rows[0].stock_quantity
+    await verify(p,'103')
+    assert.equal((await db.query('select stock_quantity from public.products where id=$1',[product])).rows[0].stock_quantity,before)
+    const jobs=(await db.query('select * from public.paystack_refunds where order_id=$1',[p.order_id])).rows
+    assert.equal(jobs.length,1);assert.equal(Number(jobs[0].amount_kobo),1020000)
+    assert.equal((await db.query('select status from public.orders where id=$1',[p.order_id])).rows[0].status,'cancelled')
+  })
+  await t.test('voluntary paid cancellation retains only the disclosed CampusMart fee and never lies about bank credit',async()=>{
+    const p=await create('live');await verify(p,'104')
+    const quote=await as(buyer,()=>rpc('cm_order_cancellation_quote',[p.order_id]))
+    assert.equal(Number(quote.refund_amount),10000);assert.equal(Number(quote.retained_service_fee),200)
+    await as(buyer,()=>rpc('cm_cancel_buyer_order',[p.order_id,'Changed plans']))
+    await as(buyer,()=>rpc('cm_cancel_buyer_order',[p.order_id,'Retry']))
+    const jobs=(await db.query('select * from public.paystack_refunds where order_id=$1',[p.order_id])).rows
+    assert.equal(jobs.length,1);assert.equal(Number(jobs[0].amount_kobo),1000000);assert.equal(jobs[0].state,'queued')
+    assert.equal((await db.query('select payment_status from public.orders where id=$1',[p.order_id])).rows[0].payment_status,'paid')
+    await rpc('cm_paystack_refund_result',[jobs[0].id,'501','processed'])
+    assert.equal((await db.query('select payment_status from public.orders where id=$1',[p.order_id])).rows[0].payment_status,'paid')
+    assert.equal((await as(buyer,()=>rpc('cm_payment_summary',[p.order_id]))).refunds[0].status,'processed')
+  })
+  await t.test('reviewed full refunds and provider-fee deductions are separate from voluntary service fees',async()=>{
+    const full=await create('live');await verify(full,'105')
+    await as(buyer,()=>assert.rejects(rpc('cm_admin_queue_refund',[full.order_id,null,false,true,'Customer tried admin refund']),/Administrator/))
+    const id=await as(admin,()=>rpc('cm_admin_queue_refund',[full.order_id,null,false,true,'Faulty item: full statutory remedy is owed.',1020000,0]))
+    assert.equal(Number((await db.query('select amount_kobo from public.paystack_refunds where id=$1',[id])).rows[0].amount_kobo),1020000)
+    await rpc('cm_paystack_refund_result',[id,'502','processed'])
+    assert.equal((await db.query('select payment_status from public.orders where id=$1',[full.order_id])).rows[0].payment_status,'refunded')
+    const partial=await create('live');await verify(partial,'106')
+    await as(admin,()=>assert.rejects(rpc('cm_admin_queue_refund',[partial.order_id,null,true,true,'Stale preview must not create a refund.',995001,25000]),/changed|match|refresh/i))
+    const deduct=await as(admin,()=>rpc('cm_admin_queue_refund',[partial.order_id,null,true,true,'Reviewed circumstances, prior disclosure and permitted deduction.',995000,25000]))
+    const job=(await db.query('select * from public.paystack_refunds where id=$1',[deduct])).rows[0]
+    assert.equal(Number(job.amount_kobo),995000);assert.equal(Number(job.processing_fee_retained_kobo),25000)
+  })
+  await t.test('test-domain delivery approvals never credit real vendor money',async()=>{
+    const p=await create();await verify(p,'107')
+    const id=(await db.query('select id from public.order_items where order_id=$1',[p.order_id])).rows[0].id
+    await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'confirmed']));await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'shipped']));await handedOver(id)
+    const before=Number((await db.query('select wallet_balance from public.sellers where id=$1',[seller])).rows[0].wallet_balance)
+    await as(admin,()=>rpc('cm_admin_approve_delivery',[id,'Paystack test handover reviewed.']))
+    assert.equal(Number((await db.query('select wallet_balance from public.sellers where id=$1',[seller])).rows[0].wallet_balance),before)
+  })
+  await t.test('live approved transfers reserve earnings once, require a beneficiary, and restore failures once',async()=>{
+    const p=await create('live');await verify(p,'108')
+    const id=(await db.query('select id from public.order_items where order_id=$1',[p.order_id])).rows[0].id
+    await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'confirmed']));await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'shipped']));await handedOver(id)
+    await as(admin,()=>assert.rejects(rpc('cm_admin_queue_transfer',[id,'Review beneficiary and earnings',true]),/approved/))
+    await as(admin,()=>rpc('cm_admin_approve_delivery',[id,'Verified payment, buyer receipt and handover.']))
+    await as(admin,()=>assert.rejects(rpc('cm_admin_queue_transfer',[id,'Review beneficiary and earnings',true]),/payout account/))
+    await db.query("insert into public.paystack_recipients(seller_id,mode,recipient_code,account_name,bank_name,last_four) values($1,'live','RCP_test','Vendor Example','Test Bank','1234')",[seller])
+    const version=(await db.query('select updated_at from public.paystack_recipients where seller_id=$1',[seller])).rows[0].updated_at
+    const before=Number((await db.query('select wallet_balance from public.sellers where id=$1',[seller])).rows[0].wallet_balance)
+    await as(admin,()=>assert.rejects(rpc('cm_admin_queue_transfer',[id,'Stale beneficiary was displayed.',true,new Date(0),950000]),/account changed/))
+    const job=await as(admin,()=>rpc('cm_admin_queue_transfer',[id,'Beneficiary and approved earnings reviewed.',true,version,950000]))
+    assert.equal(await as(admin,()=>rpc('cm_admin_queue_transfer',[id,'Retrying same approved payout.',true])),job)
+    assert.equal(Number((await db.query('select wallet_balance from public.sellers where id=$1',[seller])).rows[0].wallet_balance),before-9500)
+    assert.equal(await rpc('cm_claim_paystack_transfer',[job]),true);assert.equal(await rpc('cm_claim_paystack_transfer',[job]),false)
+    await rpc('cm_paystack_transfer_result',[job,'TRF_example','failed']);await rpc('cm_paystack_transfer_result',[job,'TRF_example','failed'])
+    assert.equal(Number((await db.query('select wallet_balance from public.sellers where id=$1',[seller])).rows[0].wallet_balance),before)
+    const retry=await as(admin,()=>rpc('cm_admin_queue_transfer',[id,'Provider failure confirmed; retry reviewed.',true,version,950000]))
+    assert.notEqual(retry,job)
+    assert.equal(Number((await db.query('select wallet_balance from public.sellers where id=$1',[seller])).rows[0].wallet_balance),before-9500)
+    await as(vendor,()=>assert.rejects(rpc('cm_cancel_unsent_transfer',[retry,'Vendor cannot cancel finance jobs.']),/Administrator/))
+    await as(admin,()=>rpc('cm_cancel_unsent_transfer',[retry,'Cancelled before submission to the provider.']))
+    await as(admin,()=>rpc('cm_cancel_unsent_transfer',[retry,'Repeated cancellation must not restore twice.']))
+    assert.equal(Number((await db.query('select wallet_balance from public.sellers where id=$1',[seller])).rows[0].wallet_balance),before)
+    await db.exec('grant select,update on public.sellers to authenticated')
+    await as(vendor,()=>assert.rejects(db.query('update public.sellers set wallet_balance=999999 where id=$1',[seller]),/Financial/))
+  })
+  await t.test('waived service fees retain zero and paid dispatch blocks cancellation',async()=>{
+    const p=await create('live',crypto.randomUUID(),20000,2);await verify(p,'109')
+    const quote=await as(buyer,()=>rpc('cm_order_cancellation_quote',[p.order_id]));assert.equal(Number(quote.retained_service_fee),0);assert.equal(Number(quote.refund_amount),20000)
+    const id=(await db.query('select id from public.order_items where order_id=$1',[p.order_id])).rows[0].id
+    await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'confirmed']));await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'shipped']))
+    await as(buyer,()=>assert.rejects(rpc('cm_cancel_buyer_order',[p.order_id]),/dispatched/))
+  })
+  await t.test('payout bank resolution is adult-vendor only and rate limited across modes',async()=>{
+    await assert.rejects(rpc('cm_begin_payout_setup',[buyer,'test']),/vendor/)
+    for(let n=0;n<5;n++)await rpc('cm_begin_payout_setup',[vendor,n%2?'live':'test'])
+    await assert.rejects(rpc('cm_begin_payout_setup',[vendor,'live']),/Too many/)
+  })
+  await t.test('verification after a missed expiry still refunds rather than fulfilling stale reservations',async()=>{
+    const p=await create('live');await db.query("update public.paystack_payments set expires_at=now()-interval '1 second' where order_id=$1",[p.order_id]);await verify(p,'110')
+    assert.equal((await db.query('select status from public.orders where id=$1',[p.order_id])).rows[0].status,'cancelled')
+    assert.equal(Number((await db.query('select amount_kobo from public.paystack_refunds where order_id=$1',[p.order_id])).rows[0].amount_kobo),1020000)
+  })
+  await t.test('provider review blocks approval even after an ordinary delivery hold is cleared',async()=>{
+    const p=await create('live');await verify(p,'111');const id=(await db.query('select id from public.order_items where order_id=$1',[p.order_id])).rows[0].id
+    await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'confirmed']));await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'shipped']));await handedOver(id)
+    await rpc('cm_paystack_hold',[p.reference]);await as(admin,()=>rpc('cm_admin_hold_delivery',[id,'Cleared delivery-specific hold only.',false]))
+    await as(admin,()=>assert.rejects(rpc('cm_admin_approve_delivery',[id,'An ordinary hold release is not payment approval.']),/under review/))
+    assert.equal((await db.query('select released_at from public.order_items where id=$1',[id])).rows[0].released_at,null)
+  })
+  await t.test('test payments cannot create purchase-verified reviews',async()=>{
+    await create()
+    const pid=crypto.randomUUID();await db.query("insert into public.products(id,title,seller_id,price,stock_quantity,status) values($1,'Test-only listing',$2,10000,10,'active')",[pid,seller])
+    const p=await rpc('cm_create_paystack_order',[buyer,crypto.randomUUID(),[{product_id:pid,quantity:1}],'pickup','','08012345678','Test review guard',10200,'test',true]);await verify(p,'112')
+    const id=(await db.query('select id from public.order_items where order_id=$1',[p.order_id])).rows[0].id
+    await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'confirmed']));await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'shipped']));await handedOver(id)
+    await as(buyer,()=>assert.rejects(rpc('cm_review_product',[pid,5,'No real purchase took place.']),/Only buyers/))
+  })
+  await t.test('payment migrations preserve trial cancellation and do not generate refund jobs for trials',async()=>{
+    await db.query("update public.orders set created_at=now()-interval '1 hour' where is_trial")
+    const trialOrder=await rpc('cm_create_trial_order',[buyer,crypto.randomUUID(),[{product_id:product,quantity:1}],'pickup','','08012345678','Trial after payments',10200])
+    await as(buyer,()=>rpc('cm_cancel_buyer_order',[trialOrder.id]))
+    assert.equal(Number((await db.query('select count(*) n from public.paystack_refunds where order_id=$1',[trialOrder.id])).rows[0].n),0)
+  })
+
+  await t.test('paid cancellation blocks closure until the net refund is processed',async()=>{
+    const uid=crypto.randomUUID(),email='closure-buyer@example.test';await db.query('insert into auth.users values($1,$2,now())',[uid,email]);await db.query('insert into public.users(id,full_name,email) values($1,$2,$3)',[uid,'Closing buyer',email]);await db.query("insert into public.marketplace_consents values($1,'adult')",[uid]);
+    const p=await rpc('cm_create_paystack_order',[uid,crypto.randomUUID(),[{product_id:product,quantity:1}],'pickup','','08012345678','Closure after refund',10200,'live',true]);await rpc('cm_verify_paystack_payment',[p.reference,'113',1020000,email,'NGN','live',18000]);await as(uid,()=>rpc('cm_cancel_buyer_order',[p.order_id]));
+    const request=await as(uid,()=>rpc('cm_request_account_change',['close_account','Close after settlement.']));
+    await as(admin,()=>assert.rejects(rpc('cm_admin_review_account_change',[request,'approve_closure','Refund has not yet reached final provider state.']),/pending refunds/));
+    const job=(await db.query('select id from public.paystack_refunds where order_id=$1',[p.order_id])).rows[0].id;await rpc('cm_paystack_refund_result',[job,'703','processed']);
+    await as(admin,()=>rpc('cm_admin_review_account_change',[request,'approve_closure','Refund processed and cancellation fee settled.']));assert.equal((await as(uid,()=>rpc('cm_account_status'))).active,false)
+  })
+
+})

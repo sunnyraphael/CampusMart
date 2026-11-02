@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { updateSession } from "@/lib/supabase/middleware"
 
 export async function proxy(request: NextRequest) {
-  if (['/api/connectivity', '/sw.js', '/offline.html', '/offline.js', '/status.css'].includes(request.nextUrl.pathname)) return NextResponse.next()
+  if (['/api/connectivity', '/api/paystack/webhook', '/api/payments/reconcile', '/sw.js', '/offline.html', '/offline.js', '/status.css'].includes(request.nextUrl.pathname)) return NextResponse.next()
   return await updateSession(request)
 }
 

@@ -1,6 +1,7 @@
 export type TrackingEvent = { id: string; status: string; note: string | null; created_at: string; admin_note?: string | null }
 export type OrderTracking = {
   is_trial?: boolean
+  payment_environment?: 'test'|'live'|null
   item_id: string; status: string; created_at: string | null; expected_by: string | null
   courier: string | null; tracking_number: string | null; tracking_url: string | null; delivery_note: string | null
   reported_at: string | null; review_after: string | null; buyer_confirmed_at: string | null
@@ -25,7 +26,8 @@ export function safeTrackingUrl(value?: string | null) {
   if (!value) return undefined
   try { const url = new URL(value); return ['https:', 'http:'].includes(url.protocol) ? url.href : undefined } catch { return undefined }
 }
-export function creditLabel(t: Pick<OrderTracking, 'released_at' | 'held_at' | 'buyer_confirmed_at' | 'is_trial'>, status: string) {
+export function creditLabel(t: Pick<OrderTracking, 'released_at' | 'held_at' | 'buyer_confirmed_at' | 'is_trial'|'payment_environment'>, status: string) {
+  if(t.payment_environment==='test')return t.released_at?'Paystack test completed · no real wallet credit':'Paystack test order · no real funds'
   if (status === 'cancelled') return t.is_trial ? 'Trial cancelled · no payment collected or vendor credit' : 'Order cancelled · check refund status with support'
   if (t.is_trial && t.released_at) return 'Trial completed · no real vendor credit'
   if (t.is_trial && status === 'refunded') return 'Trial refund approved · no real refund sent'

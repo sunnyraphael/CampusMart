@@ -305,7 +305,7 @@ export default function VendorOnboardingPage() {
             <>
               <h2 className="ob-card-title">Payout information</h2>
               <p className="ob-card-sub">You can open your store without providing a bank account today.</p>
-              <div className="ob-info-box"><div className="ob-info-row"><CreditCard size={18} aria-hidden/><div><p>Online payments and bank payouts are not enabled yet. We will ask for payout details when they are needed. Do not send bank credentials, PINs or card details.</p><p>For real sales, vendor credit requires verified payment, a delivery code, buyer receipt confirmation and a separate admin approval.</p><p>CampusMart deducts a <strong>5% commission</strong> from the item subtotal on an approved completed real sale. Trial orders do not create real earnings.</p></div></div></div>
+              <div className="ob-info-box"><div className="ob-info-row"><CreditCard size={18} aria-hidden/><div><p>When Paystack is configured, add a resolved payout account from your earnings page before an administrator sends approved earnings. You can open the store without collecting bank details here. Do not send bank credentials, PINs or card details.</p><p>For real sales, vendor credit requires verified payment, a delivery code, buyer receipt confirmation and a separate admin approval.</p><p>CampusMart deducts a <strong>5% commission</strong> from the item subtotal on an approved completed real sale. Trial orders do not create real earnings.</p></div></div></div>
               <p className="ob-hint">Your bank details are not collected in this setup. <Link href="/vendor-terms">Review vendor terms</Link> and the <Link href="/refunds">refund policy</Link> before you continue.</p>
             </>
           )}

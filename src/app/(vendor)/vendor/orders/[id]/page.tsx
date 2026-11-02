@@ -48,7 +48,7 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
           <FileText size={15} aria-hidden /> Print packing slip
         </Link></>} />
       <div className="vx-order-summary"><span><Package size={17} />{items.reduce((sum, i) => sum + Number(i.quantity ?? 0), 0)} units in your part of this order</span><strong>{naira(items.reduce((sum, i) => sum + itemSubtotal(i), 0))}</strong></div>
-      {order.is_trial&&<p className="buyer-notice">TRIAL ORDER · No payment collected. Test the delivery steps and code verification; this is not a paid sale and will not credit your real wallet.</p>}
+      {order.payment_environment==='test'&&<p className="buyer-notice">PAYSTACK TEST ? Do not fulfil as a real sale. No real funds or vendor wallet credit.</p>}{order.is_trial&&<p className="buyer-notice">TRIAL ORDER · No payment collected. Test the delivery steps and code verification; this is not a paid sale and will not credit your real wallet.</p>}
 
       {disputed.length > 0 && (
         <section className="od-dispute" role="alert">

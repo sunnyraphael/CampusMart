@@ -3,10 +3,11 @@ import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
 export const ids={user:'11111111-1111-4111-8111-111111111111',vendor:'44444444-4444-4444-8444-444444444444',product:'55555555-5555-4555-8555-555555555555',order:'66666666-6666-4666-8666-666666666666',chat:'77777777-7777-4777-8777-777777777777',message:'88888888-8888-4888-8888-888888888888'}
 const now=()=>new Date().toISOString()
-export const user={id:ids.user,aud:'authenticated',role:'authenticated',email:'buyer@example.test',email_confirmed_at:now(),app_metadata:{provider:'email',providers:['email']},user_metadata:{full_name:'Test Buyer',role:'buyer'},created_at:now(),identities:[]}
+export const user={id:ids.user,aud:'authenticated',role:'authenticated',email:'buyer@example.test',email_confirmed_at:now(),app_metadata:{provider:'email',providers:['email']},user_metadata:{full_name:'Test Buyer',role:'buyer'},created_at:now(),last_sign_in_at:now(),identities:[]}
 export function session(){const exp=Math.floor(Date.now()/1000)+3600;const token=[{alg:'HS256',typ:'JWT'},{sub:ids.user,aud:'authenticated',role:'authenticated',exp,iat:Math.floor(Date.now()/1000)},'test'].map((v)=>Buffer.from(typeof v==='string'?v:JSON.stringify(v)).toString('base64url')).join('.');return {access_token:token,refresh_token:'fixture-refresh',expires_in:3600,expires_at:exp,token_type:'bearer',user}}
 
 if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
+  let finance=null,financeRefunds=[],financeEvents=[],financeTransfers=[],financeRecipients=[],providerRefunds=[],providerStatus='pending',providerAmountDelta=0,providerRefundStatus='pending',providerRefundInterrupted=false;
   let kyc=[];let favorites=[];let saved=[];let support=[];let read=false;let messages=[];let failures=new Set();let temporaryFailures=new Map();let delays=new Map();let isAdmin=false;let calls=[];let role='buyer';let hasStore=false;let removedProduct=false;let storageFailure=false;let cleanupQueued=false;let extraProducts=[];let itemStatus='received';let transactions=[];let delivery={};let verifiedPayment=false;let credited=true;let handoverCode=null;let trial=false;let trialRequests=new Map();let loseTrialResponse=false;let disputeDecision=null;let notificationOrders=[];let notificationRows=null;let orderBuyerId=ids.user
   const product={id:ids.product,title:'Campus headphones',description:'Comfortable headphones for lectures and study.',price:12000,images:[],avg_rating:null,total_reviews:0,stock_quantity:5,status:'active',seller_id:ids.vendor,category_id:'99999999-9999-4999-8999-999999999999',compare_at_price:15000,sale_ends_at:null,condition:'used_like_new',availability:'on_campus',delivery_days:2,categories:{name:'Electronics',slug:'electronics'},sellers:{id:ids.vendor,store_name:'Campus Store',is_verified:true,logo_url:null,description:'Study essentials'}}
   const categories=[{id:product.category_id,name:'Electronics',slug:'electronics'},{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',name:'Books & Notes',slug:'books'}]
@@ -30,7 +31,7 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
     let body={};try{body=JSON.parse(Buffer.concat(buffers).toString()||'{}')}catch{}
     const json=(data,status=200)=>{res.setHeader('Content-Type','application/json');res.writeHead(status);res.end(req.method==='HEAD'?undefined:JSON.stringify(data))}
     if(url.pathname==='/health')return json({ok:true})
-    if(url.pathname==='/__reset'){consent=defaultConsent();accountActive=true;accountClosedAt=null;storeClosedAt=null;accountRequests=[];guardians=[];sellerFields={};product.status='active';kyc=[];favorites=[];saved=[];support=[];read=false;messages=[];failures=new Set();temporaryFailures=new Map();delays=new Map();isAdmin=false;calls=[];role='buyer';hasStore=false;removedProduct=false;storageFailure=false;cleanupQueued=false;extraProducts=[];itemStatus='received';transactions=[];delivery={};verifiedPayment=false;credited=true;handoverCode=null;trial=false;trialRequests=new Map();loseTrialResponse=false;disputeDecision=null;notificationOrders=[];notificationRows=null;orderBuyerId=ids.user;product.price=12000;product.stock_quantity=5;order.total_amount=12240;order.delivery_method=undefined;order.delivery_address='Hall A';order.phone_number=undefined;order.delivery_notes=undefined;order.order_items[0].unit_price=12000;order.order_items[0].quantity=1;order.order_items[0].subtotal=12000;return json({ok:true})}
+    if(url.pathname==='/__reset'){finance=null;financeRefunds=[];financeEvents=[];financeTransfers=[];financeRecipients=[];providerRefunds=[];providerStatus='pending';providerAmountDelta=0;providerRefundStatus='pending';providerRefundInterrupted=false;consent=defaultConsent();accountActive=true;accountClosedAt=null;storeClosedAt=null;accountRequests=[];guardians=[];sellerFields={};product.status='active';kyc=[];favorites=[];saved=[];support=[];read=false;messages=[];failures=new Set();temporaryFailures=new Map();delays=new Map();isAdmin=false;calls=[];role='buyer';hasStore=false;removedProduct=false;storageFailure=false;cleanupQueued=false;extraProducts=[];itemStatus='received';transactions=[];delivery={};verifiedPayment=false;credited=true;handoverCode=null;trial=false;trialRequests=new Map();loseTrialResponse=false;disputeDecision=null;notificationOrders=[];notificationRows=null;orderBuyerId=ids.user;product.price=12000;product.stock_quantity=5;order.total_amount=12240;order.status='pending';order.created_at=now();order.delivery_method=undefined;order.delivery_address='Hall A';order.phone_number=undefined;order.delivery_notes=undefined;order.order_items[0].unit_price=12000;order.order_items[0].quantity=1;order.order_items[0].subtotal=12000;return json({ok:true})}
     if(url.pathname==='/__privacy'){
       if(body.consent)consent={...consent,...body.consent}
       if(typeof body.active==='boolean'){accountActive=body.active;accountClosedAt=body.active?null:now();if(!body.active&&hasStore)closeStore(true)}
@@ -50,6 +51,29 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
     if(url.pathname==='/__trial_state')return json({created:trialRequests.size})
     if(url.pathname==='/__notification_context'){notificationOrders=body.orders??[];notificationRows=body.notifications??null;orderBuyerId=body.buyerId??ids.user;return json({ok:true})}
     if(url.pathname==='/__calls')return json(calls)
+    if(url.pathname==='/__payment'){
+      providerStatus=body.status??providerStatus;providerAmountDelta=body.amountDelta??providerAmountDelta;providerRefundStatus=body.refundStatus??providerRefundStatus;providerRefundInterrupted=body.refundInterrupted??providerRefundInterrupted
+      return json({payment:finance,refunds:financeRefunds,events:financeEvents,providerRefunds})
+    }
+    if(url.pathname.startsWith('/__paystack/')){
+      calls.push({path:url.pathname,method:req.method})
+      const ok=data=>json({status:true,data})
+      if(url.pathname.endsWith('/transaction/initialize')&&!/^[a-zA-Z0-9.=-]+$/.test(body.reference))return json({status:false,message:'Invalid reference'},400);
+      if(url.pathname.endsWith('/transaction/initialize'))return ok({reference:body.reference,authorization_url:'https://checkout.paystack.com/fixture-'+body.reference})
+      if(url.pathname.includes('/transaction/verify/'))return ok({id:11,reference:finance?.reference,status:providerStatus,amount:Number(finance?.amount_kobo??0)+providerAmountDelta,currency:'NGN',domain:'test',fees:18000,customer:{email:user.email}})
+      if(url.pathname==='/__paystack/refund'&&req.method==='POST'){
+        const refund={id:55+providerRefunds.length,transaction:{id:11,reference:finance.reference,currency:'NGN',domain:'test'},amount:body.amount,currency:'NGN',status:providerRefundStatus,merchant_note:body.merchant_note}
+        providerRefunds.push(refund)
+        if(providerRefundInterrupted){providerRefundInterrupted=false;return json({status:false},503)}
+        return ok(refund)
+      }
+      if(url.pathname==='/__paystack/refund')return ok(providerRefunds.map(row=>({...row,status:providerRefundStatus})))
+      if(url.pathname.startsWith('/__paystack/refund/'))return ok({...providerRefunds.find(row=>String(row.id)===url.pathname.split('/').at(-1)),status:providerRefundStatus})
+      if(url.pathname==='/__paystack/bank')return json({status:true,data:[{code:'058',name:'Fixture Bank',active:true,type:'nuban'}],meta:{next:null}})
+      if(url.pathname==='/__paystack/bank/resolve')return ok({account_number:url.searchParams.get('account_number'),account_name:'Test Vendor'})
+      if(url.pathname==='/__paystack/transferrecipient')return ok({recipient_code:'RCP_fixture',active:true})
+      return json({status:false},404)
+    }
     calls.push({path:url.pathname,method:req.method,query:url.search,isService:req.headers.authorization==='Bearer fixture-service-key',requestId:body.p_request_id,fields:Object.keys(body)})
     const track=()=>({is_trial:trial,item_id:order.order_items[0].id,status:itemStatus,created_at:order.created_at,expected_by:null,courier:null,tracking_number:null,tracking_url:null,delivery_note:null,reported_at:['delivered','received'].includes(itemStatus)?now():null,review_after:null,buyer_confirmed_at:itemStatus==='received'?now():null,code_verified_at:null,held_at:null,approved_at:null,events:[],...delivery,released_at:credited?now():null})
     if(url.pathname==='/auth/v1/user')return json(req.headers.authorization?.includes('Bearer')?user:{},req.headers.authorization?200:401)
@@ -70,6 +94,34 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
       if(failures.has(rpc))return json({code:'XX000',message:'Fixture request failed'},500)
       const rejected=message=>json({code:'P0001',message},400)
       const signedIn=!!req.headers.authorization&&!req.headers.authorization.includes('fixture-anon-key')
+      if(rpc==='cm_create_paystack_order'){
+        if(req.headers.authorization!=='Bearer fixture-service-key')return rejected('Service access required')
+        if(finance){if(finance.request_id!==body.p_request_id)return rejected('Existing fixture payment');return json(finance)}
+        const subtotal=product.price*body.p_items[0].quantity,fee=subtotal>=20000?0:Math.round(subtotal*0.02),deliveryFee=body.p_delivery_method==='delivery'?500:0
+        if(body.p_expected_total!==subtotal+fee+deliveryFee)return rejected('Prices changed. Refresh your cart.')
+        finance={order_id:ids.order,user_id:ids.user,request_id:body.p_request_id,reference:'cm-'+crypto.randomUUID().replaceAll('-',''),amount_kobo:(subtotal+fee+deliveryFee)*100,email:user.email,mode:'test',state:'created',provider_id:null,authorization_url:null,expires_at:new Date(Date.now()+30*60000).toISOString(),retain_fee_kobo:fee*100}
+        trial=false;verifiedPayment=false;credited=false;itemStatus='pending';delivery={};order.created_at=now();order.total_amount=subtotal+fee+deliveryFee
+        order.order_items[0].quantity=body.p_items[0].quantity;order.order_items[0].subtotal=subtotal;order.delivery_method=body.p_delivery_method
+        return json(finance)
+      }
+      if(rpc==='cm_verify_paystack_payment'){
+        if(req.headers.authorization!=='Bearer fixture-service-key')return rejected('Service access required')
+        if(body.p_reference!==finance?.reference||body.p_amount!==finance.amount_kobo||body.p_mode!=='test'||body.p_email!==user.email)return rejected('Verification mismatch')
+        finance.state='paid';finance.provider_id=body.p_provider_id;finance.provider_fee_kobo=body.p_provider_fee;verifiedPayment=true;return json(ids.order)
+      }
+      if(rpc==='cm_paystack_hold'){if(finance)finance.state='review';return json(null)}
+      if(rpc==='cm_payment_summary')return json(finance?{reference:finance.reference,mode:finance.mode,state:finance.state,amount:finance.amount_kobo/100,refunds:financeRefunds.map(r=>({id:r.id,amount:r.amount_kobo/100,status:r.state,processing_fee_retained:0}))}:null)
+      if(finance&&(rpc==='cm_order_cancellation_quote'||rpc==='cm_cancel_buyer_order')){
+        if(body.p_order_id!==ids.order)return rejected('This order is not available.')
+        if(rpc==='cm_cancel_buyer_order'&&itemStatus!=='cancelled'){
+          if(finance.state!=='paid'||!['pending','confirmed'].includes(itemStatus))return rejected('This order cannot be cancelled.')
+          itemStatus='cancelled';order.status='cancelled';financeRefunds.push({id:crypto.randomUUID(),order_id:ids.order,dedup_key:'cancel:'+ids.order,amount_kobo:finance.amount_kobo-finance.retain_fee_kobo,state:'queued',provider_id:null,updated_at:now()})
+        }
+        return json({is_trial:false,mode:'test',can_cancel:itemStatus!=='cancelled'&&finance.state==='paid',cancelled:itemStatus==='cancelled',refund_amount:(finance.amount_kobo-finance.retain_fee_kobo)/100,retained_service_fee:finance.retain_fee_kobo/100,deadline:finance.expires_at})
+      }
+      if(rpc==='cm_paystack_refund_result'){
+        const job=financeRefunds.find(r=>r.id===body.p_id);if(job){job.state=body.p_state;job.provider_id=body.p_provider_id}return json(null)
+      }
       if(['cm_consent_status','cm_accept_marketplace_terms','cm_accept_vendor_terms','cm_account_status','cm_set_store_closed','cm_request_account_change','cm_cancel_account_change','cm_admin_account_requests','cm_admin_review_account_change','cm_request_guardian_permission','cm_withdraw_guardian_permission','cm_admin_guardian_queue','cm_admin_review_guardian'].includes(rpc)&&!signedIn)return rejected('Please sign in to continue.')
       if(rpc==='cm_account_is_active')return json(body.p_user_id&&body.p_user_id!==ids.user?true:accountActive)
       if(rpc==='cm_consent_status')return json(consentStatus())
@@ -173,7 +225,7 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
       }
       if(rpc==='cm_vendor_delivery_holds')return json(delivery.held_at?[order.order_items[0].id]:[])
       if(rpc==='cm_order_tracking')return json([track()])
-      if(rpc==='cm_order_cancellation_quote'||rpc==='cm_cancel_buyer_order'){
+      if(!finance&&(rpc==='cm_order_cancellation_quote'||rpc==='cm_cancel_buyer_order')){
         if(!signedIn||body.p_order_id!==ids.order)return rejected('This order is not available.')
         const cancelled=itemStatus==='cancelled'
         const reason=!trial?'Online cancellation of real orders is not enabled until payment and refund integration is connected. Contact support.':!['pending','confirmed'].includes(itemStatus)?'An item is already dispatched or ready for pickup. Contact support.':null
@@ -210,6 +262,17 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
       return json(null)
     }
     const table=url.pathname.split('/rest/v1/')[1]
+    if(['paystack_payments','paystack_refunds','paystack_events','paystack_recipients','paystack_transfers'].includes(table)){
+      if(req.headers.authorization!=='Bearer fixture-service-key')return json({code:'42501',message:'Private finance table'},403)
+      let base=table==='paystack_payments'?(finance?[finance]:[]):table==='paystack_refunds'?financeRefunds:table==='paystack_events'?financeEvents:table==='paystack_recipients'?financeRecipients:financeTransfers
+      let rows=base.filter(row=>[...url.searchParams].every(([key,value])=>!value.startsWith('eq.')||key.includes('.')||String(row[key])===value.slice(3)))
+      if(req.method==='PATCH'){for(const row of rows)Object.assign(row,body)}
+      if(req.method==='POST'){
+        const field=table==='paystack_recipients'?'seller_id':'id',existing=base.find(row=>row[field]===body[field])
+        if(existing){if(!req.headers.prefer?.includes('ignore-duplicates'))Object.assign(existing,body);rows=[existing]}else{base.push(body);rows=[body]}
+      }
+      return json(req.headers.accept?.includes('vnd.pgrst.object')?rows[0]??null:rows)
+    }
     if(delays.get(table))await new Promise(resolve=>setTimeout(resolve,delays.get(table)))
     const temporary=temporaryFailures.get(table)
     if(temporary?.remaining>0){temporary.remaining--;return json({code:'PGRST000',message:'Temporary fixture outage'},temporary.status)}
@@ -224,7 +287,7 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
     if(table==='support_requests'&&req.method==='PATCH'){if(!isAdmin)return json({message:'Forbidden'},403);const id=url.searchParams.get('id')?.slice(3);const item=support.find(i=>i.id===id);if(item)Object.assign(item,body);return json(item?[{id}]:[])}
     if(table==='saved_searches'&&req.method==='POST'){saved.push({...body,id:crypto.randomUUID()});return json(null,201)}
     if(table==='saved_searches'&&req.method==='DELETE'){saved=[];return json(null)}
-    const tables={guardian_permissions:guardians.filter(row=>row.guardian_id===ids.user),account_change_requests:accountRequests.filter(row=>row.user_id===ids.user||isAdmin),products:[...(removedProduct?[]:[{...product,created_at:now()}]),...extraProducts],categories,users:[{id:ids.user,full_name:'Test Buyer',phone:'08012345678',email:user.email,role}],sellers:hasStore?[{id:ids.vendor,user_id:ids.user,store_name:'Campus Store',wallet_balance:0,kyc_status:'not_submitted',is_kyc_verified:false,phone:'08012345678',description:'Study essentials for students',logo_url:null,category:'Electronics & Gadgets',whatsapp:null,state:'Lagos',campus:'Campus',bank_name:null,account_name:null,account_number:null,store_closed_at:storeClosedAt,...sellerFields}]:[],public_vendors:[{id:ids.vendor,store_name:'Campus Store',description:'Study essentials',logo_url:null,is_verified:true,campus:'Campus',state:'Lagos'}],orders:[{...order,user_id:orderBuyerId,is_trial:trial,payment_status:trial?'unpaid':'paid',payment_verified_at:verifiedPayment?now():null,order_items:order.order_items.map(i=>({...i,fulfillment_status:itemStatus,released_at:credited?now():null,dispute_reason:delivery.dispute_reason}))},...notificationOrders.map(o=>({...order,...o}))],order_items:[{...order.order_items[0],order_id:ids.order,seller_id:ids.vendor,payout_amount:11400,released_at:credited?now():null,orders:{user_id:orderBuyerId,payment_status:trial?'unpaid':'paid',is_trial:trial},fulfillment_status:itemStatus}],transactions,reviews:[],wishlist:favorites,saved_searches:saved,notifications:read?[]:notificationRows??[{id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',user_id:ids.user,message:'Your order has been delivered',is_read:false,created_at:now(),order_id:ids.order}],buyer_messages:messages,support_requests:support}
+    const tables={guardian_permissions:guardians.filter(row=>row.guardian_id===ids.user),account_change_requests:accountRequests.filter(row=>row.user_id===ids.user||isAdmin),products:[...(removedProduct?[]:[{...product,created_at:now()}]),...extraProducts],categories,users:[{id:ids.user,full_name:'Test Buyer',phone:'08012345678',email:user.email,role}],sellers:hasStore?[{id:ids.vendor,user_id:ids.user,store_name:'Campus Store',wallet_balance:0,kyc_status:'not_submitted',is_kyc_verified:false,phone:'08012345678',description:'Study essentials for students',logo_url:null,category:'Electronics & Gadgets',whatsapp:null,state:'Lagos',campus:'Campus',bank_name:null,account_name:null,account_number:null,store_closed_at:storeClosedAt,...sellerFields}]:[],public_vendors:[{id:ids.vendor,store_name:'Campus Store',description:'Study essentials',logo_url:null,is_verified:true,campus:'Campus',state:'Lagos'}],orders:[{...order,user_id:orderBuyerId,is_trial:trial,payment_environment:finance?.mode??null,payment_status:finance?(verifiedPayment?'paid':'unpaid'):trial?'unpaid':'paid',payment_verified_at:verifiedPayment?now():null,order_items:order.order_items.map(i=>({...i,fulfillment_status:itemStatus,released_at:credited?now():null,dispute_reason:delivery.dispute_reason}))},...notificationOrders.map(o=>({...order,...o}))],order_items:[{...order.order_items[0],order_id:ids.order,seller_id:ids.vendor,payout_amount:11400,released_at:credited?now():null,orders:{user_id:orderBuyerId,payment_status:trial?'unpaid':'paid',is_trial:trial},fulfillment_status:itemStatus}],transactions,reviews:[],wishlist:favorites,saved_searches:saved,notifications:read?[]:notificationRows??[{id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',user_id:ids.user,message:'Your order has been delivered',is_read:false,created_at:now(),order_id:ids.order}],buyer_messages:messages,support_requests:support}
     if(!(table in tables))return json({code:'PGRST205',message:'Unknown fixture table'},404)
     let rows=tables[table]
     for(const [key,value]of url.searchParams)if(key==='id'&&value.startsWith('eq.'))rows=rows.filter((r)=>r.id===value.slice(3))

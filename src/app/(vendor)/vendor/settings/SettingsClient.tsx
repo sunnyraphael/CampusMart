@@ -28,28 +28,13 @@ type Seller = {
   whatsapp: string | null
   state: string | null
   campus: string | null
-  bank_name: string | null
-  account_number: string | null
-  account_name: string | null
   is_kyc_verified: boolean | null
   kyc_status: string
   kyc_rejection_reason: string | null
 }
 
-type Section = 'profile' | 'contact' | 'payout'
+type Section = 'profile' | 'contact'
 type Status = { busy: boolean; ok: boolean; err: string | null }
-
-const BANKS = [
-  'Access Bank', 'Citibank', 'Ecobank', 'Fidelity Bank',
-  'First Bank of Nigeria', 'First City Monument Bank (FCMB)',
-  'Globus Bank', 'Guaranty Trust Bank (GTB)', 'Heritage Bank',
-  'Keystone Bank', 'Kuda Bank', 'Moniepoint',
-  'Opay', 'Palmpay', 'Parallex Bank', 'Polaris Bank',
-  'Providus Bank', 'Stanbic IBTC Bank', 'Standard Chartered',
-  'Sterling Bank', 'Suntrust Bank', 'Titan Trust Bank',
-  'Union Bank', 'United Bank for Africa (UBA)', 'Unity Bank',
-  'VFD Microfinance Bank', 'Wema Bank', 'Zenith Bank',
-]
 
 const CATEGORIES = [
   'Electronics & Gadgets', 'Books & Stationery', 'Fashion & Clothing',
@@ -72,8 +57,6 @@ const idle: Status = { busy: false, ok: false, err: null }
 // True when every field matches its saved value (ignoring spaces at the ends)
 const same = (a: Record<string, string>, b: Record<string, string>) =>
   Object.keys(a).every((k) => (a[k] ?? '').trim() === (b[k] ?? '').trim())
-
-const mask = (n: string | null) => (n ? '•••• ' + n.slice(-4) : '')
 
 function Field({
   id,
@@ -148,15 +131,6 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
   const [contactBase, setContactBase] = useState(startContact)
   const [contact, setContact] = useState(startContact)
 
-  const [payoutBase, setPayoutBase] = useState({
-    bank_name: seller.bank_name ?? '',
-    account_number: seller.account_number ?? '',
-    account_name: seller.account_name ?? '',
-  })
-  const [payout, setPayout] = useState({ bank_name: '', account_number: '', account_name: '' })
-  const [editingPayout, setEditingPayout] = useState(!seller.account_number)
-  const [confirmPayout, setConfirmPayout] = useState(false)
-
   const [logoUrl, setLogoUrl] = useState(seller.logo_url)
   const [logoBusy, setLogoBusy] = useState(false)
   const [logoErr, setLogoErr] = useState<string | null>(null)
@@ -164,7 +138,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
   const [status, setStatus] = useState<Record<Section, Status>>({
     profile: idle,
     contact: idle,
-    payout: idle,
+
   })
 
   // Runs a save, tracks busy/ok/error for that section, hides "Saved" after 3 seconds
@@ -218,24 +192,6 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       const next = { phone, whatsapp, state: contact.state, campus: contact.campus.trim() }
       setContactBase(next)
       setContact(next)
-    })
-  }
-
-  function savePayout() {
-    run('payout', async () => {
-      if (!payout.bank_name) throw new Error('Please select your bank')
-      if (!/^\d{10}$/.test(payout.account_number)) throw new Error('Account number must be exactly 10 digits')
-      if (payout.account_name.trim().length < 3) throw new Error('Enter the account name exactly as your bank has it')
-      if (!confirmPayout) throw new Error('Please tick the box to confirm the change')
-      const next = {
-        bank_name: payout.bank_name,
-        account_number: payout.account_number,
-        account_name: payout.account_name.trim(),
-      }
-      await saveFields(next)
-      setPayoutBase(next)
-      setEditingPayout(false)
-      setConfirmPayout(false)
     })
   }
 
@@ -401,76 +357,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       </section>
 
       {/* Payout account */}
-      <section id="payout" className="ss-card" aria-labelledby="ss-payout-title">
-        <h2 id="ss-payout-title" className="ss-title">
-          <Landmark size={17} aria-hidden /> Payout account
-        </h2>
-
-        {!editingPayout ? (
-          <>
-            <dl className="ss-account">
-              <div><dt>Bank</dt><dd>{payoutBase.bank_name}</dd></div>
-              <div><dt>Account number</dt><dd>{mask(payoutBase.account_number)}</dd></div>
-              <div><dt>Account name</dt><dd>{payoutBase.account_name}</dd></div>
-            </dl>
-            <button
-              className="ss-btn-ghost"
-              onClick={() => {
-                setPayout({ bank_name: payoutBase.bank_name, account_number: '', account_name: '' })
-                setEditingPayout(true)
-              }}
-            >
-              Change payout account
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="ss-warn">
-              <AlertCircle size={16} aria-hidden />
-              <span>The new account is used for future payouts only. Check every detail, because money sent to a wrong account cannot be recovered.</span>
-            </div>
-            <Field id="bank_name" label="Bank">
-              <select id="bank_name" value={payout.bank_name} onChange={(e) => setPayout({ ...payout, bank_name: e.target.value })}>
-                <option value="">Select your bank</option>
-                {BANKS.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </Field>
-            <div className="ss-grid">
-              <Field id="account_number" label="Account number">
-                <input
-                  id="account_number"
-                  inputMode="numeric"
-                  maxLength={10}
-                  value={payout.account_number}
-                  onChange={(e) => setPayout({ ...payout, account_number: e.target.value.replace(/\D/g, '') })}
-                />
-              </Field>
-              <Field id="account_name" label="Account name" hint="Exactly as your bank has it.">
-                <input id="account_name" value={payout.account_name} onChange={(e) => setPayout({ ...payout, account_name: e.target.value })} />
-              </Field>
-            </div>
-            <label className="ss-check">
-              <input type="checkbox" checked={confirmPayout} onChange={(e) => setConfirmPayout(e.target.checked)} />
-              <span>I have checked these details and want to use this account for future payouts.</span>
-            </label>
-            <SaveBar status={status.payout} disabled={false} onSave={savePayout} label="Save payout account" />
-            {payoutBase.account_number && (
-              <button
-                className="ss-link"
-                onClick={() => {
-                  setEditingPayout(false)
-                  setConfirmPayout(false)
-                  setStatus((s) => ({ ...s, payout: idle }))
-                }}
-              >
-                Cancel
-              </button>
-            )}
-          </>
-        )}
-      </section>
+      <section id="payout" className="ss-card" aria-labelledby="ss-payout-title"><h2 id="ss-payout-title" className="ss-title"><Landmark size={17} aria-hidden/>Payout account</h2><p className="buyer-help">Resolve your bank account with Paystack. Typed legacy bank details are not used for transfers; changing a resolved account requires a recent sign-in.</p><Link href="/vendor/payout-account" className="buyer-btn">Manage Paystack payout account</Link></section>
       </div></div>
     </div>
   )

@@ -1,5 +1,7 @@
 # Buyer redesign and privacy controls
 
+For the subsequent Paystack integration, migrations and operations, see [paystack-setup.md](paystack-setup.md). The validation and payment statements below describe the earlier buyer/privacy change.
+
 Implemented 1 November 2026. These changes keep CampusMart's blue/navy theme and the compact mobile cart icon, with full desktop cart buttons. No live payment or payout integration was added.
 
 ## Required database setup

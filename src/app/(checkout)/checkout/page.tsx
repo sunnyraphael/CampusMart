@@ -1,9 +1,11 @@
 import { requireMarketplacePermission } from '@/lib/privacy/consent-server'
 import CheckoutClient from './CheckoutClient'
 import { trialCheckoutEnabled } from '@/lib/orders/trial'
+import { paymentConfig,paymentsEnabled } from '@/lib/paystack/config'
 
 export default async function CheckoutPage() {
   await requireMarketplacePermission('/checkout')
   // Trial creation has its own server-only RPC; legacy payment simulation remains unused.
-  return <CheckoutClient trialEnabled={trialCheckoutEnabled(process.env)}/>
+  const paystackMode=paymentsEnabled()?paymentConfig().mode:null
+  return <CheckoutClient trialEnabled={!paystackMode&&trialCheckoutEnabled(process.env)} paystackMode={paystackMode}/>
 }

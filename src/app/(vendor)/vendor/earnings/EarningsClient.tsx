@@ -106,7 +106,7 @@ export default function EarningsClient({
         </div>
       </section>
 
-      <div className="vx-notice"><Info size={17} /><span>Wallet funds and bank transfers are separate. Manage your bank details in <Link href="/vendor/settings#payout" className="vx-text-link">payout settings</Link>.</span></div>
+      <div className="vx-notice"><Info size={17} /><span>Wallet funds and bank transfers are separate. Manage your bank details in <Link href="/vendor/payout-account" className="vx-text-link">payout settings</Link>.</span></div>
 
       <section className="er-grid" aria-label="Money on its way">
         <div className="er-stat">
