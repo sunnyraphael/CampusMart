@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useSyncExternalStore } from 'react'
 import {
   Store,
   ImagePlus,
@@ -111,7 +111,15 @@ function SaveBar({
   )
 }
 
-export default function SettingsClient({ seller }: { seller: Seller }) {
+const settingsSections=[{id:'store-profile',label:'Store profile',icon:Store},{id:'contact',label:'Contact & location',icon:MapPin},{id:'payout',label:'Payout account',icon:Landmark},{id:'store-controls',label:'Store controls',icon:ShieldAlert}]
+function readSection(){const hash=window.location.hash.slice(1);return settingsSections.some(s=>s.id===hash)?hash:'store-profile'}
+function subscribeSection(listener:()=>void){window.addEventListener('hashchange',listener);return ()=>window.removeEventListener('hashchange',listener)}
+function selectSection(id:string){window.history.replaceState(window.history.state,'','#'+id);window.dispatchEvent(new Event('hashchange'))}
+export default function SettingsClient({ seller,controls }: { seller: Seller;controls:React.ReactNode }) {
+  const hashSection=useSyncExternalStore(subscribeSection,readSection,()=> 'store-profile')
+  const [selectedSection,setSelectedSection]=useState<string|null>(null)
+  const activeSection=selectedSection??hashSection
+  function switchSection(id:string){setSelectedSection(id);selectSection(id)}
   const supabase = useMemo(() => createClient(), [])
 
   // Each section keeps its saved copy (base) and its editable copy
@@ -132,6 +140,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
   const [contact, setContact] = useState(startContact)
 
   const [logoUrl, setLogoUrl] = useState(seller.logo_url)
+  useEffect(()=>{const update=(e:Event)=>setLogoUrl((e as CustomEvent<string|null>).detail);window.addEventListener("campusmart:store-logo",update);return ()=>window.removeEventListener("campusmart:store-logo",update)},[])
   const [logoBusy, setLogoBusy] = useState(false)
   const [logoErr, setLogoErr] = useState<string | null>(null)
 
@@ -213,6 +222,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       const { data } = supabase.storage.from('product-images').getPublicUrl(path)
       await saveFields({ logo_url: data.publicUrl })
       setLogoUrl(data.publicUrl)
+      window.dispatchEvent(new CustomEvent("campusmart:store-logo",{detail:data.publicUrl}))
     } catch (err) {
       setLogoErr(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -234,10 +244,10 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
 
 
       <PageHeading eyebrow="Make it yours" title="Store settings" description="The details that help buyers get to know your business." actions={<ShareStoreButton sellerId={seller.id} />} />
-      <div className="vx-settings-grid"><aside className="vx-settings-index"><p className="vx-eyebrow">Store essentials</p><nav aria-label="Settings sections"><a href="#store-profile"><Store size={16} />Store profile</a><a href="#contact"><MapPin size={16} />Contact &amp; location</a><a href="#payout"><Landmark size={16} />Payout account</a></nav><p className="vx-settings-tip">Keep these details current. Your store profile and location help buyers know who they are ordering from.</p><Link className="vx-text-link" href={`/vendors/${seller.id}`}>Preview your storefront</Link></aside><div className="vx-settings-body">
+      <div className="vx-settings-grid"><aside className="vx-settings-index"><p className="vx-eyebrow">Store essentials</p><nav role="tablist" aria-label="Settings sections" onKeyDown={e=>{const index=settingsSections.findIndex(s=>s.id===activeSection);const next=e.key==='ArrowRight'||e.key==='ArrowDown'?(index+1)%4:e.key==='ArrowLeft'||e.key==='ArrowUp'?(index+3)%4:e.key==='Home'?0:e.key==='End'?3:-1;if(next<0)return;e.preventDefault();switchSection(settingsSections[next].id);document.getElementById('settings-tab-'+settingsSections[next].id)?.focus()}}>{settingsSections.map(({id,label,icon:Icon})=><button key={id} type="button" role="tab" id={'settings-tab-'+id} aria-controls={id} aria-selected={activeSection===id} tabIndex={activeSection===id?0:-1} onClick={()=>switchSection(id)}><Icon size={16} aria-hidden/>{label}</button>)}</nav><p className="vx-settings-tip">Keep these details current. Your store profile and location help buyers know who they are ordering from.</p><Link className="vx-text-link" href={`/vendors/${seller.id}`}>Preview your storefront</Link></aside><div className="vx-settings-body">
 
       {/* Verification */}
-      <section className={`ss-card ss-verify ${verified ? 'is-ok' : rejected ? 'is-bad' : ''}`} aria-label="Verification status">
+      <section className={`ss-card ss-verify ${verified ? 'is-ok' : rejected ? 'is-bad' : ''}`} aria-label="Verification status" hidden={activeSection!=='store-profile'}>
         <div className="ss-verify-icon" aria-hidden>
           {verified ? <ShieldCheck size={22} /> : rejected ? <ShieldAlert size={22} /> : reviewing ? <Clock size={22} /> : <ShieldCheck size={22} />}
         </div>
@@ -260,7 +270,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       </section>
 
       {/* Store profile */}
-      <section id="store-profile" className="ss-card" aria-labelledby="ss-profile-title">
+      <section hidden={activeSection!=='store-profile'} role="tabpanel" tabIndex={0} id="store-profile" className="ss-card" aria-labelledby="ss-profile-title">
         <h2 id="ss-profile-title" className="ss-title">
           <Store size={17} aria-hidden /> Store profile
         </h2>
@@ -318,7 +328,7 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       </section>
 
       {/* Contact and location */}
-      <section id="contact" className="ss-card" aria-labelledby="ss-contact-title">
+      <section hidden={activeSection!=='contact'} role="tabpanel" tabIndex={0} id="contact" className="ss-card" aria-labelledby="ss-contact-title">
         <h2 id="ss-contact-title" className="ss-title">
           <MapPin size={17} aria-hidden /> Contact and location
         </h2>
@@ -357,7 +367,8 @@ export default function SettingsClient({ seller }: { seller: Seller }) {
       </section>
 
       {/* Payout account */}
-      <section id="payout" className="ss-card" aria-labelledby="ss-payout-title"><h2 id="ss-payout-title" className="ss-title"><Landmark size={17} aria-hidden/>Payout account</h2><p className="buyer-help">Resolve your bank account with Paystack. Typed legacy bank details are not used for transfers; changing a resolved account requires a recent sign-in.</p><Link href="/vendor/payout-account" className="buyer-btn">Manage Paystack payout account</Link></section>
+      <section hidden={activeSection!=='payout'} role="tabpanel" tabIndex={0} id="payout" className="ss-card" aria-labelledby="ss-payout-title"><h2 id="ss-payout-title" className="ss-title"><Landmark size={17} aria-hidden/>Payout account</h2><p className="buyer-help">Resolve your bank account with Paystack. Typed legacy bank details are not used for transfers; changing a resolved account requires a recent sign-in.</p><Link href="/vendor/payout-account" className="buyer-btn">Manage Paystack payout account</Link></section>
+      <div id="store-controls" role="tabpanel" aria-labelledby="settings-tab-store-controls" tabIndex={0} hidden={activeSection!=='store-controls'}>{controls}</div>
       </div></div>
     </div>
   )

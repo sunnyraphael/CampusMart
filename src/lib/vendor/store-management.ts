@@ -58,12 +58,14 @@ async function cleanup(id:string,discover:boolean){
   return remaining.count??0
 }
 export async function manageStore(input:unknown){
-  const parsed=z.object({sellerId:z.uuid(),action:z.enum(['pause','resume','close','reopen','purge_images','retry_cleanup']),note:z.string().trim().min(5).max(1000)}).safeParse(input)
+  const parsed=z.object({sellerId:z.uuid(),admin:z.boolean().default(false),confirmation:z.string().default(''),action:z.enum(['pause','resume','close','reopen','purge_images','retry_cleanup']),note:z.string().trim().min(5).max(1000)}).safeParse(input)
   if(!parsed.success)return {error:'Choose an action and enter a reason of at least five characters.'}
   try{
-    const v=parsed.data,{supabase,seller}=await access(v.sellerId)
+    const v=parsed.data
+    if(v.action==='purge_images'&&v.confirmation!=='DELETE PHOTOS')return {error:'Type DELETE PHOTOS to confirm permanent removal.'}
+    const {supabase,seller}=await access(v.sellerId)
     if(v.action!=='retry_cleanup'){
-      const result=await supabase.rpc('cm_manage_store',{p_seller:v.sellerId,p_action:v.action,p_note:v.note})
+      const result=await supabase.rpc('cm_manage_store',{p_seller:v.sellerId,p_action:v.action,p_note:v.note,p_as_admin:v.admin})
       if(result.error)return {error:result.error.code==='P0001'?result.error.message:'Store action could not be confirmed. Refresh before retrying.'}
     }else if(!seller.store_closed_at)return {error:'Close the store before running permanent photo cleanup.'}
     let pending=0

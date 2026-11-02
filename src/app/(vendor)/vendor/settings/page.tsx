@@ -1,3 +1,4 @@
+import StoreControls from '@/components/vendor/StoreControls'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SettingsClient from './SettingsClient'
@@ -24,5 +25,6 @@ export default async function SettingsPage() {
   if (error) throw new Error('Could not load your store settings.')
   if (!seller) redirect('/vendor/onboarding')
 
-  return <><SettingsClient seller={seller}/><section className="vx-panel" style={{marginTop:24}}><h2>Store permissions and closure</h2><p className="buyer-help">Review the current vendor terms or close your store while keeping your buyer account. Existing orders, disputes and payouts remain your responsibility.</p><div className="buyer-actions"><Link className="buyer-btn" href="/consent?next=%2Fvendor%2Fsettings&vendor=1">Review vendor terms</Link><Link className="buyer-btn" href="/settings#account-controls">Privacy and account controls</Link></div></section></>
+  const controls=await supabase.rpc('cm_store_overview',{p_seller:seller.id})
+  return <SettingsClient seller={seller} controls={<>{controls.error?<p className="buyer-notice">Store controls could not load. Apply the store-management migration and refresh.</p>:<StoreControls sellerId={seller.id} state={controls.data}/>}<section className="ss-card" style={{marginTop:24}}><h2 className="ss-title">Permissions & privacy</h2><p className="buyer-help">Review vendor terms or manage your buyer account and data requests. Existing orders and payouts remain your responsibility.</p><div className="buyer-actions"><Link className="buyer-btn" href="/consent?next=%2Fvendor%2Fsettings&vendor=1">Vendor terms</Link><Link className="buyer-btn" href="/settings#account-controls">Account & privacy controls</Link></div></section></>}/>
 }

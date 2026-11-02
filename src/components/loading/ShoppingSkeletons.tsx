@@ -1,11 +1,9 @@
 import { Block, Button, Frame, Lines, Panel, ProductCards, Rows } from './Primitives'
-import { formatPrice } from '@/lib/utils/format'
-import { SERVICE_FEE_RATE, SERVICE_FEE_WAIVED_FROM } from '@/lib/fees'
+import FeeDisclosure from '@/components/store/FeeDisclosure'
+
 import { SORT_OPTIONS } from '@/lib/products-query'
 
-function FeeSkeleton({compact=false}:{compact?:boolean}) {
-  return <div className={`sh-fee-note${compact?' is-compact':''}`}><Block width={16} height={16} style={{flexShrink:0,marginTop:3}}/><p><span className="sk-ink">Item prices exclude checkout charges. Service fee: {SERVICE_FEE_RATE*100}% below {formatPrice(SERVICE_FEE_WAIVED_FROM)}, waived from {formatPrice(SERVICE_FEE_WAIVED_FROM)}. Any delivery charge is shown before you place an order. </span><span className="sk-ink" style={{whiteSpace:'nowrap'}}>Fee details</span></p></div>
-}
+function FeeSkeleton({compact=false}:{compact?:boolean}) {return <FeeDisclosure compact={compact} preview/> }
 function ShoppingHeadingSkeleton({title,description,actions=true}:{title?:string;description?:string;actions?:boolean}) {
   return <header className="sh-heading"><div><p className="sh-eyebrow"><Block width={150} height={14}/></p><h1>{title?<span className="sk-ink">{title}</span>:<Block width="min(340px,75vw)" height={43}/>}</h1>{description?<p className="sh-description"><span className="sk-ink">{description}</span></p>:<Block width="min(450px,75vw)" height={23}/>}</div>{actions&&<div className="buyer-actions"><Button width={125}/></div>}</header>
 }

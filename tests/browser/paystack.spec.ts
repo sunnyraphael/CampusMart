@@ -11,7 +11,7 @@ async function begin(page:Page,request:APIRequestContext){
   await page.route('https://checkout.paystack.com/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Paystack fixture checkout</h1>'}))
   await page.goto('/products');const add=page.locator('.pc-add').first();await add.click();await expect(add).toHaveAttribute('title','Added to cart')
   await page.goto('/checkout');await expect(page.getByText('Paystack TEST checkout.',{exact:false})).toBeVisible()
-  await expect(page.getByText(/CampusMart service fee.*retained/).first()).toBeVisible()
+  await expect(page.getByRole('region',{name:'Order summary'}).getByText(/CampusMart service fee.*retained/)).toBeVisible()
   await page.getByLabel('Contact phone',{exact:true}).fill('08012345678')
   await page.getByRole('checkbox',{name:/I have reviewed/}).check()
   await page.getByRole('button',{name:'Paystack test payment',exact:true}).click()

@@ -1,9 +1,10 @@
 'use client'
+import BrandMark from '@/components/BrandMark'
 
 import Link from 'next/link'
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, ShoppingBag, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { passwordSchema, safeRedirect, uuid } from '@/lib/buyer/validation'
 
@@ -77,7 +78,7 @@ export default function AuthForm({mode,next='/',vendor=false,initialError=''}:{m
       if(error)throw error
     } catch{setError('Google sign-in could not start. Please try again.');setBusy(false)}
   }
-  return <section className="buyer-auth buyer-panel buyer-stack"><ShoppingBag size={28} aria-hidden="true"/><h1>{titles[mode]}</h1>
+  return <section className="buyer-auth buyer-panel buyer-stack"><BrandMark size={52}/><h1>{titles[mode]}</h1>
     <p className="buyer-help">{mode==='login'?'Sign in to your orders, favorites and messages.':mode==='register'?'Start with your age band so we can show the account permissions that apply to you.':mode==='forgot'?'Enter the email address you use on CampusMart.':'Use at least 8 characters and choose a password you do not use elsewhere.'}</p>
     <form className="buyer-form" onSubmit={submit}>
       {mode==='register'&&<><label>Age band<select className="buyer-input" value={ageBand} onChange={e=>chooseAge(e.target.value as AgeBand)} disabled={busy} required><option value="">Choose your age band</option><option value="adult">I am 18 or older</option><option value="under_18">I am under 18</option></select></label><p className="buyer-help">We ask for an age band, not your date of birth or student ID.</p>{ageBand==='under_18'&&<><div className="buyer-notice"><ShieldCheck size={19} aria-hidden/><p>Before entering your details, ask a parent or legal guardian to use <Link href="/guardian-permission">Guardian permission</Link> from their own adult account. CampusMart must review and approve their permission first. The approved reference must match the email you register with.</p></div><label>Approved guardian permission reference<input className="buyer-input" value={guardianReference} onChange={e=>{setGuardianReference(e.target.value);setGuardianConfirmed(false)}} disabled={busy} required maxLength={36} autoComplete="off" spellCheck={false} aria-describedby="guardian-reference-help"/></label><p className="buyer-help" id="guardian-reference-help">Use the 36-character reference shared by your guardian after approval. A pending request is not an approval.</p><label className="by-check"><input type="checkbox" checked={guardianConfirmed} onChange={e=>setGuardianConfirmed(e.target.checked)} required disabled={busy}/><span>My parent or legal guardian already has CampusMart approval for this reference and my registration email.</span></label><p className="buyer-help">Buying requires approved guardian permission. Your guardian must separately authorise selling before you can open a store.</p></>}</>}

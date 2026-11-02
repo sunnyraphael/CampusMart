@@ -1,4 +1,5 @@
 'use client'
+import BrandMark from '@/components/BrandMark'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -30,6 +31,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const sidebarOpen = sidebarPath === pathname
   const [isAdmin,setIsAdmin]=useState(false)
   const [permissionsNeeded,setPermissionsNeeded]=useState(false)
+  const [storeLogo,setStoreLogo]=useState<string|null>(null)
   const [vendorName, setVendorName] = useState('Your store')
   const [sellerId, setSellerId] = useState<string | null>(null)
   const [todoCount, setTodoCount] = useState(0)
@@ -45,7 +47,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || cancelled) return
-      const { data: seller, error } = await supabase.from('sellers').select('id, store_name').eq('user_id', user.id).maybeSingle()
+      const { data: seller, error } = await supabase.from('sellers').select('id, store_name, logo_url').eq('user_id', user.id).maybeSingle()
       if (cancelled) return
       if (error) { setLoadError(true); return }
       setLoadError(false)
@@ -54,6 +56,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
         return
       }
       setSellerId(seller.id)
+      setStoreLogo(seller.logo_url)
       setVendorName(seller.store_name || 'Your store')
       const [admin,permission]=await Promise.all([supabase.rpc('is_admin'),supabase.rpc('cm_consent_status')])
       if(!cancelled){setIsAdmin(!admin.error&&admin.data===true);setPermissionsNeeded(!!permission.error||permission.data?.eligible!==true||permission.data?.vendor_terms!==true||permission.data?.selling_eligible!==true)}
@@ -112,8 +115,8 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     <a href="#vendor-content" className="vs-skip">Skip to content</a>
     {sidebarOpen && <button className="vs-overlay" tabIndex={-1} aria-label="Dismiss navigation" onClick={() => { setSidebarPath(null); requestAnimationFrame(() => menuRef.current?.focus()) }} />}
     <aside id="vendor-navigation" ref={sidebarRef} className={`vs-sidebar${sidebarOpen ? ' open' : ''}`} onTransitionEnd={event => { if (sidebarOpen && event.target === event.currentTarget && event.propertyName === 'transform') closeRef.current?.focus({ preventScroll: true }) }} role={sidebarOpen ? 'dialog' : undefined} aria-modal={sidebarOpen || undefined} aria-label="Vendor workspace">
-      <div className="vs-logo-area"><Link href="/vendor/dashboard" className="vs-logo"><span className="vs-logo-icon"><ShoppingBasket size={21} /></span><span>Campus<span className="vs-brand-blue">Mart</span><small>VENDOR WORKSPACE</small></span></Link><button ref={closeRef} className="vs-close-btn" onClick={() => { setSidebarPath(null); requestAnimationFrame(() => menuRef.current?.focus()) }} aria-label="Close menu"><X size={20} /></button></div>
-      <div className="vs-store-card"><span className="vs-store-initials">{initials}</span><div><strong>{vendorName}</strong><span>Your campus business</span></div></div>
+      <div className="vs-logo-area"><Link href="/vendor/dashboard" className="vs-logo"><BrandMark/><span>Campus<span className="vs-brand-blue">Mart</span><small>VENDOR WORKSPACE</small></span></Link><button ref={closeRef} className="vs-close-btn" onClick={() => { setSidebarPath(null); requestAnimationFrame(() => menuRef.current?.focus()) }} aria-label="Close menu"><X size={20} /></button></div>
+      <div className="vs-store-card"><span className="vs-store-initials">{storeLogo?<img referrerPolicy="no-referrer" src={storeLogo} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"inherit"}} onError={()=>setStoreLogo(null)}/>:initials}</span><div><strong>{vendorName}</strong><span>Your campus business</span></div></div>
       <nav className="vs-nav" aria-label="Vendor navigation"><p className="vs-nav-label">Manage</p>{links(navItems)}<p className="vs-nav-label vs-nav-label-spaced">Your store</p>{links(storeItems)}</nav>
       <div className="vs-bottom">
         {isAdmin&&<Link href="/admin" className="vs-bottom-link"><ShieldCheck size={18} aria-hidden />Admin workspace</Link>}
@@ -124,7 +127,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
       </div>
     </aside>
     <div className="vs-main" inert={sidebarOpen || undefined}>
-      <header className="vs-topbar"><div className="vs-topbar-left"><button ref={menuRef} className="vs-hamburger" onClick={() => setSidebarPath(pathname)} aria-label="Open menu" aria-expanded={sidebarOpen} aria-controls="vendor-navigation"><Menu size={22} /></button><span className="vs-topbar-context">Workspace <span>/</span></span><p className="vs-topbar-title">{vendorPageTitle(pathname)}</p></div><div className="vs-topbar-right">{storeHref && <Link className="vs-store-link" href={storeHref}>View Store <ArrowUpRight size={15} /></Link>}<ThemeToggle /><Link href="/vendor/settings" className="vs-avatar" aria-label="Store settings">{initials}</Link></div></header>
+      <header className="vs-topbar"><div className="vs-topbar-left"><button ref={menuRef} className="vs-hamburger" onClick={() => setSidebarPath(pathname)} aria-label="Open menu" aria-expanded={sidebarOpen} aria-controls="vendor-navigation"><Menu size={22} /></button><span className="vs-topbar-context">Workspace <span>/</span></span><p className="vs-topbar-title">{vendorPageTitle(pathname)}</p></div><div className="vs-topbar-right">{storeHref && <Link className="vs-store-link" href={storeHref}>View Store <ArrowUpRight size={15} /></Link>}<ThemeToggle /><Link href="/vendor/settings" className="vs-avatar" aria-label="Store settings">{storeLogo?<img referrerPolicy="no-referrer" src={storeLogo} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"inherit"}} onError={()=>setStoreLogo(null)}/>:initials}</Link></div></header>
       <main id="vendor-content" className="vs-content" tabIndex={-1}>{loadError && <p className="vx-notice" role="alert">We couldn’t complete that request. Please refresh and try again.</p>}{permissionsNeeded&&<p className="buyer-notice">Review your account and vendor permissions before accepting new orders or publishing listings. <Link href={`/consent?next=${encodeURIComponent(pathname)}&vendor=1`}>Review permissions</Link></p>}{children}</main>
       {!onboarding && <nav className="vs-mobile-nav" aria-label="Quick navigation"><Link href="/vendor/dashboard" aria-current={pathname === '/vendor/dashboard' ? 'page' : undefined}><LayoutDashboard size={20} />Overview</Link><Link href="/vendor/listings" aria-current={pathname.startsWith('/vendor/listings') ? 'page' : undefined}><Package size={20} />Listings</Link><Link href="/vendor/listings/new" className="vs-mobile-add" aria-label="Create listing"><Plus size={23} /></Link><Link href="/vendor/orders" aria-current={pathname.startsWith('/vendor/orders') ? 'page' : undefined}><ShoppingBag size={20} />Orders</Link><Link href="/vendor/messages" aria-current={pathname.startsWith('/vendor/messages') ? 'page' : undefined}><MessageCircle size={20} />Messages</Link></nav>}
     </div>

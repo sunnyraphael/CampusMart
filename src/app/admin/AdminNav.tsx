@@ -2,10 +2,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
-import { LayoutDashboard, PackageCheck, ShieldCheck, ShieldAlert, LifeBuoy, UserRoundCheck, UserRoundCog,Wallet } from 'lucide-react'
+import { LayoutDashboard, PackageCheck, ShieldCheck, ShieldAlert, LifeBuoy, UserRoundCheck, UserRoundCog,Wallet,ShoppingBag } from 'lucide-react'
 
 export const adminSections = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin/stores', label: 'Vendor stores', icon: ShoppingBag },
   { href: '/admin/deliveries', label: 'Deliveries', icon: PackageCheck },
   { href: '/admin/payments', label: 'Payments & refunds', icon: Wallet },
   { href: '/admin/verifications', label: 'Verifications', icon: ShieldCheck },

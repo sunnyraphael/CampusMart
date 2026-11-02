@@ -1,3 +1,4 @@
+import BrandMark from '@/components/BrandMark'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getVendorOrder, pick, naira, fmtDate, itemSubtotal } from '@/lib/vendor-orders'
@@ -42,7 +43,7 @@ export default async function SlipPage({ params }: { params: Promise<{ id: strin
       {order.payment_environment==='test'&&<p className="buyer-notice">PAYSTACK TEST ? Do not fulfil as a real sale. No real funds or vendor wallet credit.</p>}{order.is_trial&&<p className="buyer-notice">TRIAL ORDER - No payment collected. This packing slip is for testing only.</p>}
         <header className="slip-head">
           <div>
-            <p className="slip-label">CampusMart / Packing slip</p>
+            <div style={{display:"flex",alignItems:"center",gap:8}}><BrandMark size={36}/><p className="slip-label">CampusMart / Packing slip</p></div>
             <h1>{String(store)}</h1>
           </div>
           <div className="slip-right">

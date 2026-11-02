@@ -1,3 +1,5 @@
+import StoresSkeleton from '@/app/admin/stores/loading'
+import StoreDetailSkeleton from '@/app/admin/stores/[id]/loading'
 import FinanceSkeleton from '@/app/admin/payments/loading'
 import PayoutSkeleton from '@/app/(vendor)/vendor/payout-account/loading'
 import { AccountControlsSkeleton,ConsentSkeleton,GuardianPermissionSkeleton,AdminAccountRequestsSkeleton,AdminGuardianSkeleton } from './PrivacySkeletons'
@@ -11,6 +13,8 @@ import { EarningsSkeleton, GuideSkeleton, ListingFormSkeleton, OnboardingSkeleto
 
 export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
   switch (kind) {
+    case 'admin-stores': return <StoresSkeleton/>
+    case 'admin-store-details': return <StoreDetailSkeleton/>
     case 'admin-payments': return <FinanceSkeleton/>
     case 'payout-account': return <PayoutSkeleton/>
     case 'homepage': return <ShoppingHomeSkeleton />

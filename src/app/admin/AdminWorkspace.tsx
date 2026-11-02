@@ -1,8 +1,9 @@
 'use client'
+import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { ArrowUpRight, ChevronRight, LogOut, ShieldCheck, ShoppingBag } from 'lucide-react'
+import { ArrowUpRight, ChevronRight, LogOut, ShieldCheck } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { createClient } from '@/lib/supabase/client'
 import AdminNav, { adminSections } from './AdminNav'
@@ -25,7 +26,7 @@ export default function AdminWorkspace({ name, children }: { name: string; child
   return <div className="ad-shell">
     <a className="aw-skip" href="#admin-content">Skip to admin content</a>
     <aside className="aw-sidebar" aria-label="Admin workspace">
-      <Link className="aw-brand" href="/admin"><span className="aw-brand-icon"><ShoppingBag size={21} aria-hidden /></span><span>Campus<span className="aw-blue">Mart</span><small>ADMIN WORKSPACE</small></span></Link>
+      <Link className="aw-brand" href="/admin"><BrandMark/><span>Campus<span className="aw-blue">Mart</span><small>ADMIN WORKSPACE</small></span></Link>
       <p className="aw-nav-label">Manage marketplace</p><AdminNav />
       <div className="aw-sidebar-foot"><div className="aw-access-note"><ShieldCheck size={18} aria-hidden /><span>Administrator access<small>Review decisions with care.</small></span></div><Link href="/" className="aw-back"><ArrowUpRight size={17} aria-hidden />Back to marketplace</Link><button className="aw-back" disabled={busy} onClick={signOut}><LogOut size={17} aria-hidden />{busy ? 'Signing out…' : 'Sign out'}</button></div>
     </aside>

@@ -1,3 +1,4 @@
+import BrandMark from '@/components/BrandMark'
 import type { ReactNode } from 'react'
 import { CloudOff, PackageSearch, ShieldAlert, Unplug } from 'lucide-react'
 
@@ -14,7 +15,7 @@ export default function StatusView({ kind = 'error', title, description, actions
   const content = messages[kind], Icon = content.icon
   const Heading = compact ? 'h2' : 'h1'
   return <section className={`cm-status${compact ? ' compact' : ''}`} role={kind === 'not-found' ? undefined : 'alert'} data-status-kind={kind}>
-    <p className="cm-status-brand">Campus<span>Mart</span></p><div className="cm-status-art" aria-hidden="true"><span className="cm-status-orbit" /><span className="cm-status-symbol"><Icon strokeWidth={1.5} /></span><span className="cm-status-code">{content.code}</span></div>
+    <p className="cm-status-brand" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><BrandMark/><span>Campus<span>Mart</span></span></p><div className="cm-status-art" aria-hidden="true"><span className="cm-status-orbit" /><span className="cm-status-symbol"><Icon strokeWidth={1.5} /></span><span className="cm-status-code">{content.code}</span></div>
     <p className="cm-status-eyebrow">{content.eyebrow}</p><Heading>{title ?? content.title}</Heading><p className="cm-status-description">{description ?? content.description}</p>{actions && <div className="cm-status-actions">{actions}</div>}{note && <p className="cm-status-foot">{note}</p>}{reference && <p className="cm-status-reference">Support reference: {reference}</p>}
   </section>
 }

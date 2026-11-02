@@ -26,6 +26,7 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
+  icons: {icon:'/brand/campusmart-symbol.png',apple:'/brand/campusmart-symbol.png'},
   title: 'CampusMart - Student Marketplace',
   description: 'Buy, sell and connect with students on campus.',
 }

@@ -11,6 +11,7 @@ create table public.store_management_events(id uuid primary key default gen_rand
 alter table public.store_management_events enable row level security;
 revoke all on public.store_management_events from public,anon,authenticated;
 grant all on public.store_management_events,public.store_visibility_restore to service_role;
+grant all on public.listing_image_cleanup to service_role;
 
 create function public.cm_store_visibility_guard() returns trigger language plpgsql security definer set search_path='' as $$
 declare s public.sellers;
@@ -28,17 +29,19 @@ begin
 end $$;
 create trigger cm_store_flags_guard before update on public.sellers for each row execute function public.cm_store_flags_guard();
 
-create function public.cm_manage_store(p_seller uuid,p_action text,p_note text) returns void language plpgsql security definer set search_path='' as $$
+create function public.cm_manage_store(p_seller uuid,p_action text,p_note text,p_as_admin boolean default false) returns void language plpgsql security definer set search_path='' as $$
 declare s public.sellers;v_admin boolean;
 begin
   if auth.uid() is null then raise exception 'Sign in first.';end if;
-  v_admin:=public.is_admin() is true;
-  select * into s from public.sellers where id=p_seller for update;
+  if p_as_admin and public.is_admin() is not true then raise exception 'Administrator access required.';end if;
+  v_admin:=coalesce(p_as_admin,false) and public.is_admin() is true;
+  select * into s from public.sellers where id=p_seller;
   if not found or (not v_admin and s.user_id<>auth.uid()) then raise exception 'Store unavailable.';end if;
   if length(btrim(coalesce(p_note,''))) not between 5 and 1000 then raise exception 'Record a reason of 5 to 1000 characters.';end if;
-  if p_action not in ('pause','resume','close','reopen','purge_images') then raise exception 'Invalid store action.';end if;
+  if p_action is null or p_action not in ('pause','resume','close','reopen','purge_images') then raise exception 'Invalid store action.';end if;
   -- Lock items before products, consistent with checkout/refund routines.
   perform 1 from public.order_items where seller_id=s.id order by id for update;
+  select * into s from public.sellers where id=p_seller for update;
   perform 1 from public.products where seller_id=s.id order by id for update;
   if p_action='pause' then
     insert into public.store_visibility_restore select id,seller_id from public.products where seller_id=s.id and status='active' on conflict do nothing;
@@ -81,6 +84,17 @@ begin
 end $$;
 create trigger cm_store_order_guard before insert on public.order_items for each row execute function public.cm_store_order_guard();
 
+create function public.cm_store_logo_guard() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  if new.logo_url is not null and new.logo_url is distinct from old.logo_url then
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(new.logo_url,3));
+    if exists(select 1 from public.listing_image_cleanup where image_url=new.logo_url and status in ('pending','deleting','deleted')) then raise exception 'This photo was removed or is queued for removal. Upload a new logo.';end if;
+    if new.store_closed_at is not null then raise exception 'Reopen the store before uploading a new logo.';end if;
+  end if;
+  return new;
+end $$;
+create trigger cm_store_logo_guard before update of logo_url on public.sellers for each row execute function public.cm_store_logo_guard();
+
 create function public.cm_store_overview(p_seller uuid) returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare s public.sellers;v_result jsonb;
 begin
@@ -89,14 +103,24 @@ begin
   select jsonb_build_object('owner_paused',s.owner_paused,'admin_paused',s.admin_paused,'admin_closed',s.admin_closed,'closed',s.store_closed_at is not null,
     'listings',(select count(*) from public.products where seller_id=s.id),'published',(select count(*) from public.products where seller_id=s.id and status='active'),
     'orders',count(*),'completed',count(*) filter(where done),'unsuccessful',count(*) filter(where unsuccessful),
-    'ongoing',count(*) filter(where not done and not unsuccessful),'disputes',coalesce(sum(disputes),0),
+    'ongoing',count(*) filter(where not settled),'mixed',count(*) filter(where settled and not done and not unsuccessful),'disputes',coalesce(sum(disputes),0),
     'cleanup_pending',(select count(*) from public.listing_image_cleanup where vendor_id=s.id and status in ('pending','deleting'))) into v_result
-  from (select i.order_id,bool_and(i.fulfillment_status='received' and i.released_at is not null) done,
-    bool_and(i.fulfillment_status in ('cancelled','refunded')) unsuccessful,count(*) filter(where nullif(i.dispute_reason,'') is not null) disputes
+  from (select i.order_id,bool_and(coalesce(i.fulfillment_status='received' and i.released_at is not null,false)) done,
+    bool_and(coalesce(i.fulfillment_status in ('cancelled','refunded'),false)) unsuccessful,
+    bool_and(coalesce((i.fulfillment_status='received' and i.released_at is not null) or i.fulfillment_status in ('cancelled','refunded'),false)) settled,
+    count(*) filter(where nullif(i.dispute_reason,'') is not null) disputes
     from public.order_items i join public.orders o on o.id=i.order_id where i.seller_id=s.id and not coalesce(o.is_trial,false) and o.payment_environment is distinct from 'test' and o.payment_status in ('paid','refunded') group by i.order_id) q;
   return v_result;
 end $$;
-revoke all on function public.cm_store_visibility_guard(),public.cm_store_flags_guard(),public.cm_store_order_guard(),public.cm_manage_store(uuid,text,text),public.cm_store_overview(uuid) from public,anon,authenticated;
-grant execute on function public.cm_manage_store(uuid,text,text),public.cm_store_overview(uuid) to authenticated;
+create function public.cm_admin_store_items(p_seller uuid) returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+  if auth.uid() is null or public.is_admin() is not true then raise exception 'Administrator access required.';end if;
+  return coalesce((select jsonb_agg(to_jsonb(q)) from(select i.id,i.order_id,i.fulfillment_status,i.dispute_reason,i.dispute_resolution,i.released_at,o.created_at,o.is_trial,o.payment_environment,o.payment_status
+    from public.order_items i join public.orders o on o.id=i.order_id where i.seller_id=p_seller order by o.created_at desc,i.id limit 50) q),'[]'::jsonb);
+end $$;
+revoke all on function public.cm_store_visibility_guard(),public.cm_store_flags_guard(),public.cm_store_order_guard(),public.cm_store_logo_guard(),public.cm_manage_store(uuid,text,text,boolean),public.cm_store_overview(uuid) from public,anon,authenticated;
+grant execute on function public.cm_manage_store(uuid,text,text,boolean),public.cm_store_overview(uuid) to authenticated;
+revoke all on function public.cm_admin_store_items(uuid) from public,anon,authenticated;
+grant execute on function public.cm_admin_store_items(uuid) to authenticated;
 notify pgrst,'reload schema';
 commit;

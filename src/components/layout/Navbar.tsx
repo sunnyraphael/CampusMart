@@ -1,4 +1,5 @@
 'use client'
+import BrandMark from '@/components/BrandMark'
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
@@ -8,7 +9,7 @@ import { useCartStore } from '@/store/cart'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import {
   ShoppingCart, Bell, Heart, MessageCircle,
-  ShoppingBag, ChevronDown,
+  ChevronDown,
   User, Settings, LogOut, Package, Store, ShieldCheck
 } from 'lucide-react'
 import { useBuyerAccount } from '@/components/buyer/BuyerAccount'
@@ -63,9 +64,7 @@ export function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <ShoppingBag size={18} className="text-white" />
-          </div>
+          <BrandMark/>
           <span className="text-xl font-bold tracking-tight"
             style={{ fontFamily: 'var(--font-sora), Sora, sans-serif' }}>
             <span className="text-gray-900 dark:text-white">Campus</span>

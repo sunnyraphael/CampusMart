@@ -1,6 +1,6 @@
 /* Cache only the public offline screen. Never store account pages, API data or requests to Supabase. */
-const OFFLINE_CACHE = 'campusmart-offline-v2'
-const OFFLINE_FILES = ['/offline.html', '/status.css', '/offline.js']
+const OFFLINE_CACHE = 'campusmart-offline-v3'
+const OFFLINE_FILES = ['/offline.html', '/status.css', '/offline.js', '/brand/campusmart-symbol.png']
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(OFFLINE_CACHE).then(cache => cache.addAll(OFFLINE_FILES.map(path => new Request(path, { cache: 'reload' })))).then(() => self.skipWaiting()))
 })
