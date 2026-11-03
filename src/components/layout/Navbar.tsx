@@ -60,12 +60,12 @@ export function Navbar() {
       }}
     >
       {/* ── Top bar ── */}
-      <div className="flex items-center h-16 px-4 gap-4 max-w-screen-2xl mx-auto">
+      <div className="flex items-center h-16 px-3 sm:px-4 gap-2 sm:gap-4 max-w-screen-2xl mx-auto">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <BrandMark/>
-          <span className="text-xl font-bold tracking-tight"
+          <span className="text-lg sm:text-xl font-bold tracking-tight"
             style={{ fontFamily: 'var(--font-sora), Sora, sans-serif' }}>
             <span className="text-gray-900 dark:text-white">Campus</span>
             <span className="text-blue-600">Mart</span>

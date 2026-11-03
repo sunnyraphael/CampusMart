@@ -52,3 +52,5 @@
 .af-status.af-failed{color:#b91c1c;background:#fee2e2}
 .af-reference{overflow-wrap:anywhere;word-break:break-word;font-size:12px}
 .af-tabs button:focus-visible,.af-filter:focus-visible{outline:2px solid var(--vx-link);outline-offset:3px}
+
+@media(max-width:600px){.aw-security-link{padding:7px}.aw-security-link span{display:none}.aw-top-actions{gap:6px}}

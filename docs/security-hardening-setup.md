@@ -1,5 +1,7 @@
 # Security hardening setup
 
+The admin authenticator instructions below describe the earlier version. The requested password-and-PIN replacement is documented in [admin-password-and-google-setup.md](admin-password-and-google-setup.md) and requires its newer migration.
+
 This change addresses the six findings from the November 3 security review. It is not a guarantee against all attacks. No live SQL, funds, customer records, or MFA factors were changed during implementation.
 
 ## Database and image ownership

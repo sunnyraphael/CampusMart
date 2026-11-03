@@ -1,7 +1,10 @@
+import type {Page} from '@playwright/test'
 import {test,expect} from '@playwright/test'
 import {ids,session} from '../fixture-backend.mjs'
 
 const backend='http://127.0.0.1:54329'
+async function confirmPin(page:Page){const dialog=page.getByRole('dialog');await dialog.getByLabel('Transaction PIN',{exact:true}).fill('246810');await dialog.getByRole('button',{name:'Confirm with PIN'}).click()}
+
 test.beforeEach(async({context,request})=>{
   await request.post(`${backend}/__reset`)
   await request.post(`${backend}/__vendor`,{data:{role:'vendor',store:true}})
@@ -48,6 +51,7 @@ test('trial checkout creates an unpaid test order and completes the full deliver
   await page.getByRole('button',{name:'Approve trial delivery',exact:true}).click()
   await page.getByLabel('Your review note',{exact:true}).fill('Completed all trial delivery steps.')
   await page.getByRole('button',{name:'Confirm trial approval',exact:true}).click()
+  await confirmPin(page)
   await page.getByRole('link',{name:'Approved',exact:true}).click()
   await expect(page.getByText('Trial completed',{exact:true})).toBeVisible()
   await page.goto('/vendor/earnings')
@@ -102,6 +106,7 @@ test('an unpaid trial dispute reaches admin review and only simulates a refund',
   await page.getByRole('button',{name:'Approve refund',exact:true}).click()
   await page.getByLabel('Your note (saved with the decision)',{exact:true}).fill('Trial refund approval for testing only.')
   await page.getByRole('button',{name:'Confirm refund decision',exact:true}).click()
+  await confirmPin(page)
   await expect(page.getByText('Trial dispute decision saved.',{exact:false})).toBeVisible()
   await page.getByRole('tab',{name:'Resolved',exact:true}).click()
   await expect(page.getByText('Refund approved',{exact:true})).toBeVisible()

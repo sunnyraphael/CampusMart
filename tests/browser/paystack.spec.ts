@@ -82,15 +82,30 @@ test('payout setup resolves the provider name and stores only the recipient and 
 })
 
 
-test('administrator must verify an authenticator before entering the workspace',async({page,request})=>{
-  await request.post(backend+'/__admin',{data:{enabled:true,mfaVerified:false}})
-  await page.goto('/admin/payments')
-  await expect(page).toHaveURL(/\/admin-security$/)
-  await page.getByRole('button',{name:'Set up or unlock authenticator'}).click()
-  await page.getByLabel('Authenticator code',{exact:true}).fill('123456')
-  await page.getByRole('button',{name:'Verify and open workspace'}).click()
-  await expect(page).toHaveURL(/\/admin$/)
-  await expect(page.getByRole('main')).toBeVisible()
+test('administrator unlocks using the existing password and makes a fresh navigation',async({page,request})=>{
+ await request.post(backend+'/__admin',{data:{enabled:true,unlocked:false}})
+ await page.goto('/admin/payments');await expect(page).toHaveURL(/\/admin-security$/)
+ await page.getByLabel('CampusMart password',{exact:true}).fill('WrongPassword')
+ await page.getByRole('button',{name:'Unlock admin workspace',exact:true}).click()
+ await expect(page.getByRole('alert').filter({hasText:'password could not be verified'})).toBeVisible()
+ await page.getByLabel('CampusMart password',{exact:true}).fill('FixtureExistingPassword123!')
+ const navigation=page.waitForRequest(r=>r.isNavigationRequest()&&new URL(r.url()).pathname==='/admin')
+ await page.getByRole('button',{name:'Unlock admin workspace',exact:true}).click();await navigation
+ await expect(page).toHaveURL(/\/admin$/)
+})
+
+test('vendor credit requires a separate PIN after the delivery review',async({page,request})=>{
+ await request.post(backend+'/__admin',{data:{enabled:true}})
+ await request.post(backend+'/__delivery',{data:{credited:false,verifiedPayment:true,tracking:{buyer_confirmed_at:new Date().toISOString(),code_verified_at:new Date().toISOString()}}})
+ await page.goto('/admin/deliveries')
+ await page.getByRole('button',{name:'Approve vendor credit',exact:true}).click()
+ await page.getByLabel('Your review note',{exact:true}).fill('Reviewed payment, code and receipt evidence.')
+ await page.getByRole('button',{name:'Confirm vendor credit',exact:true}).click()
+ const dialog=page.getByRole('dialog',{name:'Approve vendor credit',exact:true});await expect(dialog).toBeVisible()
+ await dialog.getByLabel('Transaction PIN',{exact:true}).fill('999999');await dialog.getByRole('button',{name:'Confirm with PIN'}).click()
+ await expect(dialog.getByRole('alert')).toContainText('Incorrect transaction PIN')
+ await dialog.getByLabel('Transaction PIN',{exact:true}).fill('246810');await dialog.getByRole('button',{name:'Confirm with PIN'}).click()
+ await expect(dialog).toHaveCount(0);await expect(page.getByText('Vendor wallet credited. No bank transfer was initiated.',{exact:true})).toBeVisible()
 })
 
 test('browser security headers block framing on public and login pages',async({request})=>{
@@ -100,4 +115,13 @@ test('browser security headers block framing on public and login pages',async({r
     expect(response.headers()['x-content-type-options']).toBe('nosniff')
     expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'")
   }
+})
+
+
+test('first administrator password unlock leads to transaction PIN setup',async({page,request})=>{
+ await request.post(backend+'/__admin',{data:{enabled:true,unlocked:false,pinConfigured:false}})
+ await page.goto('/admin-security');await page.getByLabel('CampusMart password',{exact:true}).fill('FixtureExistingPassword123!')
+ await page.getByRole('button',{name:'Unlock admin workspace',exact:true}).click()
+ await page.getByLabel('New transaction PIN',{exact:true}).fill('246810');await page.getByLabel('Confirm transaction PIN',{exact:true}).fill('246810')
+ await page.getByRole('button',{name:'Save PIN and open workspace',exact:true}).click();await expect(page).toHaveURL(/\/admin$/)
 })

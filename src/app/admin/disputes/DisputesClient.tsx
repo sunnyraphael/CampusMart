@@ -1,12 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import {useTransactionPin} from '@/components/admin/TransactionPin'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Loader2, AlertCircle, Inbox, Phone, ClipboardCheck, Undo2, CheckCircle2, Info } from 'lucide-react'
 import { AdminHeading, QueueSummary, QueueToolbar } from '@/components/admin/Workspace'
 import AdminRefresh from '@/components/admin/RefreshButton'
 import { queueMatches } from '@/lib/admin/queues'
-import { createClient } from '@/lib/supabase/client'
 
 type Item = {
   isTrial?: boolean
@@ -44,7 +44,7 @@ export default function DisputesClient({
   resolved: boolean
   loadError: string | null
 }) {
-  const supabase = useMemo(() => createClient(), [])
+  const {authorize,prompt}=useTransactionPin()
 
   const [removed,setRemoved] = useState<string[]>([])
   const items=initial.filter(item=>!removed.includes(item.itemId))
@@ -62,13 +62,13 @@ export default function DisputesClient({
     if (note.trim().length < 5) return setError('Please write a note of at least 5 characters explaining your decision.')
     setBusy(it.itemId)
     try {
-    const { error: rpcErr } = await supabase.rpc('cm_admin_resolve_delivery_dispute', {
+    const result = await authorize('resolve_dispute', {
       p_item_id: it.itemId,
       p_decision: decision,
       p_note: note.trim(),
     })
     setBusy(null)
-    if (rpcErr) return setError(rpcErr.message)
+    if ('error' in result) return setError(result.error)
     setRemoved(list=>[...list,it.itemId])
     setPanel(null)
     setNote('')
@@ -212,6 +212,7 @@ export default function DisputesClient({
           )
         })
       )}
+      {prompt}
     </div>
   )
 }

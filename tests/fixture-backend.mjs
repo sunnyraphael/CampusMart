@@ -11,7 +11,7 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
   const defaultOperations=()=>({settings:{database_limit:500000000,storage_limit:1000000000,egress_limit:5000000000,cached_egress_limit:5000000000,maintenance:false},sample:null,alerts:[]})
   let operations=defaultOperations(),uploadAllowed=true,uploadedMedia=[];const uploadedFiles=new Map()
   let finance=null,financeRefunds=[],financeEvents=[],financeTransfers=[],financeRecipients=[],providerRefunds=[],providerStatus='pending',providerAmountDelta=0,providerRefundStatus='pending',providerRefundInterrupted=false;
-  let kyc=[];let favorites=[];let saved=[];let support=[];let read=false;let messages=[];let failures=new Set();let temporaryFailures=new Map();let delays=new Map();let isAdmin=false,mfaVerified=true;let calls=[];let role='buyer';let hasStore=false;let removedProduct=false;let storageFailure=false;let cleanupQueued=false;let extraProducts=[];let itemStatus='received';let transactions=[];let delivery={};let verifiedPayment=false;let credited=true;let handoverCode=null;let trial=false;let trialRequests=new Map();let loseTrialResponse=false;let disputeDecision=null;let notificationOrders=[];let notificationRows=null;let orderBuyerId=ids.user
+  let kyc=[];let favorites=[];let saved=[];let support=[];let read=false;let messages=[];let failures=new Set();let temporaryFailures=new Map();let delays=new Map();let isAdmin=false,mfaVerified=true,pinConfigured=true,testPin='246810';let calls=[];let role='buyer';let hasStore=false;let removedProduct=false;let storageFailure=false;let cleanupQueued=false;let extraProducts=[];let itemStatus='received';let transactions=[];let delivery={};let verifiedPayment=false;let credited=true;let handoverCode=null;let trial=false;let trialRequests=new Map();let loseTrialResponse=false;let disputeDecision=null;let notificationOrders=[];let notificationRows=null;let orderBuyerId=ids.user
   const product={id:ids.product,title:'Campus headphones',description:'Comfortable headphones for lectures and study.',price:12000,images:[],avg_rating:null,total_reviews:0,stock_quantity:5,status:'active',seller_id:ids.vendor,category_id:'99999999-9999-4999-8999-999999999999',compare_at_price:15000,sale_ends_at:null,condition:'used_like_new',availability:'on_campus',delivery_days:2,categories:{name:'Electronics',slug:'electronics'},sellers:{id:ids.vendor,store_name:'Campus Store',is_verified:true,logo_url:null,description:'Study essentials'}}
   const categories=[{id:product.category_id,name:'Electronics',slug:'electronics'},{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',name:'Books & Notes',slug:'books'}]
   const order={id:ids.order,user_id:ids.user,created_at:now(),status:'pending',payment_status:'paid',total_amount:12240,delivery_address:'Hall A',order_items:[{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',product_id:ids.product,seller_id:ids.vendor,quantity:1,unit_price:12000,subtotal:12000,fulfillment_status:'received',products:{title:product.title,images:[]}}]}
@@ -32,9 +32,10 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
     const url=new URL(req.url,'http://localhost')
     const buffers=[];for await(const chunk of req)buffers.push(chunk)
     let body={};try{body=JSON.parse(Buffer.concat(buffers).toString()||'{}')}catch{}
-    const json=(data,status=200)=>{res.setHeader('Content-Type','application/json');res.writeHead(status);res.end(req.method==='HEAD'?undefined:JSON.stringify(data))}
+    let wrapFinance=false
+    const json=(data,status=200)=>{if(wrapFinance&&status<400)data={ok:true,result:data};res.setHeader('Content-Type','application/json');res.writeHead(status);res.end(req.method==='HEAD'?undefined:JSON.stringify(data))}
     if(url.pathname==='/health')return json({ok:true})
-    if(url.pathname==='/__reset'){operations=defaultOperations();uploadAllowed=true;uploadedMedia=[];uploadedFiles.clear();finance=null;financeRefunds=[];financeEvents=[];financeTransfers=[];financeRecipients=[];providerRefunds=[];providerStatus='pending';providerAmountDelta=0;providerRefundStatus='pending';providerRefundInterrupted=false;consent=defaultConsent();accountActive=true;accountClosedAt=null;storeClosedAt=null;accountRequests=[];guardians=[];sellerFields={};product.status='active';kyc=[];favorites=[];saved=[];support=[];read=false;messages=[];failures=new Set();temporaryFailures=new Map();delays=new Map();isAdmin=false;mfaVerified=true;calls=[];role='buyer';hasStore=false;removedProduct=false;storageFailure=false;cleanupQueued=false;extraProducts=[];itemStatus='received';transactions=[];delivery={};verifiedPayment=false;credited=true;handoverCode=null;trial=false;trialRequests=new Map();loseTrialResponse=false;disputeDecision=null;notificationOrders=[];notificationRows=null;orderBuyerId=ids.user;product.price=12000;product.stock_quantity=5;order.total_amount=12240;order.status='pending';order.created_at=now();order.delivery_method=undefined;order.delivery_address='Hall A';order.phone_number=undefined;order.delivery_notes=undefined;order.order_items[0].unit_price=12000;order.order_items[0].quantity=1;order.order_items[0].subtotal=12000;return json({ok:true})}
+    if(url.pathname==='/__reset'){operations=defaultOperations();uploadAllowed=true;uploadedMedia=[];uploadedFiles.clear();finance=null;financeRefunds=[];financeEvents=[];financeTransfers=[];financeRecipients=[];providerRefunds=[];providerStatus='pending';providerAmountDelta=0;providerRefundStatus='pending';providerRefundInterrupted=false;consent=defaultConsent();accountActive=true;accountClosedAt=null;storeClosedAt=null;accountRequests=[];guardians=[];sellerFields={};product.status='active';kyc=[];favorites=[];saved=[];support=[];read=false;messages=[];failures=new Set();temporaryFailures=new Map();delays=new Map();isAdmin=false;mfaVerified=true;pinConfigured=true;testPin='246810';calls=[];role='buyer';hasStore=false;removedProduct=false;storageFailure=false;cleanupQueued=false;extraProducts=[];itemStatus='received';transactions=[];delivery={};verifiedPayment=false;credited=true;handoverCode=null;trial=false;trialRequests=new Map();loseTrialResponse=false;disputeDecision=null;notificationOrders=[];notificationRows=null;orderBuyerId=ids.user;product.price=12000;product.stock_quantity=5;order.total_amount=12240;order.status='pending';order.created_at=now();order.delivery_method=undefined;order.delivery_address='Hall A';order.phone_number=undefined;order.delivery_notes=undefined;order.order_items[0].unit_price=12000;order.order_items[0].quantity=1;order.order_items[0].subtotal=12000;return json({ok:true})}
     if(url.pathname==='/__privacy'){
       if(body.consent)consent={...consent,...body.consent}
       if(typeof body.active==='boolean'){accountActive=body.active;accountClosedAt=body.active?null:now();if(!body.active&&hasStore)closeStore(true)}
@@ -45,7 +46,7 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
     }
     if(url.pathname==='/__delay'){delays.set(body.table,body.ms??0);return json({ok:true})}
     if(url.pathname==='/__admin_data'){kyc=body.kyc??kyc;support=body.support??support;return json({ok:true})}
-    if(url.pathname==='/__admin'){isAdmin=!!body.enabled;mfaVerified=body.mfaVerified??true;return json({ok:true})}
+    if(url.pathname==='/__admin'){isAdmin=!!body.enabled;mfaVerified=body.unlocked??body.mfaVerified??true;pinConfigured=body.pinConfigured??pinConfigured;return json({ok:true})}
     if(url.pathname==='/__fail'){if(body.times)temporaryFailures.set(body.table,{remaining:body.times,status:body.status??503});else failures.add(body.table);return json({ok:true})}
     if(url.pathname==='/__recover'){failures.delete(body.table);temporaryFailures.delete(body.table);return json({ok:true})}
     if(url.pathname==='/__vendor'){sellerFields={...sellerFields,...body.sellerFields};role=body.role??role;hasStore=body.store??hasStore;storageFailure=body.storageFailure??storageFailure;extraProducts=body.products??extraProducts;itemStatus=body.itemStatus??itemStatus;if(body.itemStatus)credited=body.itemStatus==='received';transactions=body.transactions??transactions;return json({ok:true})}
@@ -84,7 +85,7 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
     if(url.pathname==='/auth/v1/user')return json(req.headers.authorization?.includes('Bearer')?{...user,factors:isAdmin?[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',factor_type:'totp',status:'verified',friendly_name:'CampusMart administrator',created_at:now(),updated_at:now()}]:[]}: {},req.headers.authorization?200:401)
     if(url.pathname.endsWith('/challenge')&&url.pathname.startsWith('/auth/v1/factors/'))return json({id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',expires_at:Math.floor(Date.now()/1000)+300})
     if(url.pathname.endsWith('/verify')&&url.pathname.startsWith('/auth/v1/factors/')){if(body.code!=='123456')return json({message:'Invalid code'},400);mfaVerified=true;return json(session())}
-    if(url.pathname==='/auth/v1/token')return json(session())
+    if(url.pathname==='/auth/v1/token')return body.password?.startsWith('Wrong')?json({message:'Invalid login credentials'},400):json(session())
     if(url.pathname==='/auth/v1/logout')return json({})
     if(url.pathname==='/auth/v1/recover')return json({})
     if(url.pathname==='/auth/v1/verify')return json(session())
@@ -101,7 +102,7 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
       if(body.data?.age_band==='under_18'&&!guardians.some(row=>row.id===body.data.guardian_request_id&&row.state==='approved'&&row.student_email_hash===emailHash(body.email)))return json({code:'unexpected_failure',message:'Guardian permission must be approved before student registration.'},400)
       return json({user,session:null})
     }
-    const rpc=url.pathname.split('/rpc/')[1]
+    let rpc=url.pathname.split('/rpc/')[1]
     if(rpc) {
       if(delays.get(rpc))await new Promise(resolve=>setTimeout(resolve,delays.get(rpc)))
       const temporaryRpc=temporaryFailures.get(rpc)
@@ -109,6 +110,18 @@ if(process.argv[1]?.endsWith('fixture-backend.mjs')) {
       if(failures.has(rpc))return json({code:'XX000',message:'Fixture request failed'},500)
       const rejected=message=>json({code:'P0001',message},400)
       const signedIn=!!req.headers.authorization&&!req.headers.authorization.includes('fixture-anon-key')
+      if(rpc==='cm_unlock_admin'){if(!isAdmin)return rejected('Administrator access required');mfaVerified=true;return json(null)}
+      if(rpc==='cm_admin_pin_status')return json({configured:pinConfigured})
+      if(rpc==='cm_set_admin_pin'){if(pinConfigured&&body.p_old_pin!==testPin)return json({ok:false,error:'Incorrect current PIN'});testPin=body.p_pin;pinConfigured=true;return json({ok:true})}
+      if(rpc==='cm_prepare_google_signup'){if(body.p_accepted!==true||!body.p_age_band)return rejected('Choose your age band and accept the terms');return json(crypto.randomUUID())}
+      if(rpc==='cm_admin_finance_decision'){
+        if(!isAdmin||!mfaVerified)return rejected('Unlock the administrator workspace first.')
+        if(!pinConfigured)return json({ok:false,error:'Set up your transaction PIN in Admin security first.'})
+        if(body.p_pin!==testPin)return json({ok:false,error:'Incorrect transaction PIN. Please try again.'})
+        const targets={approve_delivery:'cm_admin_approve_delivery',delivery_hold:'cm_admin_hold_delivery',resolve_dispute:'cm_admin_resolve_delivery_dispute',transfer:'cm_admin_queue_transfer',refund:'cm_admin_queue_refund',cancel_transfer:'cm_cancel_unsent_transfer',retry_refund:'cm_retry_rejected_refund'}
+        rpc=targets[body.p_operation];body=body.p_payload;wrapFinance=true
+        if(failures.has(rpc))return rejected('Fixture decision unavailable')
+      }
       if(rpc==='cm_health_ping')return json(true);
       if(rpc==='cm_upload_budget')return json(uploadAllowed);
       if(rpc==='cm_checkout_available')return json(!operations.settings.maintenance);

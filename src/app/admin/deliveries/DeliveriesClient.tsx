@@ -1,10 +1,10 @@
 'use client'
 
+import {useTransactionPin} from '@/components/admin/TransactionPin'
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, Clock, Inbox, ShieldCheck } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { formatPrice } from '@/lib/utils/format'
 import { trackingDate, type OrderTracking, type TrackingEvent } from '@/lib/orders/tracking'
 import TrackingTimeline from '@/components/orders/TrackingTimeline'
@@ -42,6 +42,7 @@ export default function DeliveriesClient({ items, view, page, hasMore, loadedAt 
   </section>
 }
 function ApprovalCard({ item: i, loadedAt }: { item: DeliveryApproval; loadedAt: number }) {
+  const {authorize,prompt}=useTransactionPin()
   const router = useRouter()
   const [refreshing, startTransition] = useTransition()
   const [busy, setBusy] = useState(false)
@@ -64,10 +65,8 @@ function ApprovalCard({ item: i, loadedAt }: { item: DeliveryApproval; loadedAt:
     if (note.trim().length < 5) { setError('Explain what you checked in at least 5 characters.'); return }
     setBusy(true); setError(''); setNotice('')
     try {
-      const { error } = mode === 'approve'
-        ? await createClient().rpc('cm_admin_approve_delivery', { p_item_id: i.item_id, p_note: note.trim() })
-        : await createClient().rpc('cm_admin_hold_delivery', { p_item_id: i.item_id, p_note: note.trim(), p_hold: mode === 'hold' })
-      if (error) { setError(error.message); return }
+      const result=await authorize(mode==='approve'?'approve_delivery':'delivery_hold',{p_item_id:i.item_id,p_note:note.trim(),...(mode==='approve'?{}:{p_hold:mode==='hold'})})
+      if ('error' in result) { setError(result.error); return }
       setNotice(mode === 'approve' ? i.is_trial ? 'Trial delivery approved. No real wallet funds were created.' : 'Vendor wallet credited. No bank transfer was initiated.' : mode === 'hold' ? 'Delivery placed on hold.' : 'Delivery returned to review.')
       setMode(null); setNote(''); startTransition(() => router.refresh())
     } catch { setError('The decision could not be saved. Check your connection and retry.') } finally { setBusy(false) }
@@ -91,5 +90,6 @@ function ApprovalCard({ item: i, loadedAt }: { item: DeliveryApproval; loadedAt:
       </form>}
     </div>}
     {error && <p className="ot-error" role="alert">{error}</p>}{notice && <p role="status" className="buyer-help">{notice}</p>}
+    {prompt}
   </article>
 }

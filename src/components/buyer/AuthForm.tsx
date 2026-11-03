@@ -74,13 +74,25 @@ export default function AuthForm({mode,next='/',vendor=false,initialError=''}:{m
   }
   async function google() {
     if(busy)return
-    if(mode!=='login'){setError('Create your account with email first so the required age and terms options can be reviewed. Google sign-in is for existing accounts.');return}
+    if(mode!=='login'&&mode!=='register')return
+    if(mode==='register'){
+      if(!ageBand||!termsAccepted){setError('Choose your age band and accept the terms before Google signup.');return}
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())){setError('Enter the email address you will choose in Google. You do not need to enter a password for Google signup.');return}
+      if(ageBand==='under_18'&&(!guardianConfirmed||!approvedReference)){setError('An approved guardian reference is required before Google signup.');return}
+    }
     setBusy(true);setError('')
     try {
-      const params=new URLSearchParams({next:safeRedirect(next)})
-      const {error}=await createClient().auth.signInWithOAuth({provider:'google',options:{redirectTo:`${window.location.origin}/auth/callback?${params}`}})
-      if(error)throw error
-    } catch{setError('Google sign-in could not start. Please try again.');setBusy(false)}
+      const client=createClient()
+      if(mode==='register'){
+        const prepared=await client.rpc('cm_prepare_google_signup',{p_email:form.email.trim(),p_age_band:ageBand,p_accepted:true,p_guardian_request_id:ageBand==='under_18'?guardianReference.trim():null})
+        if(prepared.error){setError(prepared.error.code==='P0001'?prepared.error.message:'Google signup setup is unavailable. Contact support to check the signup migration.');setBusy(false);return}
+      }
+      const destination=mode==='register'&&form.role==='vendor'?'/start-selling':safeRedirect(next)
+      const params=new URLSearchParams({next:destination})
+      const result=await client.auth.signInWithOAuth({provider:'google',options:{skipBrowserRedirect:true,redirectTo:window.location.origin+'/auth/callback?'+params,queryParams:{prompt:'select_account',...(mode==='register'?{login_hint:form.email.trim()}:{})}}})
+      if(result.error||!result.data.url)throw new Error('Google unavailable')
+      window.location.assign(result.data.url)
+    }catch{setError('Google sign-in could not start. The site owner must enable Google in Supabase and configure its Google OAuth client.');setBusy(false)}
   }
   return <section className="buyer-auth buyer-panel buyer-stack"><BrandMark size={52}/><h1>{titles[mode]}</h1>
     <p className="buyer-help">{mode==='login'?'Sign in to your orders, favorites and messages.':mode==='register'?'Start with your age band so we can show the account permissions that apply to you.':mode==='forgot'?'Enter the email address you use on CampusMart.':'Use at least 8 characters and choose a password you do not use elsewhere.'}</p>
@@ -97,8 +109,8 @@ export default function AuthForm({mode,next='/',vendor=false,initialError=''}:{m
       {error&&<p className="buyer-notice is-error" role="alert">{error}</p>}{notice&&<p className="buyer-notice is-success" role="status">{notice}</p>}
       <button className="buyer-btn is-primary" disabled={busy||captchaEnabled&&!captchaToken||mode==='register'&&(!showPersonalFields||!termsAccepted)}>{busy?'Please wait...':mode==='login'?'Sign in':mode==='register'?'Create account':mode==='forgot'?'Send recovery link':'Update password'}</button>
     </form>
-    {mode==='login'&&<><p className="buyer-help">Google sign-in is for existing accounts. Create a new account with email first.</p><button className="buyer-btn" disabled={busy} onClick={google}>Continue with Google</button></>}
-    {mode==='register'&&<p className="buyer-help">New accounts use email registration so age, terms and any required guardian permission can be checked first. Google sign-in is available for existing accounts. Marketing consent is not part of registration.</p>}
+    {mode==='login'&&<><p className="buyer-help">New here? Use Create account to review your age and terms options before Google signup.</p><button className="buyer-btn" disabled={busy} onClick={google}>Continue with Google</button></>}
+    {mode==='register'&&<><p className="buyer-help">For Google signup, choose your age band, accept the terms and enter the same email you will select in Google. No password is needed here. Guardian approval is checked before under-18 registration. You will confirm your account permissions after returning from Google.</p><button className="buyer-btn" disabled={busy||!showPersonalFields||!termsAccepted} onClick={google}>Sign up with Google</button></>}
     <div className="buyer-actions">{mode==='login'?<><Link href={`/register?redirectTo=${encodeURIComponent(safeRedirect(next))}`}>Create account</Link><Link href="/forgot-password">Forgot password?</Link></>:mode==='reset'?<><Link href="/profile">Go to account</Link><Link href="/forgot-password">Request a new link</Link></>:<Link href="/login">Back to sign in</Link>}</div>
     {error&&<Link href="/contact">Contact support</Link>}
   </section>

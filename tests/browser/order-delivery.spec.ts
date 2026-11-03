@@ -1,7 +1,10 @@
+import type {Page} from '@playwright/test'
 import { test, expect } from '@playwright/test'
 import { ids, session } from '../fixture-backend.mjs'
 
 const backend = 'http://127.0.0.1:54329'
+async function confirmPin(page:Page){const dialog=page.getByRole('dialog');await dialog.getByLabel('Transaction PIN',{exact:true}).fill('246810');await dialog.getByRole('button',{name:'Confirm with PIN'}).click()}
+
 test.beforeEach(async ({ context, request }) => {
   await request.post(`${backend}/__reset`)
   await request.post(`${backend}/__vendor`, { data: { role: 'vendor', store: true, itemStatus: 'shipped' } })
@@ -38,6 +41,7 @@ test('buyer generates a private code, vendor verifies it, buyer confirms, admin 
   await page.getByRole('button', { name: 'Approve vendor credit', exact: true }).click()
   await page.getByLabel('Your review note', { exact: true }).fill('Checked payment, handover and buyer confirmation.')
   await page.getByRole('button', { name: 'Confirm vendor credit', exact: true }).click()
+  await confirmPin(page)
   await expect(page.getByRole('heading', { name: 'No deliveries in this view' })).toBeVisible()
   await page.getByRole('link', { name: 'Approved', exact: true }).click()
   await expect(page.getByText('Credited', { exact: true })).toBeVisible()
@@ -110,16 +114,20 @@ test('admin can hold and resume review; failed decisions remain retryable', asyn
   await page.getByLabel('Your review note', { exact: true }).fill('Checking delivery evidence with the buyer.')
   await request.post(`${backend}/__fail`, { data: { table: 'cm_admin_hold_delivery' } })
   await page.getByRole('button', { name: 'Confirm hold', exact: true }).click()
-  await expect(page.locator('.ot-error[role=alert]')).toContainText('Fixture request failed')
+  await confirmPin(page)
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Fixture decision unavailable')
+  await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click()
   await expect(page.getByRole('button', { name: 'Confirm hold', exact: true })).toBeEnabled()
   await request.post(`${backend}/__recover`, { data: { table: 'cm_admin_hold_delivery' } })
   await page.getByRole('button', { name: 'Confirm hold', exact: true }).click()
+  await confirmPin(page)
   await expect(page.getByRole('heading', { name: 'No deliveries in this view' })).toBeVisible()
   await page.getByRole('link', { name: 'On hold', exact: true }).click()
   await expect(page.getByText('Review note: Checking delivery evidence with the buyer.')).toBeVisible()
   await page.getByRole('button', { name: 'Resume review', exact: true }).click()
   await page.getByLabel('Your review note', { exact: true }).fill('Ready for review after speaking to the buyer.')
   await page.getByRole('button', { name: 'Confirm resume', exact: true }).click()
+  await confirmPin(page)
   await expect(page.getByRole('heading', { name: 'No deliveries in this view' })).toBeVisible()
   await page.getByRole('link', { name: 'Awaiting review', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Campus headphones', exact: true })).toBeVisible()

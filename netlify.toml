@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "24"
+  PAYSTACK_MODE = "test"
+  PAYSTACK_LIVE_ENABLED = "0"
+  CAMPUSMART_TRIAL_CHECKOUT = "0"
+
+# Explicitly enable the current adapter, including for sites created through API.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Set credentials privately in the site's environment settings, not this file.

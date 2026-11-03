@@ -32,47 +32,9 @@ export async function savePayoutAccount(input:unknown){
     return {ok:true as const,accountName:resolved.account_name}
   }catch(error){return fail(error)}
 }
-export async function queueOrderRefund(input:unknown){
-  const parsed=z.object({orderId:z.uuid(),itemId:z.union([z.uuid(),z.literal('')]),deductProcessing:z.boolean(),reviewed:z.literal(true),note:z.string().trim().min(10).max(1000),expectedAmount:z.number().int().positive().max(100000000000),expectedFee:z.number().int().nonnegative().max(100000000000)}).safeParse(input)
-  if(!parsed.success)return {error:'Review the refund scope and fee treatment, confirm consumer rights were checked and enter a note of at least 10 characters.'}
-  try{
-    const {supabase}=await adminSession(),v=parsed.data
-    const result=await supabase.rpc('cm_admin_queue_refund',{p_order_id:v.orderId,p_item_id:v.itemId||null,p_deduct_processing:v.deductProcessing,p_reviewed:true,p_note:v.note,p_expected_amount:v.expectedAmount,p_expected_fee:v.expectedFee})
-    if(result.error)throw result.error
-    try{await processRefund(result.data)}catch{/* Durable job remains available for reconciliation. */}
-    revalidatePath('/admin/payments');revalidatePath('/orders')
-    return {ok:true as const}
-  }catch(error){return fail(error)}
-}
-export async function queueVendorTransfer(input:unknown){
-  const parsed=z.object({itemId:z.uuid(),confirmed:z.literal(true),note:z.string().trim().min(10).max(1000),recipientUpdatedAt:z.iso.datetime({offset:true}),expectedAmount:z.number().int().positive().max(100000000000)}).safeParse(input)
-  if(!parsed.success)return {error:'Confirm the beneficiary and approved amount and record your review.'}
-  try{
-    const {supabase}=await adminSession(),v=parsed.data
-    const result=await supabase.rpc('cm_admin_queue_transfer',{p_item_id:v.itemId,p_confirmed:true,p_note:v.note,p_recipient_updated_at:v.recipientUpdatedAt,p_expected_amount:v.expectedAmount})
-    if(result.error)throw result.error
-    try{await processTransfer(result.data)}catch{/* Reconcile the same durable transfer reference. */}
-    revalidatePath('/admin/payments');revalidatePath('/vendor/earnings')
-    return {ok:true as const}
-  }catch(error){return fail(error)}
-}
 export async function reconcileFinanceJob(input:unknown){
   const parsed=z.object({id:z.uuid(),kind:z.enum(['refund','transfer'])}).safeParse(input)
   if(!parsed.success)return {error:'Choose a recorded finance job.'}
   try{await adminSession();if(parsed.data.kind==='refund')await processRefund(parsed.data.id);else await processTransfer(parsed.data.id);revalidatePath('/admin/payments');return {ok:true as const}}catch(error){return fail(error)}
 }
 export async function refreshPaymentQueue(){try{await adminSession();await reconcilePayments();revalidatePath('/admin/payments');return {ok:true as const}}catch(error){return fail(error)}}
-export async function cancelUnsentTransfer(id:string){
-  if(!z.uuid().safeParse(id).success)return {error:'Choose a recorded transfer.'}
-  try{const {supabase}=await adminSession();const result=await supabase.rpc('cm_cancel_unsent_transfer',{p_id:id,p_note:'Administrator cancelled this unsent transfer and restored the reserved vendor wallet funds.'});if(result.error)throw result.error;revalidatePath('/admin/payments');revalidatePath('/vendor/earnings');return {ok:true as const}}catch(error){return fail(error)}
-}
-export async function retryRejectedRefund(id:string){
-  if(!z.uuid().safeParse(id).success)return {error:'Choose a recorded refund.'}
-  try{
-    await adminSession()
-    const claim=await paymentService().from('paystack_refunds').update({state:'queued',updated_at:new Date().toISOString()}).eq('id',id).eq('state','rejected').is('provider_id',null).select('id')
-    if(claim.error||!claim.data?.length)return {error:'This refund was not definitively rejected. Reconcile its existing result instead.'}
-    try{await processRefund(id)}catch{/* Keep the new result visible for reconciliation. */}
-    revalidatePath('/admin/payments');return {ok:true as const}
-  }catch(error){return fail(error)}
-}

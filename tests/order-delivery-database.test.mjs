@@ -2,8 +2,9 @@ import {test,before,after} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import {PGlite} from '@electric-sql/pglite'
+import {pgcrypto} from '@electric-sql/pglite/contrib/pgcrypto'
 
-const db=new PGlite()
+const db=new PGlite({extensions:{pgcrypto}})
 const buyer='11111111-1111-4111-8111-111111111111',vendor='22222222-2222-4222-8222-222222222222',admin='33333333-3333-4333-8333-333333333333',other='99999999-9999-4999-8999-999999999999'
 const seller='44444444-4444-4444-8444-444444444444',order='55555555-5555-4555-8555-555555555555',product='66666666-6666-4666-8666-666666666666'
 let itemNumber=0
@@ -525,6 +526,45 @@ test('Paystack payment, refund and payout migrations preserve financial invarian
     await as(admin,()=>assert.rejects(rpc('cm_admin_review_account_change',[request,'approve_closure','Refund has not yet reached final provider state.']),/pending refunds/));
     const job=(await db.query('select id from public.paystack_refunds where order_id=$1',[p.order_id])).rows[0].id;await rpc('cm_paystack_refund_result',[job,'703','processed']);
     await as(admin,()=>rpc('cm_admin_review_account_change',[request,'approve_closure','Refund processed and cancellation fee settled.']));assert.equal((await as(uid,()=>rpc('cm_account_status'))).active,false)
+  })
+
+  await t.test('password unlock and a per-decision PIN guard real finance functions without changing ledger rules',async()=>{
+    await db.exec(`create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;
+      create function public.cm_admin_membership() returns boolean language sql stable as $$select auth.uid()='${admin}'::uuid$$;`)
+    await db.exec(await readFile(new URL('../supabase/migrations/202611030002_admin_password_and_pin.sql',import.meta.url),'utf8'))
+    const sid=crypto.randomUUID(),claims={session_id:sid,amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)}]}
+    await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify(claims)])
+    await as(buyer,()=>assert.rejects(rpc('cm_unlock_admin'),/password/))
+    await as(admin,async()=>{assert.equal(await rpc('is_admin'),false);await rpc('cm_unlock_admin');assert.equal(await rpc('is_admin'),true);assert.equal((await rpc('cm_admin_pin_status')).configured,false);await assert.rejects(rpc('cm_set_admin_pin',['111111']),/six digits/);assert.equal((await rpc('cm_set_admin_pin',['246810'])).ok,true)})
+    const stored=(await db.query('select pin_hash from admin_pin_credentials where user_id=$1',[admin])).rows[0].pin_hash
+    assert.ok(stored.startsWith('$2'));assert.notEqual(stored,'246810')
+    await as(admin,()=>assert.rejects(db.query('select * from admin_pin_credentials'),/permission denied/))
+    const p=await create('live');await verify(p)
+    const id=(await db.query('select id from order_items where order_id=$1',[p.order_id])).rows[0].id
+    await db.query("update order_items set fulfillment_status='shipped' where id=$1",[id]);await handedOver(id)
+    const payload={p_item_id:id,p_note:'Reviewed payment, buyer receipt and delivery code.'}
+    await as(admin,()=>assert.rejects(rpc('cm_admin_approve_delivery',[id,payload.p_note]),/transaction PIN/))
+    for(let n=0;n<5;n++)assert.equal((await as(admin,()=>rpc('cm_admin_finance_decision',['approve_delivery',payload,'999999']))).ok,false)
+    assert.equal((await as(admin,()=>rpc('cm_admin_finance_decision',['approve_delivery',payload,'246810']))).ok,false)
+    assert.equal((await db.query('select released_at from order_items where id=$1',[id])).rows[0].released_at,null)
+    await db.query("update admin_pin_credentials set locked_until=now()-interval '1 second' where user_id=$1",[admin])
+    const before=Number((await db.query('select wallet_balance from sellers where id=$1',[seller])).rows[0].wallet_balance)
+    assert.equal((await as(admin,()=>rpc('cm_admin_finance_decision',['approve_delivery',payload,'246810']))).ok,true)
+    assert.equal(Math.round(Number((await db.query('select wallet_balance from sellers where id=$1',[seller])).rows[0].wallet_balance)*100)-Math.round(before*100),950000)
+    await as(admin,()=>assert.rejects(rpc('cm_admin_finance_decision',['approve_delivery',payload,'246810']),/already/))
+    const recipient=(await db.query("select updated_at::text stamp from paystack_recipients where seller_id=$1 and mode='live'",[seller])).rows[0]
+    assert.ok(recipient)
+    const transferPayload={p_item_id:id,p_note:'Reviewed beneficiary and payout amount.',p_confirmed:true,p_recipient_updated_at:recipient.stamp,p_expected_amount:950000}
+    await as(admin,()=>assert.rejects(rpc('cm_admin_queue_transfer',[id,transferPayload.p_note,true,recipient.stamp,950000]),/transaction PIN/))
+    const transfer=await as(admin,()=>rpc('cm_admin_finance_decision',['transfer',transferPayload,'246810']));assert.equal(transfer.ok,true)
+    assert.equal((await as(admin,()=>rpc('cm_admin_finance_decision',['transfer',transferPayload,'246810']))).result,transfer.result)
+    assert.equal(Number((await db.query('select count(*) n from admin_pin_permissions')).rows[0].n),0)
+    await as(admin,()=>assert.rejects(rpc('cm_cancel_unsent_transfer',[transfer.result,'Cancel after checking existing provider status.']),/transaction PIN/))
+    assert.equal((await as(admin,()=>rpc('cm_admin_finance_decision',['cancel_transfer',{p_id:transfer.result,p_note:'Cancel the queued transfer after reviewing its status.'},'246810']))).ok,true)
+    await as(admin,async()=>{const wrong=await rpc('cm_set_admin_pin',['864209','999999']);assert.equal(wrong.ok,false);assert.equal((await rpc('cm_set_admin_pin',['864209','246810'])).ok,true)})
+    await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({...claims,session_id:crypto.randomUUID()})])
+    assert.equal(await as(admin,()=>rpc('is_admin')),false)
+    await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({...claims,amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)-400}]})]);await as(admin,()=>assert.rejects(rpc('cm_unlock_admin'),/password/))
   })
 
 })
