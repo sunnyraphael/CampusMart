@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import {preparePublicImage} from '@/lib/media/prepare'
 import { useRouter } from 'next/navigation'
 import { cleanupListingImages } from '@/lib/vendor/actions'
 import { toast } from 'sonner'
@@ -86,6 +87,8 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
   const errorRef = useRef<HTMLDivElement>(null)
   const isEdit = mode === 'edit'
 
+  const uploadedUrls=useRef(new Map<File,string>())
+  const newListingId=useRef<string|null>(null)
   const [title, setTitle] = useState(initial?.title ?? '')
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? '')
   const [condition, setCondition] = useState(initial?.condition ?? 'new')
@@ -136,7 +139,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
 
   function addFiles(fileList: FileList | File[]) {
     const accepted: PhotoSlot[] = []
-    for (const file of Array.from(fileList)) {
+    for (const file of Array.from(fileList).slice(0,MAX_IMAGES)) {
       if (!file.type.startsWith('image/')) continue
       if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
         showError(`"${file.name}" is over ${MAX_FILE_SIZE_MB}MB. Please use a smaller image.`)
@@ -144,7 +147,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
       }
       accepted.push({ kind: 'new', file, previewUrl: URL.createObjectURL(file) })
     }
-    setPhotos(prev => [...prev, ...accepted].slice(0, MAX_IMAGES))
+    setPhotos(prev => {const all=[...prev,...accepted];for(const slot of all.slice(MAX_IMAGES))if(slot.kind==='new')URL.revokeObjectURL(slot.previewUrl);return all.slice(0,MAX_IMAGES)})
   }
 
   function removePhoto(index: number) {
@@ -192,18 +195,33 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
 
     const uploadedPaths: string[] = []
     try {
+      if(!isEdit){
+        if(newListingId.current){
+          const earlier=await supabase.from('products').select('id').eq('id',newListingId.current).eq('seller_id',sellerId).maybeSingle()
+          if(earlier.error)throw new Error('Could not check your earlier attempt. Retry later before publishing again.')
+          if(earlier.data){toast.info('Your earlier attempt was saved. Review it before making further changes.');router.push('/vendor/listings/'+earlier.data.id+'/edit');return}
+        }else newListingId.current=crypto.randomUUID()
+      }
+      const budget=await supabase.rpc('cm_upload_budget')
+      if(photos.some(p=>p.kind==='new'&&!uploadedUrls.current.has(p.file))&&(budget.error||budget.data!==true))throw new Error('New photos are temporarily unavailable. Your form remains here; please retry later or contact support.')
       const finalUrls: string[] = []
       for (const slot of photos) {
         if (slot.kind === 'existing') {
           finalUrls.push(slot.url)
           continue
         }
-        const ext = slot.file.name.split('.').pop() ?? 'jpg'
-        const path = `${sellerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-        const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, slot.file)
-        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
-        uploadedPaths.push(path)
-        finalUrls.push(supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl)
+        const reused=uploadedUrls.current.get(slot.file)
+        if(reused){finalUrls.push(reused);continue}
+        const prepared=await preparePublicImage(slot.file)
+        const base=sellerId+'/'+crypto.randomUUID()
+        for(const [suffix,file] of [['full',prepared.full],['thumb',prepared.thumbnail]] as const){
+          const path=base+'-'+suffix+'.webp'
+          const uploaded=await supabase.storage.from(BUCKET).upload(path,file,{contentType:'image/webp',cacheControl:'31536000',upsert:false})
+          if(uploaded.error)throw new Error('Photo upload could not finish. Your form is saved on screen; please retry.')
+          uploadedPaths.push(path)
+        }
+        const url=supabase.storage.from(BUCKET).getPublicUrl(base+'-full.webp').data.publicUrl
+        uploadedUrls.current.set(slot.file,url);finalUrls.push(url)
       }
 
       const payload = {
@@ -236,7 +254,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
       } else {
         const { data, error: insertError } = await supabase
           .from('products')
-          .insert({ seller_id: sellerId, ...payload })
+          .insert({ id:newListingId.current, seller_id: sellerId, ...payload })
           .select('id')
           .single()
         if (insertError) throw new Error(insertError.message)
@@ -247,7 +265,9 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
       router.refresh()
     } catch (err: unknown) {
       // The save failed, so remove the files we just uploaded to avoid orphans.
-      if (uploadedPaths.length) await supabase.storage.from(BUCKET).remove(uploadedPaths)
+      // A save may have committed before its response was lost. Scheduled cleanup
+      // removes only unreferenced uploads after a grace period; never delete here.
+      if (uploadedPaths.length) toast.info('Your photos remain available while we check the saved listing.')
       showError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       setBusy(null)
     }
@@ -381,7 +401,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
           >
             <div className="lf-dropzone-icon"><ImagePlus size={20} /></div>
             <p className="lf-dropzone-text">Drag photos here, or tap to browse</p>
-            <p className="lf-dropzone-sub">Up to {MAX_IMAGES} images, max {MAX_FILE_SIZE_MB}MB each. The first photo is the cover.</p>
+            <p className="lf-dropzone-sub">Up to {MAX_IMAGES} images, max {MAX_FILE_SIZE_MB}MB each. Photos are automatically optimised. The first photo is the cover.</p>
             <input
               ref={fileInputRef} type="file" accept="image/*" multiple hidden
               onChange={e => { if (e.target.files) addFiles(e.target.files); e.target.value = '' }}

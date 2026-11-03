@@ -14,6 +14,8 @@ export async function placeTrialOrder(input: unknown): Promise<{ error: string }
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return { error: 'Please sign in again before placing your trial order.' }
+    const available=await supabase.rpc('cm_checkout_available')
+    if(available.error||available.data!==true)return {error:'Ordering is temporarily unavailable. Your cart is saved; please try again later.'}
     const permission=await supabase.rpc('cm_consent_status')
     if(permission.error||permission.data?.eligible!==true)return {error:'Review your account permissions before placing an order. Open Account permissions from Settings.'}
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY

@@ -1,3 +1,4 @@
+import {publicCategories} from '@/lib/catalog/categories'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { AlertTriangle, ChevronLeft, ChevronRight, PackageSearch } from 'lucide-react'
@@ -31,10 +32,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
   const supabase = await createClient()
 
   // Real categories from the database drive the filter chips, so the slugs can never drift from what is stored.
-  const { data: categoryRows } = await supabase
-    .from('categories')
-    .select('id, name, slug')
-    .order('name', { ascending: true })
+  const { data: categoryRows } = await publicCategories()
   const categories = (categoryRows ?? []) as { id: string; name: string; slug: string }[]
   const activeCategory = categorySlug ? categories.find((c) => c.slug === categorySlug) ?? null : null
   const unknownCategory = !!categorySlug && !activeCategory

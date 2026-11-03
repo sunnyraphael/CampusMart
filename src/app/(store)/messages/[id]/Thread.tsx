@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import {useVisibleRefresh} from '@/hooks/useVisibleRefresh'
 import { Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { sendMessage } from '@/lib/buyer/actions'
@@ -20,11 +21,14 @@ export default function Thread({id,userId,initial,otherLabel='Vendor'}:{id:strin
   const history=useRef<HTMLDivElement>(null)
   const alive=useRef(true)
   const lastRead=useRef('')
+  const latestSeen=useRef(initial.at(-1)?.created_at??null)
   const {refresh:refreshAccount}=useBuyerAccount()
   const refresh=useCallback(async()=>{
-    const result=await supabase.from('buyer_messages').select('id,conversation_id,sender_id,body,created_at').eq('conversation_id',id).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(50)
+    let query=supabase.from('buyer_messages').select('id,conversation_id,sender_id,body,created_at').eq('conversation_id',id).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(50)
+    if(latestSeen.current)query=query.gte('created_at',latestSeen.current)
+    const result=await query
     if(!alive.current) return
-    if(result.error) {setSyncError('New messages could not be loaded. Retrying automatically.');return}
+    if(result.error) {setSyncError('New messages could not be loaded. Retrying automatically.');throw new Error('Chat synchronisation failed')}
     const rows=result.data as ChatMessage[]
     const el=history.current
     const atBottom=!el||el.scrollHeight-el.scrollTop-el.clientHeight<80
@@ -32,6 +36,7 @@ export default function Thread({id,userId,initial,otherLabel='Vendor'}:{id:strin
     setSyncError('')
     if(atBottom) requestAnimationFrame(()=>{if(history.current) history.current.scrollTop=history.current.scrollHeight})
     const latest=rows[0]
+    if(latest)latestSeen.current=latest.created_at
     if(latest&&!document.hidden&&lastRead.current!==latest.id) {
       const {error:readError}=await supabase.rpc('cm_read_conversation',{p_conversation_id:id,p_read_at:latest.created_at})
       if(readError&&alive.current) setSyncError('Messages loaded, but the read status could not be saved.')
@@ -40,10 +45,9 @@ export default function Thread({id,userId,initial,otherLabel='Vendor'}:{id:strin
   },[id,supabase,refreshAccount])
   useEffect(()=>{
     alive.current=true
-    const run=()=>{if(!document.hidden) void refresh().catch(()=>{if(alive.current) setSyncError('Connection interrupted. Retrying automatically.')})}
-    run();const timer=setInterval(run,5000);window.addEventListener('focus',run)
-    return()=>{alive.current=false;clearInterval(timer);window.removeEventListener('focus',run)}
-  },[refresh])
+    return()=>{alive.current=false}
+  },[])
+  useVisibleRefresh(refresh,10000)
   async function loadOlder() {
     const first=messages[0];if(!first)return
     setOlderBusy(true)
@@ -60,7 +64,7 @@ export default function Thread({id,userId,initial,otherLabel='Vendor'}:{id:strin
     const parsed=messageSchema.safeParse(body)
     if(!parsed.success) {setError(parsed.error.issues[0].message);return}
     setBusy(true)
-    try {const r=await sendMessage(id,parsed.data);if('error'in r)setError(r.error);else {setBody('');await refresh();if(history.current) history.current.scrollTop=history.current.scrollHeight}}
+    try {const r=await sendMessage(id,parsed.data);if('error'in r)setError(r.error??"Message could not be sent.");else {setBody('');try{await refresh()}catch{setSyncError('Message sent. Refreshing the conversation will retry automatically.')}if(history.current) history.current.scrollTop=history.current.scrollHeight}}
     catch {setError('Could not send this message. Your draft is still here.')}
     finally {setBusy(false)}
   }

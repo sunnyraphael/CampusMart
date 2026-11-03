@@ -11,9 +11,9 @@ export default async function VendorConversationPage({ params }: { params: Promi
   const { id } = await params
   if (!uuid.safeParse(id).success) notFound()
   const { supabase, user } = await vendorSession(`/vendor/messages/${id}`)
-  const { data, error } = await supabase.rpc('cm_conversations')
+  const { data, error } = await supabase.rpc('cm_conversation_header',{p_id:id})
   if (error) throw new Error('Could not load your conversation.')
-  const conversation = ((data ?? []) as Conversation[]).find(c => c.id === id)
+  const conversation = data as Conversation|null
   if (!conversation) notFound()
   const result = await supabase.from('buyer_messages').select('id,conversation_id,sender_id,body,created_at').eq('conversation_id', id).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50)
   if (result.error) throw new Error('Could not load these messages.')

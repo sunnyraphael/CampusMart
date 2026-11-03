@@ -1,3 +1,4 @@
+import PublicPhoto from './PublicPhoto'
 import Link from 'next/link'
 import { BadgeCheck, Package, Star, Store } from 'lucide-react'
 import { DeliveryLine, ListingChips, PriceBlock, PromoCorner } from '@/components/store/ListingBits'
@@ -42,8 +43,7 @@ export default function ProductCard({
       <Link href={`/products/${product.id}`} className="pc-link">
         <div className="pc-photo">
           {src ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img referrerPolicy="no-referrer" src={src} alt={product.title} loading="lazy" decoding="async" />
+            <PublicPhoto key={src} src={src} alt={product.title}/>
           ) : (
             <Package size={32} strokeWidth={1.5} aria-hidden="true" />
           )}

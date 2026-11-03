@@ -1,6 +1,7 @@
+import {publicCategories} from '@/lib/catalog/categories'
 import Link from 'next/link'
 import { Armchair, ArrowUpRight, BookOpen, Dumbbell, Grid2X2, Laptop, PenLine, Shirt, ShoppingBag, Sparkles, Smartphone, Utensils, Wrench } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+
 import { buildProductsHref } from '@/lib/products-query'
 
 // Match both names and slugs so compound database slugs retain their category icon.
@@ -24,11 +25,7 @@ function categoryStyle(slug: string, name: string) {
 }
 
 export default async function CategoriesPage() {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('categories')
-    .select('id, name, slug')
-    .order('name', { ascending: true })
+  const { data, error } = await publicCategories()
 
   return (
     <section className="cat-page" aria-labelledby="categories-title">

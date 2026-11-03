@@ -14,6 +14,7 @@ async function session() {
 
 function fail(error: unknown): { error: string } {
   console.error('Buyer action failed', {code:typeof error==='object'&&error!==null&&'code'in error?String(error.code).slice(0,20):'unknown'})
+  if(typeof error==='object'&&error!==null&&'message'in error&&error.message==='Too many requests. Please wait before trying again.')return {error:error.message}
   if (error instanceof z.ZodError) return { error: error.issues[0]?.message ?? 'Please check the form.' }
   if (error instanceof Error && error.message === 'Please log in to continue.') return { error: error.message }
   return { error: 'We could not save that change. Please try again or contact support.' }

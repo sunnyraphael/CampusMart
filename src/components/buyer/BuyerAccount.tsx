@@ -21,20 +21,15 @@ export function BuyerAccount({ children }: { children: ReactNode }) {
       const {data:{user}}=await supabase.auth.getUser()
       if (cancelled || version!==generation) return
       if (!user) { setAccount({isAdmin:false,user:null,vendorState:'none',favorites:[],notifications:0,messages:0}); return }
-      const [profile,seller,wishlist,notifications,chats,admin] = await Promise.all([
-        supabase.from('users').select('role,full_name').eq('id',user.id).maybeSingle(),
-        supabase.from('sellers').select('id').eq('user_id',user.id).maybeSingle(),
-        supabase.from('wishlist').select('product_id').eq('user_id',user.id),
-        supabase.from('notifications').select('id',{count:'exact',head:true}).eq('user_id',user.id).eq('is_read',false),
-        supabase.rpc('cm_conversations'),
-        supabase.rpc('is_admin'),
-      ])
-      if (cancelled || version!==generation) return
-      setAccount({isAdmin:!admin.error&&admin.data===true,user: {...user, user_metadata:{...user.user_metadata,full_name:profile.data?.full_name ?? user.user_metadata?.full_name}},vendorState:profile.data?.role==='vendor' ? seller.data ? 'active' : 'onboarding' : 'buyer',favorites:(wishlist.data??[]).map((w)=>w.product_id),notifications:notifications.count??0,messages:(chats.data??[]).reduce((n:number,c:{unread_count:number})=>n+Number(c.unread_count),0)})
+      const summary=await supabase.rpc('cm_account_summary')
+      if(summary.error||!summary.data)throw new Error('Account summary unavailable')
+      if(cancelled||version!==generation)return
+      const v=summary.data
+      setAccount({isAdmin:v.is_admin===true,user:{...user,user_metadata:{...user.user_metadata,full_name:v.full_name??user.user_metadata?.full_name}},vendorState:v.role==='vendor'?(v.seller_id?'active':'onboarding'):'buyer',favorites:v.favorites??[],notifications:Number(v.notifications??0),messages:Number(v.messages??0)})
     }
     const run=()=> { if (!document.hidden) void load().catch((e)=>console.error('Account refresh failed',e)) }
     run()
-    const timer=setInterval(run,30000)
+    const timer=setInterval(run,60000)
     const {data:{subscription}}=supabase.auth.onAuthStateChange(()=> { queueMicrotask(run) })
     window.addEventListener('campusmart:account',run)
     window.addEventListener('focus',run)

@@ -1,4 +1,5 @@
 'use client'
+import AuthChallenge from '@/components/buyer/AuthChallenge'
 import BrandMark from '@/components/BrandMark'
 
 import Link from 'next/link'
@@ -19,6 +20,9 @@ export default function AuthForm({mode,next='/',vendor=false,initialError=''}:{m
   const [show,setShow]=useState(false)
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState(initialError)
+  const [captchaToken,setCaptchaToken]=useState('')
+  const [captchaAttempt,setCaptchaAttempt]=useState(0)
+  const captchaEnabled=!!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY&&mode!=='reset'
   const [notice,setNotice]=useState('')
   const titles={login:'Welcome back',register:'Join CampusMart',forgot:'Reset your password',reset:'Choose a new password'}
   const approvedReference=uuid.safeParse(guardianReference.trim()).success
@@ -45,17 +49,17 @@ export default function AuthForm({mode,next='/',vendor=false,initialError=''}:{m
     try {
       const supabase=createClient()
       if(mode==='login') {
-        const {error}=await supabase.auth.signInWithPassword({email:form.email.trim(),password:form.password})
+        const {error}=await supabase.auth.signInWithPassword({email:form.email.trim(),password:form.password,options:{captchaToken}})
         if(error)throw error
         router.replace(safeRedirect(next));router.refresh()
       } else if(mode==='register') {
         const destination=consentDestination(form.role==='vendor'?'/start-selling':safeRedirect(next))
-        const {data,error}=await supabase.auth.signUp({email:form.email.trim(),password:form.password,options:{data:{full_name:form.name.trim(),role:form.role,age_band:ageBand,terms_accepted:true,...(ageBand==='under_18'?{guardian_request_id:guardianReference.trim()}:{})},emailRedirectTo:`${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`}})
+        const {data,error}=await supabase.auth.signUp({email:form.email.trim(),password:form.password,options:{captchaToken,data:{full_name:form.name.trim(),role:form.role,age_band:ageBand,terms_accepted:true,...(ageBand==='under_18'?{guardian_request_id:guardianReference.trim()}:{})},emailRedirectTo:`${window.location.origin}/auth/callback?next=${encodeURIComponent(destination)}`}})
         if(error)throw error
         if(data.session){router.replace(destination);router.refresh()}
         else setNotice('Check your email for a confirmation link, then review your account permissions. If you already have an account, sign in or reset your password.')
       } else if(mode==='forgot') {
-        const {error}=await supabase.auth.resetPasswordForEmail(form.email.trim(),{redirectTo:`${window.location.origin}/auth/callback?next=%2Freset-password`})
+        const {error}=await supabase.auth.resetPasswordForEmail(form.email.trim(),{captchaToken,redirectTo:`${window.location.origin}/auth/callback?next=%2Freset-password`})
         if(error)throw error
         setNotice('If an account exists for that address, a recovery email is on its way. Follow the link in the same browser when possible.')
       } else {
@@ -66,7 +70,7 @@ export default function AuthForm({mode,next='/',vendor=false,initialError=''}:{m
         setForm({...form,password:'',confirm:''});setNotice('Your password has been updated. You can return to your account.')
       }
     } catch(e){setError(e instanceof Error?e.message:'Please try again in a moment.')}
-    finally{setBusy(false)}
+    finally{setBusy(false);if(captchaEnabled){setCaptchaToken('');setCaptchaAttempt(n=>n+1)}}
   }
   async function google() {
     if(busy)return
@@ -89,8 +93,9 @@ export default function AuthForm({mode,next='/',vendor=false,initialError=''}:{m
         {mode==='reset'&&<label>Confirm new password<input className="buyer-input" type="password" autoComplete="new-password" required disabled={busy} value={form.confirm} onChange={e=>setForm({...form,confirm:e.target.value})}/></label>}
         {mode==='register'&&<label className="by-check"><input type="checkbox" checked={termsAccepted} onChange={e=>setTermsAccepted(e.target.checked)} required disabled={busy}/><span>I agree to the <Link href="/terms" target="_blank" rel="noopener noreferrer">buyer terms of service</Link> and acknowledge the <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link>.</span></label>}
       </>}
+      {captchaEnabled&&<AuthChallenge key={captchaAttempt} onToken={setCaptchaToken}/>}
       {error&&<p className="buyer-notice is-error" role="alert">{error}</p>}{notice&&<p className="buyer-notice is-success" role="status">{notice}</p>}
-      <button className="buyer-btn is-primary" disabled={busy||mode==='register'&&(!showPersonalFields||!termsAccepted)}>{busy?'Please wait...':mode==='login'?'Sign in':mode==='register'?'Create account':mode==='forgot'?'Send recovery link':'Update password'}</button>
+      <button className="buyer-btn is-primary" disabled={busy||captchaEnabled&&!captchaToken||mode==='register'&&(!showPersonalFields||!termsAccepted)}>{busy?'Please wait...':mode==='login'?'Sign in':mode==='register'?'Create account':mode==='forgot'?'Send recovery link':'Update password'}</button>
     </form>
     {mode==='login'&&<><p className="buyer-help">Google sign-in is for existing accounts. Create a new account with email first.</p><button className="buyer-btn" disabled={busy} onClick={google}>Continue with Google</button></>}
     {mode==='register'&&<p className="buyer-help">New accounts use email registration so age, terms and any required guardian permission can be checked first. Google sign-in is available for existing accounts. Marketing consent is not part of registration.</p>}

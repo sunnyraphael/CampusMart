@@ -14,6 +14,7 @@ import {
   MapPin,
 } from 'lucide-react'
 import Link from 'next/link'
+import {preparePublicImage} from '@/lib/media/prepare'
 import { createClient } from '@/lib/supabase/client'
 import { PageHeading } from '@/components/vendor/Workspace'
 import ShareStoreButton from '@/components/vendor/ShareStoreButton'
@@ -214,12 +215,13 @@ export default function SettingsClient({ seller,controls }: { seller: Seller;con
     setLogoBusy(true)
     setLogoErr(null)
     try {
-      const ext = (file.name.split('.').pop() || 'png').toLowerCase()
-      // Same folder convention as product photos: sellerId first
-      const path = `${seller.id}/logo-${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('product-images').upload(path, file)
-      if (upErr) throw new Error(`Upload failed: ${upErr.message}`)
-      const { data } = supabase.storage.from('product-images').getPublicUrl(path)
+      const prepared=await preparePublicImage(file,true)
+      const base=seller.id+'/logo-'+crypto.randomUUID()
+      for(const [suffix,image] of [['full',prepared.full],['thumb',prepared.thumbnail]] as const){
+        const upload=await supabase.storage.from('product-images').upload(base+'-'+suffix+'.webp',image,{contentType:'image/webp',cacheControl:'31536000',upsert:false})
+        if(upload.error)throw new Error('Logo upload failed. Please retry.')
+      }
+      const {data}=supabase.storage.from('product-images').getPublicUrl(base+'-full.webp')
       await saveFields({ logo_url: data.publicUrl })
       setLogoUrl(data.publicUrl)
       window.dispatchEvent(new CustomEvent("campusmart:store-logo",{detail:data.publicUrl}))

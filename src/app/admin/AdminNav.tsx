@@ -6,6 +6,7 @@ import { LayoutDashboard, PackageCheck, ShieldCheck, ShieldAlert, LifeBuoy, User
 
 export const adminSections = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
+  { href: '/admin/operations', label: 'System health', icon: ShieldCheck },
   { href: '/admin/stores', label: 'Vendor stores', icon: ShoppingBag },
   { href: '/admin/deliveries', label: 'Deliveries', icon: PackageCheck },
   { href: '/admin/payments', label: 'Payments & refunds', icon: Wallet },

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { paymentService } from '@/lib/paystack/config'
+import {publicImageSiblings} from '@/lib/media/paths'
 import { ownedProductImagePath } from './images'
 
 async function access(id:string){
@@ -44,7 +45,7 @@ async function cleanup(id:string,discover:boolean){
   for(const job of jobs.data??[]){
     const path=ownedProductImagePath(job.image_url,origin,id)
     if(!path)continue
-    const [products,logos]=await Promise.all([service.from('products').select('id',{count:'exact',head:true}).contains('images',[job.image_url]),service.from('sellers').select('id',{count:'exact',head:true}).eq('logo_url',job.image_url)])
+    const [products,logos]=await Promise.all([service.from('products').select('id',{count:'exact',head:true}).overlaps('images',publicImageSiblings(job.image_url)),service.from('sellers').select('id',{count:'exact',head:true}).in('logo_url',publicImageSiblings(job.image_url))])
     if(products.error||logos.error||products.count||logos.count)continue
     const removed=await service.storage.from('product-images').remove([path])
     if(removed.error)continue

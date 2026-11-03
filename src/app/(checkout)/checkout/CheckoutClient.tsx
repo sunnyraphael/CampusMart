@@ -21,7 +21,7 @@ function checkoutNonce() {
   return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`
 }
 
-export default function CheckoutClient({trialEnabled=false,paystackMode=null,buyerId='guest'}:{trialEnabled?:boolean;paystackMode?:'test'|'live'|null;buyerId?:string}) {
+export default function CheckoutClient({trialEnabled=false,paystackMode=null,buyerId='guest',orderingAvailable=true}:{orderingAvailable?:boolean;trialEnabled?:boolean;paystackMode?:'test'|'live'|null;buyerId?:string}) {
   const hydrated=useHydrated()
   const items=useCartStore((s)=>s.items)
   const {live,loading,error,retry}=useLiveListings(items.map((i)=>i.id))
@@ -42,6 +42,7 @@ export default function CheckoutClient({trialEnabled=false,paystackMode=null,buy
   // Preview only. A future payment endpoint must calculate the authoritative delivery fee.
   const delivery=method==='delivery'?500:0
   async function submit() {
+    if(!orderingAvailable){setSubmitError('Ordering is temporarily unavailable. Your cart is saved.');return}
     if(!agreed){setSubmitError('Review the total and accept the order terms before continuing.');return}
     if(busyRef.current||!ready||unavailable||!items.length||(!trialEnabled&&!paystackMode))return
     const payload={items:items.map(i=>({product_id:i.id,quantity:i.quantity})).sort((a,b)=>a.product_id.localeCompare(b.product_id)),deliveryMethod:method,address:method==='delivery'?address.trim():'',phone:phone.trim(),note:note.trim(),expectedTotal:subtotal+fee+delivery}
@@ -79,6 +80,7 @@ export default function CheckoutClient({trialEnabled=false,paystackMode=null,buy
   if(!items.length)return <BuyerPage title="Checkout" description="Add items to your cart before reviewing an order."><EmptyState title="Your cart is empty">Add items before checking out.</EmptyState></BuyerPage>
   return <BuyerPage title="Checkout" description="Review current prices, delivery details and your total." actions={<Link className="buyer-btn" href="/cart">Back to cart</Link>}>
     {paystackMode==='test'?<p className="buyer-help" role="status">Paystack TEST checkout. No real money is charged.</p>:!paystackMode&&<p className="buyer-help" role="status">{trialEnabled?'Trial checkout is on. No payment is collected.':'Payment unavailable. You have not been charged.'}</p>}
+    {!orderingAvailable&&<p role="alert" className="buyer-notice">Ordering is temporarily unavailable. Your cart is saved; please try again later.</p>}
     <CheckoutIntro buyerId={buyerId}/>
     {loading&&<p role="status">Checking the latest prices and stock...</p>}
     {error&&<div className="buyer-notice is-error" role="alert">{error}<button className="buyer-btn" onClick={retry}>Try again</button></div>}
@@ -91,6 +93,6 @@ export default function CheckoutClient({trialEnabled=false,paystackMode=null,buy
     </section><section className="buyer-panel buyer-stack" aria-label="Order summary"><h2>Order summary</h2>{items.map((item)=>{
       const listing=live[item.id]
       return <div key={item.id} className="buyer-stack"><strong>{item.title}</strong><span className="buyer-help">Quantity {item.quantity}</span><PriceBlock product={listing??{price:item.price,stock_quantity:0}}/>{listing&&<><ListingChips product={listing}/><DeliveryLine product={listing} variant="long"/></>}</div>
-    })}<div className="buyer-row"><span>Items</span><strong>{formatPrice(subtotal)}</strong></div><div className="buyer-row"><span>Service fee</span><span>{formatPrice(fee)}</span></div><div className="buyer-row"><span>Estimated delivery</span><span>{formatPrice(delivery)}</span></div><div className="buyer-row"><strong>Estimated total</strong><strong>{formatPrice(subtotal+fee+delivery)}</strong></div>{paystackMode&&fee>0&&<p className="buyer-help">CampusMart service fee ({formatPrice(fee)}) is retained for eligible voluntary cancellation. <Link href="/refunds">Refund details</Link></p>}<label className="by-check"><input type="checkbox" checked={agreed} required onChange={e=>setAgreed(e.target.checked)}/><span>I have reviewed the total and agree to the <Link href="/terms">order terms</Link> and <Link href="/refunds">refund policy</Link>.</span></label><button type="submit" className="buyer-btn is-primary" disabled={(!trialEnabled&&!paystackMode)||busy||!ready||unavailable||!agreed}>{busy?'Preparing checkout...':paystackMode==='test'?'Paystack test payment':paystackMode==='live'?'Pay with Paystack':trialEnabled?'Place trial order':'Payment unavailable'}</button>{submitError&&<div className="buyer-notice is-error" role="alert">{submitError}<button type="button" className="buyer-btn" disabled={busy} onClick={retry}>Refresh prices</button></div>}<p className="buyer-help">{paystackMode?'Payment processed by Paystack.':trialEnabled?'Test order. No real charge.':''}</p></section></form>
+    })}<div className="buyer-row"><span>Items</span><strong>{formatPrice(subtotal)}</strong></div><div className="buyer-row"><span>Service fee</span><span>{formatPrice(fee)}</span></div><div className="buyer-row"><span>Estimated delivery</span><span>{formatPrice(delivery)}</span></div><div className="buyer-row"><strong>Estimated total</strong><strong>{formatPrice(subtotal+fee+delivery)}</strong></div>{paystackMode&&fee>0&&<p className="buyer-help">CampusMart service fee ({formatPrice(fee)}) is retained for eligible voluntary cancellation. <Link href="/refunds">Refund details</Link></p>}<label className="by-check"><input type="checkbox" checked={agreed} required onChange={e=>setAgreed(e.target.checked)}/><span>I have reviewed the total and agree to the <Link href="/terms">order terms</Link> and <Link href="/refunds">refund policy</Link>.</span></label><button type="submit" className="buyer-btn is-primary" disabled={!orderingAvailable||(!trialEnabled&&!paystackMode)||busy||!ready||unavailable||!agreed}>{busy?'Preparing checkout...':paystackMode==='test'?'Paystack test payment':paystackMode==='live'?'Pay with Paystack':trialEnabled?'Place trial order':'Payment unavailable'}</button>{submitError&&<div className="buyer-notice is-error" role="alert">{submitError}<button type="button" className="buyer-btn" disabled={busy} onClick={retry}>Refresh prices</button></div>}<p className="buyer-help">{paystackMode?'Payment processed by Paystack.':trialEnabled?'Test order. No real charge.':''}</p></section></form>
   </BuyerPage>
 }

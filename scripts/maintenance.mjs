@@ -1,0 +1,6 @@
+const secret=process.env.CRON_SECRET,origin=new URL(process.env.NEXT_PUBLIC_APP_URL??'http://localhost:3000')
+if(!secret||secret.length<32)throw new Error('Configure a server-only CRON_SECRET of at least 32 characters.')
+if(origin.username||origin.password||!['http:','https:'].includes(origin.protocol)||origin.protocol!=='https:'&&!['localhost','127.0.0.1','[::1]'].includes(origin.hostname))throw new Error('Use a valid HTTPS site origin, or localhost for development.')
+const response=await fetch(new URL('/api/operations/maintenance',origin),{headers:{authorization:`Bearer ${secret}`},redirect:'error',signal:AbortSignal.timeout(65000)})
+if(!response.ok)throw new Error(`Maintenance needs review (HTTP ${response.status}). Check System health.`)
+const result=await response.json();console.log(`Queued ${Number(result.queued)||0}; removed ${Number(result.deleted)||0}; failed ${Number(result.failed)||0}.`)

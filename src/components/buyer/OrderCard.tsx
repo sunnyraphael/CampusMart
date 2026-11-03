@@ -1,3 +1,4 @@
+import {publicThumbnail} from '@/lib/media/paths'
 import Link from 'next/link'
 import { Package } from 'lucide-react'
 import ItemActions from '@/app/(store)/orders/ItemActions'
@@ -25,7 +26,7 @@ export default function OrderCard({order,detail=false,tracking=[]}:{order:BuyerO
       const stage=stages[item.fulfillment_status??'pending']??{name:'Processing',tone:''}
       const tracked=tracking.find(t=>t.item_id===item.id)
       return <section className="order-item" key={item.id}>
-        {image?<img referrerPolicy="no-referrer" className="order-item-photo" src={image} alt=""/>:<Package className="order-item-photo" size={32} aria-hidden="true"/>}
+        {image?<img referrerPolicy="no-referrer" className="order-item-photo" src={publicThumbnail(image)} alt=""/>:<Package className="order-item-photo" size={32} aria-hidden="true"/>}
         <div><h3>{item.product_id?<Link href={`/products/${item.product_id}`}>{item.products?.title??'Purchased item'}</Link>:item.products?.title??'Purchased item'}</h3><p>{item.quantity} × {formatPrice(item.unit_price)} · {formatPrice(item.subtotal)}</p><span className={`buyer-status ${stage.tone}`}>{stage.name}</span>
           {item.expected_by&&<p>Expected by {new Date(item.expected_by).toLocaleDateString('en-NG',{timeZone:'Africa/Lagos'})}</p>}
           {paid&&item.fulfillment_status==='delivered'&&<p>{order.is_trial?'Confirm receipt after the test handover. Admin can then complete a simulated approval.':'Inspect your item before confirming receipt. Vendor credit requires a separate admin approval.'}</p>}

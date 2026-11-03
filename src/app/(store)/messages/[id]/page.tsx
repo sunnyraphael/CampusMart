@@ -10,9 +10,9 @@ export default async function ConversationPage({params}:{params:Promise<{id:stri
   const {id}=await params
   if(!uuid.safeParse(id).success) notFound()
   const {supabase,user}=await buyerSession(`/messages/${id}`)
-  const {data,error}=await supabase.rpc('cm_conversations')
+  const {data,error}=await supabase.rpc('cm_conversation_header',{p_id:id})
   if(error) return <DataError/>
-  const conversation=(data as Conversation[]).find((c)=>c.id===id)
+  const conversation=data as Conversation|null
   if(!conversation) notFound()
   const result=await supabase.from('buyer_messages').select('id,conversation_id,sender_id,body,created_at').eq('conversation_id',id).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(50)
   return <BuyerPage title={conversation.other_name} description="Your conversation stays on CampusMart." actions={<Link className="buyer-btn" href="/messages">All messages</Link>}>

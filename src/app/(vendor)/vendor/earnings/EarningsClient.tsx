@@ -223,7 +223,7 @@ export default function EarningsClient({
           </button>
         )}
       </section>
-      <p className="vx-chat-help">Showing up to the latest 100 transactions. Export includes the currently selected filter.</p>
+      <p className="vx-chat-help">Showing up to the latest 100 transactions and 50 items awaiting review. Totals include all qualifying items. Export includes the currently selected transaction filter.</p>
     </div>
   )
 }

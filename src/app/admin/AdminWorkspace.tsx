@@ -1,4 +1,5 @@
 'use client'
+import OperationsIndicator from '@/components/admin/OperationsIndicator'
 import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -30,7 +31,7 @@ export default function AdminWorkspace({ name, children }: { name: string; child
       <p className="aw-nav-label">Manage marketplace</p><AdminNav />
       <div className="aw-sidebar-foot"><div className="aw-access-note"><ShieldCheck size={18} aria-hidden /><span>Administrator access<small>Review decisions with care.</small></span></div><Link href="/" className="aw-back"><ArrowUpRight size={17} aria-hidden />Back to marketplace</Link><button className="aw-back" disabled={busy} onClick={signOut}><LogOut size={17} aria-hidden />{busy ? 'Signing out…' : 'Sign out'}</button></div>
     </aside>
-    <div className="aw-main"><header className="aw-topbar"><div className="aw-breadcrumb"><span>Workspace</span><ChevronRight size={14} aria-hidden /><strong>{section}</strong></div><div className="aw-top-actions"><Link href="/" className="aw-market-link" aria-label="Back to marketplace"><span>Marketplace</span> <ArrowUpRight size={14} aria-hidden /></Link><ThemeToggle /><button className="aw-mobile-logout" aria-label="Sign out" disabled={busy} onClick={signOut}><LogOut size={18} aria-hidden /></button><span className="aw-avatar" title={name} aria-label={`Signed in as ${name}`}>{name.slice(0, 1).toUpperCase()}</span></div></header>
+    <div className="aw-main"><header className="aw-topbar"><div className="aw-breadcrumb"><span>Workspace</span><ChevronRight size={14} aria-hidden /><strong>{section}</strong></div><div className="aw-top-actions"><OperationsIndicator/><Link href="/" className="aw-market-link" aria-label="Back to marketplace"><span>Marketplace</span> <ArrowUpRight size={14} aria-hidden /></Link><ThemeToggle /><button className="aw-mobile-logout" aria-label="Sign out" disabled={busy} onClick={signOut}><LogOut size={18} aria-hidden /></button><span className="aw-avatar" title={name} aria-label={`Signed in as ${name}`}>{name.slice(0, 1).toUpperCase()}</span></div></header>
       <main id="admin-content" className="ad-body" tabIndex={-1}>{error && <p className="buyer-notice is-error" role="alert">{error}</p>}{children}</main>
     </div>
   </div>

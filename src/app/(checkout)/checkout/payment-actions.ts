@@ -14,6 +14,8 @@ export async function beginPaystackCheckout(input:unknown):Promise<{url:string;o
     const config=paymentConfig(),service=paymentService(),supabase=await createClient()
     const auth=await supabase.auth.getUser()
     if(auth.error||!auth.data.user)return {error:'Sign in before starting a payment.'}
+    const available=await supabase.rpc('cm_checkout_available')
+    if(available.error||available.data!==true)return {error:'Ordering is temporarily unavailable. Your cart is saved; please try again later.'}
     const permission=await supabase.rpc('cm_consent_status')
     if(permission.error||permission.data?.eligible!==true||permission.data?.age_band!=='adult')return {error:'Paid checkout currently requires an eligible adult account. Contact support about guardian-supported payments.'}
     const v=parsed.data
