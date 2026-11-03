@@ -122,3 +122,36 @@ test('authorized review removal immediately repairs the count and average',async
   await db.query('delete from public.reviews where product_id=$1',[rpcListing])
   assert.deepEqual(await totals(rpcListing),{average:null,count:0})
 })
+
+
+test('actual paid-purchase review RPC isolates items, rejects test/unreceived purchases, and keeps exact totals across edits',async()=>{
+ const a=crypto.randomUUID(),b=crypto.randomUUID(),third=crypto.randomUUID(),testOnly=crypto.randomUUID(),unpaid=crypto.randomUUID()
+ await db.exec('create table public.orders(id uuid primary key,user_id uuid,payment_status text,payment_environment text,is_trial boolean default false);create table public.order_items(id uuid primary key,order_id uuid,product_id uuid,fulfillment_status text)')
+ const migration=await readFile(new URL('../supabase/migrations/202611010006_paystack_refunds_and_payouts.sql',import.meta.url),'utf8')
+ const start=migration.indexOf('create or replace function public.cm_review_product('),end=migration.indexOf('create function public.cm_paystack_order_settled',start)
+ await db.exec(migration.slice(start,end))
+ await db.query('insert into public.products(id,vendor_id,title) values($1,$3,$4),($2,$3,$5)',[a,b,vendor,'Purchased item A','Unpurchased item B'])
+ async function purchase(who,status='received',environment=null,payment='paid'){
+  const order=crypto.randomUUID(),item=crypto.randomUUID();await db.query('insert into public.orders(id,user_id,payment_status,payment_environment) values($1,$2,$3,$4)',[order,who,payment,environment]);await db.query('insert into public.order_items values($1,$2,$3,$4)',[item,order,a,status]);return item
+ }
+ const review=(who,product,rating,comment=null)=>asUser(who,()=>db.query('select public.cm_review_product($1,$2,$3)',[product,rating,comment]))
+ await purchase(buyer);const second=await purchase(otherBuyer,'delivered');await purchase(testOnly,'received','test');await purchase(unpaid,'received',null,'unpaid')
+ await assert.rejects(review(buyer,b,5),/Only buyers/)
+ await assert.rejects(review(otherBuyer,a,5),/Only buyers/)
+ await assert.rejects(review(testOnly,a,5),/Only buyers/)
+ await assert.rejects(review(unpaid,a,5),/Only buyers/)
+ await assert.rejects(review(buyer,a,6),/rating/)
+ await assert.rejects(review(buyer,a,0),/rating/)
+ await assert.rejects(review(buyer,a,3,'x'.repeat(2001)),/2,000/)
+ await review(buyer,a,5,'Useful item')
+ await db.query("update public.order_items set fulfillment_status='received' where id=$1",[second]);await review(otherBuyer,a,1,'Not as described')
+ assert.deepEqual(await totals(a),{average:3,count:2});assert.deepEqual(await totals(b),{average:null,count:0})
+ const identity=(await db.query('select id from public.reviews where user_id=$1 and product_id=$2',[buyer,a])).rows[0].id
+ await review(buyer,a,2,'   ');await review(buyer,a,2,null)
+ assert.deepEqual(await totals(a),{average:1.5,count:2})
+ const edited=(await db.query('select id,comment from public.reviews where user_id=$1 and product_id=$2',[buyer,a])).rows[0];assert.equal(edited.id,identity);assert.equal(edited.comment,null)
+ await purchase(third);await review(third,a,4)
+ const total=await totals(a);assert.equal(total.count,3);assert.ok(Math.abs(total.average-7/3)<1e-12)
+ await purchase(vendor);await assert.rejects(review(vendor,a,5),/cannot review their own listings/)
+ await db.query('delete from public.reviews where user_id=$1 and product_id=$2',[otherBuyer,a]);assert.deepEqual(await totals(a),{average:3,count:2})
+})

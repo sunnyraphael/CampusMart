@@ -1,4 +1,5 @@
 'use client'
+import ReceiptReview,{type ReviewPurchase} from '@/components/orders/ReceiptReview'
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -7,17 +8,19 @@ import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'idle' | 'confirm' | 'dispute'
 
-export default function ItemActions({ itemId, status, credited = false }: { itemId: string; status: string; credited?: boolean }) {
+export default function ItemActions({ itemId, status, credited = false, review }: { itemId: string; status: string; credited?: boolean;review?:ReviewPurchase }) {
   const router = useRouter()
+  const [justReceived,setJustReceived]=useState(false)
   const [mode, setMode] = useState<Mode>('idle')
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [refreshing, startTransition] = useTransition()
   const [error, setError] = useState('')
-  const canReceive = !credited && ['shipped', 'delivered'].includes(status)
+  const canReceive = !credited && !justReceived && ['shipped', 'delivered'].includes(status)
   const canDispute = !credited && ['shipped', 'delivered', 'received'].includes(status)
   const locked = busy || refreshing
-  if (!canReceive && !canDispute) return null
+  const showReview=!!review&&(status==='received'||justReceived&&['shipped','delivered'].includes(status))
+  if (!canReceive && !canDispute && !showReview) return null
 
   async function submit(kind: 'received' | 'dispute') {
     if (locked) return
@@ -32,6 +35,7 @@ export default function ItemActions({ itemId, status, credited = false }: { item
         ? await supabase.rpc('cm_confirm_delivery', { p_item_id: itemId })
         : await supabase.rpc('cm_report_order_problem', { p_item_id: itemId, p_reason: reason.trim() })
       if (error) { setError(error.message); return }
+      if(kind==='received')setJustReceived(true)
       setMode('idle')
       startTransition(() => router.refresh())
     } catch { setError('Check your connection and try again.') } finally { setBusy(false) }
@@ -39,6 +43,7 @@ export default function ItemActions({ itemId, status, credited = false }: { item
 
   function cancel() { setMode('idle'); setError('') }
   return <div className="ot-buyer-actions">
+    {showReview&&review&&<ReceiptReview purchase={review} autoOpen={justReceived&&!review.existing}/>}
     {mode === 'idle' && <div className="buyer-actions">
       {canReceive && <button className="buyer-btn is-primary" onClick={() => { setMode('confirm'); setError('') }}><CheckCircle2 size={16} aria-hidden />I received this</button>}
       {canDispute && <button className="buyer-btn is-danger" onClick={() => { setMode('dispute'); setError('') }}><ShieldAlert size={16} aria-hidden />Report a problem</button>}

@@ -30,8 +30,9 @@ export async function generateMetadata({params}:{params:Promise<{id:string}>}){
  if(error||!data)return {title:'Listing unavailable',robots:{index:false,follow:false}}
  return pageMetadata(data.title,(data.description||'View item details, condition and vendor information for '+data.title+' on CampusMart.').replace(/\s+/g,' ').slice(0,180),'/products/'+id)
 }
-export default async function ProductPage({params}:{params:Promise<{id:string}>}) {
+export default async function ProductPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{reviewPage?:string}>}) {
   const {id}=await params
+  const reviewPage=Math.min(10000,Math.max(1,parseInt((await searchParams).reviewPage??'1',10)||1))
   if(!uuid.safeParse(id).success)notFound()
   const supabase=await createClient()
   const {data,error}=await productDetails(id)
@@ -40,17 +41,18 @@ export default async function ProductPage({params}:{params:Promise<{id:string}>}
   const product=data as unknown as Detail
   product.images=listingImages(product.images)
   const [reviews,related,{data:{user}}]=await Promise.all([
-    supabase.from('reviews').select('id,user_id,rating,comment,created_at').eq('product_id',id).order('created_at',{ascending:false}).limit(20),
+    supabase.from('reviews').select('id,user_id,rating,comment,created_at',{count:'exact'}).eq('product_id',id).order('created_at',{ascending:false}).order('id',{ascending:false}).range((reviewPage-1)*20,reviewPage*20-1),
     product.category_id?supabase.from('products').select(CARD_SELECT).eq('category_id',product.category_id).eq('status','active').gt('stock_quantity',0).neq('id',id).order('created_at',{ascending:false}).limit(4):Promise.resolve({data:[],error:null}),
     supabase.auth.getUser(),
   ])
   let eligible=false
   if(user) {
-    const purchase=await supabase.from('order_items').select('id,orders!inner(user_id,payment_status)').eq('product_id',id).eq('fulfillment_status','received').eq('orders.user_id',user.id).eq('orders.payment_status','paid').limit(1)
+    const purchase=await supabase.from('order_items').select('id,orders!inner(user_id,payment_status,is_trial,payment_environment)').eq('product_id',id).eq('fulfillment_status','received').eq('orders.user_id',user.id).eq('orders.payment_status','paid').eq('orders.is_trial',false).or('payment_environment.is.null,payment_environment.eq.live',{referencedTable:'orders'}).limit(1)
     eligible=!purchase.error&&!!purchase.data?.length
   }
   const reviewRows=(reviews.data??[]) as Review[]
-  const mine=user?reviewRows.find((r)=>r.user_id===user.id):undefined
+  const ownReview=user&&eligible?await supabase.from('reviews').select('rating,comment').eq('product_id',id).eq('user_id',user.id).maybeSingle():null
+  const mine=ownReview?.data
   const rated=(product.total_reviews??0)>0&&Number(product.avg_rating)>=1&&Number(product.avg_rating)<=5
   return <section className="buyer-page sh-product">
     <nav className="sh-breadcrumb" aria-label="Breadcrumb"><Link href="/products">All listings</Link><ChevronRight size={13} aria-hidden/>{product.categories?<><Link href={`/products?category=${encodeURIComponent(product.categories.slug)}`}>{product.categories.name}</Link><ChevronRight size={13} aria-hidden/></>:null}<span>Item details</span></nav>
@@ -67,9 +69,9 @@ export default async function ProductPage({params}:{params:Promise<{id:string}>}
       <p className="buyer-help">Inspect your purchase before confirming receipt. Need help? <Link href="/refunds">Read the refund policy</Link> or <Link href="/contact">contact support</Link>.</p>
     </section></div>
     <div className="sh-detail-columns"><section className="buyer-panel buyer-stack" id="about-item"><span className="sh-eyebrow">Get to know the item</span><h2>About this item</h2><p className="buyer-preserve-lines">{product.description||'The vendor has not added a description. Message them if you need more details.'}</p>{product.categories&&<Link className="sh-text-link" href={`/products?category=${encodeURIComponent(product.categories.slug)}`}>More in {product.categories.name}<ChevronRight size={15} aria-hidden/></Link>}</section><aside className="buyer-panel buyer-stack sh-purchase-guide"><MessageCircle size={25} strokeWidth={1.5} aria-hidden/><h2>A quick conversation helps</h2><p className="buyer-help">Ask about condition, what is included and the pickup or delivery arrangement. Keep conversations on CampusMart so you can refer to them later.</p><Link className="sh-text-link" href="/help">Visit the help centre <ChevronRight size={15} aria-hidden/></Link></aside></div>
-    <section className="buyer-panel buyer-stack sh-reviews" id="reviews"><div className="sh-section-top"><div><span className="sh-eyebrow">From the community</span><h2>Buyer reviews</h2></div><span className="sh-review-total">{product.total_reviews??0} {(product.total_reviews??0)===1?'review':'reviews'}</span></div><p className="buyer-help">Review submission requires a received, paid purchase. Trial orders do not qualify.</p>{reviews.error?<DataError/>:reviewRows.length?reviewRows.map(r=><article key={r.id} className="buyer-review"><div className="buyer-row"><span className="buyer-actions"><Star size={16} aria-hidden/>{r.rating} / 5{r.user_id===user?.id?' - Your review':''}</span><time className="buyer-time">{r.created_at?new Date(r.created_at).toLocaleDateString('en-NG',{timeZone:'Africa/Lagos'}):''}</time></div>{r.comment&&<p className="buyer-preserve-lines">{r.comment}</p>}</article>):<div className="sh-review-empty"><Star size={26} strokeWidth={1.3} aria-hidden/><h3>No reviews yet</h3><p>No buyer feedback has been published for this item.</p></div>}
-      {(product.total_reviews??0)>20&&<p className="buyer-help">Showing the latest 20 reviews. The overall rating includes every review.</p>}
-      {eligible?<ReviewForm productId={id} rating={mine?.rating} comment={mine?.comment??''}/>:<p className="buyer-help">Buyers can leave a review after receiving a paid order.</p>}
+    <section className="buyer-panel buyer-stack sh-reviews" id="reviews"><div className="sh-section-top"><div><span className="sh-eyebrow">From the community</span><h2>Buyer reviews</h2></div><span className="sh-review-total">{product.total_reviews??0} {(product.total_reviews??0)===1?'review':'reviews'}</span></div><p className="buyer-help">Review submission requires a received, paid purchase. Trial orders do not qualify.</p>{reviews.error?<DataError/>:reviewRows.length?reviewRows.map(r=><article key={r.id} className="buyer-review"><div className="buyer-row"><span className="buyer-actions"><span className="review-public-stars" role="img" aria-label={r.rating+' out of 5 stars'}>{[1,2,3,4,5].map(n=><Star key={n} size={16} fill={n<=r.rating?'currentColor':'none'} aria-hidden/>)}</span><span>{r.rating} / 5{r.user_id===user?.id?' - Your review':''}</span></span><time className="buyer-time">{r.created_at?new Date(r.created_at).toLocaleDateString('en-NG',{timeZone:'Africa/Lagos'}):''}</time></div>{r.comment&&<p className="buyer-preserve-lines">{r.comment}</p>}</article>):<div className="sh-review-empty"><Star size={26} strokeWidth={1.3} aria-hidden/><h3>{reviewPage>1?'No reviews on this page':'No reviews yet'}</h3><p>{reviewPage>1?'Use Previous to return to earlier reviews.':'No buyer feedback has been published for this item.'}</p></div>}
+      {!reviews.error&&<nav className="buyer-actions" aria-label="Review pages">{reviewPage>1&&<Link className="buyer-btn" href={'/products/'+id+'?reviewPage='+(reviewPage-1)+'#reviews'}>Previous reviews</Link>}{reviewPage*20<(reviews.count??0)&&<Link className="buyer-btn" href={'/products/'+id+'?reviewPage='+(reviewPage+1)+'#reviews'}>More reviews</Link>}</nav>}<p className="buyer-help">The overall rating includes all reviews for this item, not only this page. Each buyer has one review per item; editing it updates the same review.</p>
+      {eligible?(ownReview?.error?<DataError message="Your existing review could not load. Please retry before editing."/>:<ReviewForm productId={id} rating={mine?.rating} comment={mine?.comment??''}/>):<p className="buyer-help">Buyers can leave a review after receiving a paid order.</p>}
     </section>
     {related.error?<DataError/>:!!related.data?.length&&<section className="buyer-stack"><div className="sh-section-top"><div><span className="sh-eyebrow">Keep exploring</span><h2>More in this category</h2></div><Link className="sh-text-link" href={`/products?category=${encodeURIComponent(product.categories?.slug??'')}`}>View category <ChevronRight size={15} aria-hidden/></Link></div><div className="pl-grid">{(related.data as unknown as ProductCardData[]).map(p=><ProductCard key={p.id} product={p}/>)}</div></section>}
   </section>

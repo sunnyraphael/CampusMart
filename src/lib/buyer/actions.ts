@@ -126,6 +126,9 @@ export async function reviewProduct(productId: string, rating: number, comment: 
     const { error } = await supabase.rpc('cm_review_product', { p_product_id:productId, p_rating:rating, p_comment:comment.trim() })
     if(error) throw error
     revalidatePath(`/products/${productId}`)
+    revalidatePath('/orders')
+    revalidatePath('/orders/[id]','page')
+    revalidatePath('/products')
     return {ok:true}
   } catch(error) {return fail(error)}
 }
