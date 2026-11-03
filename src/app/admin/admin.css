@@ -41,3 +41,14 @@
 .store-directory-compact .buyer-help{font-size:11px;margin:4px 0 0}
 .store-directory-compact .buyer-status{align-self:flex-start;font-size:10px}
 .store-directory-open{font-size:11px;color:var(--vx-link);font-weight:600}
+.ad-shell .af-tabs{margin-bottom:0;gap:8px}
+.af-tabs button span,.af-filter span{margin-left:6px;opacity:.75;font-size:11px}
+.af-filters{display:flex;flex-wrap:wrap;gap:8px}
+.af-filter{border:1px solid var(--vx-border);background:var(--vx-card);color:var(--vx-text-soft);padding:8px 12px;border-radius:20px;cursor:pointer;font:600 12px var(--font-dm-sans),sans-serif}
+.af-filter[aria-pressed=true]{color:var(--vx-link);border-color:currentColor;background:var(--vx-input)}
+.af-status{display:inline-flex;align-items:center;border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;background:var(--vx-input);overflow-wrap:anywhere}
+.af-status.af-successful{color:#15803d;background:#dcfce7}
+.af-status.af-pending{color:#92400e;background:#fef3c7}
+.af-status.af-failed{color:#b91c1c;background:#fee2e2}
+.af-reference{overflow-wrap:anywhere;word-break:break-word;font-size:12px}
+.af-tabs button:focus-visible,.af-filter:focus-visible{outline:2px solid var(--vx-link);outline-offset:3px}

@@ -12,7 +12,7 @@ type Transfer={id:string;item_id:string;reference:string;mode:string;amount_kobo
 type View='payments'|'refunds'|'transfers'
 type Status='all'|'pending'|'successful'|'failed'
 function statusGroup(state:string):Exclude<Status,'all'>{
-  if(['paid','processed','success'].includes(state))return 'successful'
+  if(['paid','processed','success','refunded'].includes(state))return 'successful'
   if(['failed','reversed','abandoned','rejected','cancelled','expired'].includes(state))return 'failed'
   return 'pending'
 }
@@ -24,7 +24,7 @@ export default function FinanceClient({payments,items,refunds,transfers,recipien
   const [view,setView]=useState<View>('payments'),[status,setStatus]=useState<Status>('all')
   const [recordedItems,setRecordedItems]=useState<string[]>([])
   const [panel,setPanel]=useState<{kind:'refund'|'transfer';order:string;item:string}|null>(null),[note,setNote]=useState(''),[confirmed,setConfirmed]=useState(false),[deduct,setDeduct]=useState(false)
-  async function run(action:()=>Promise<{ok:true}|{error:string}>){if(busy)return;setBusy(true);setNotice('');try{const result=await action();setNotice('error'in result?result.error:'Request recorded. Check its provider status below; queued or pending does not mean money has arrived.');if(!('error'in result)){if(panel){setView(panel.kind==='refund'?'refunds':'transfers');setStatus('all');if(panel.kind==='transfer')setRecordedItems(current=>[...current,panel.item])}setPanel(null);router.refresh()}}catch{setNotice('The result could not be confirmed. Refresh and reconcile the existing job before trying another request.')}finally{setBusy(false)}}
+  async function run(action:()=>Promise<{ok:true}|{error:string}>){if(busy)return;setBusy(true);setNotice('');try{const result=await action();setNotice('error'in result?result.error:'Request recorded. Check its provider status below; queued or pending does not mean money has arrived.');if(!('error'in result)){if(panel){setView(panel.kind==='refund'?'refunds':'transfers');setStatus('all');setQuery('');if(panel.kind==='transfer')setRecordedItems(current=>[...current,panel.item])}setPanel(null);router.refresh()}}catch{setNotice('The result could not be confirmed. Refresh and reconcile the existing job before trying another request.')}finally{setBusy(false)}}
   function open(kind:'refund'|'transfer',order:string,item=''){setPanel({kind,order,item});setNote('');setConfirmed(false);setDeduct(false)}
   const payment=payments.find(p=>p.order_id===panel?.order),selected=items.find(i=>i.id===panel?.item)
   const recipient=recipients.find(r=>r.seller_id===selected?.seller_id)
