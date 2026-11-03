@@ -1,0 +1,25 @@
+# Upload application source only. Configure secrets through Vercel settings.
+.env*
+.git
+.vercel
+.next*
+node_modules
+backups
+test-results
+playwright-report
+coverage
+tests
+docs
+supabase
+scripts
+.codex
+.agents
+.aws
+*.log
+*.tsbuildinfo
+load-test-results.json
+playwright*.config.ts
+tsconfig.build-check.json
+AGENTS.md
+CLAUDE.md
+setup-folders.ps1

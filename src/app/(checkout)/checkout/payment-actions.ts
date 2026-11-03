@@ -1,4 +1,5 @@
 'use server'
+import {checkoutNetworkBudget} from '@/lib/security/checkout'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { trialOrderSchema } from '@/lib/orders/trial'
@@ -18,6 +19,9 @@ export async function beginPaystackCheckout(input:unknown):Promise<{url:string;o
     if(available.error||available.data!==true)return {error:'Ordering is temporarily unavailable. Your cart is saved; please try again later.'}
     const permission=await supabase.rpc('cm_consent_status')
     if(permission.error||permission.data?.eligible!==true||permission.data?.age_band!=='adult')return {error:'Paid checkout currently requires an eligible adult account. Contact support about guardian-supported payments.'}
+    await checkoutNetworkBudget()
+    const expiration=await service.rpc('cm_expire_reservations',{p_mode:config.mode,p_limit:20})
+    if(expiration.error)return {error:'Checkout security setup is unavailable. Your cart is saved; contact support.'}
     const v=parsed.data
     const order=await service.rpc('cm_create_paystack_order',{p_user_id:auth.data.user.id,p_request_id:v.requestId,p_items:v.items,p_delivery_method:v.deliveryMethod,p_address:v.address,p_phone:v.phone,p_note:v.note,p_expected_total:v.expectedTotal,p_mode:config.mode,p_retain_fee:true})
     if(order.error)return {error:order.error.code==='P0001'?order.error.message:'Payment checkout setup is unavailable. No payment has been confirmed. Contact support.'}
@@ -44,7 +48,7 @@ export async function checkOrderPayment(orderId:string):Promise<{state:string}|{
     if(!auth.data.user)return {error:'Sign in to check your payment.'}
     const payment=await paymentService().from('paystack_payments').select('reference').eq('order_id',orderId).eq('user_id',auth.data.user.id).maybeSingle()
     if(payment.error||!payment.data)return {error:'This payment is not available.'}
-    const result=await verifyPayment(payment.data.reference)
+    const result=await verifyPayment(payment.data.reference,{throttle:true})
     revalidatePath(`/orders/${orderId}`);revalidatePath('/orders')
     return {state:result.state}
   }catch{return {error:'Payment status could not be confirmed. Do not pay again; retry this check or contact support.'}}

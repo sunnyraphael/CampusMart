@@ -37,6 +37,7 @@ export default function FinanceClient({payments,items,refunds,transfers,recipien
   const shownCount=view==='payments'?shownPayments.length:view==='refunds'?shownRefunds.length:shownTransfers.length
   function changeView(next:View){setView(next);setStatus('all');setQuery('');setPanel(null)}
   return <div className="buyer-stack">
+    <Link href="/admin-security">Verify administrator access with an authenticator</Link>
     <p className="buyer-notice">Test payments and transfers never affect real vendor balances. Live transfers use funds in your Paystack balance and may need Paystack approval/OTP. Unknown refund results must be reconciled; do not send a second refund from the dashboard without checking this record.</p>
     <div className="buyer-actions"><label>Search loaded records<input className="buyer-input" value={query} onChange={e=>setQuery(e.target.value)} maxLength={100}/></label><button className="buyer-btn" disabled={busy} onClick={()=>void run(refreshPaymentQueue)}>Reconcile payment queue</button></div>
     <div className="aw-view-tabs af-tabs" role="tablist" aria-label="Finance views">{(['payments','refunds','transfers'] as const).map(v=><button key={v} id={'finance-tab-'+v} role="tab" aria-selected={view===v} aria-controls="finance-records" onClick={()=>changeView(v)}>{viewLabels[v]} <span>{(v==='payments'?payments:v==='refunds'?refunds:transfers).length}</span></button>)}</div>

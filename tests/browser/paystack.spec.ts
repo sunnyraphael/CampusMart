@@ -80,3 +80,24 @@ test('payout setup resolves the provider name and stores only the recipient and 
   await expect(page.getByText('Current beneficiary:',{exact:false})).toContainText('6789')
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true)
 })
+
+
+test('administrator must verify an authenticator before entering the workspace',async({page,request})=>{
+  await request.post(backend+'/__admin',{data:{enabled:true,mfaVerified:false}})
+  await page.goto('/admin/payments')
+  await expect(page).toHaveURL(/\/admin-security$/)
+  await page.getByRole('button',{name:'Set up or unlock authenticator'}).click()
+  await page.getByLabel('Authenticator code',{exact:true}).fill('123456')
+  await page.getByRole('button',{name:'Verify and open workspace'}).click()
+  await expect(page).toHaveURL(/\/admin$/)
+  await expect(page.getByRole('main')).toBeVisible()
+})
+
+test('browser security headers block framing on public and login pages',async({request})=>{
+  for(const route of ['/','/login']){
+    const response=await request.get(route)
+    expect(response.headers()['x-frame-options']).toBe('DENY')
+    expect(response.headers()['x-content-type-options']).toBe('nosniff')
+    expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'")
+  }
+})

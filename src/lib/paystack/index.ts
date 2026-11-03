@@ -7,13 +7,18 @@ export type Payment={order_id:string;user_id:string;reference:string;amount_kobo
 type Refund={id:string;order_id:string;amount_kobo:number;state:string;provider_id:string|null}
 type ProviderRefund={id:number;amount:number;currency:string|null;status:string;merchant_note?:string;transaction:number|{id:number;reference:string;domain:string;currency?:string}}
 
-export async function verifyPayment(reference:string){
+export async function verifyPayment(reference:string,{throttle=false}:{throttle?:boolean}={}){
   if(!/^cm-[a-f0-9]{32}$/.test(reference))throw new Error('Invalid payment reference')
   const service=paymentService(),config=paymentConfig()
   const lookup=await service.from('paystack_payments').select('*').eq('reference',reference).maybeSingle()
   if(lookup.error)throw new Error('Payment lookup unavailable')
   const payment=lookup.data as Payment|null
   if(!payment||payment.mode!==config.mode)throw new Error('Payment environment mismatch')
+  if(throttle){
+    const claim=await service.rpc('cm_claim_payment_check',{p_reference:reference})
+    if(claim.error)throw new Error('Payment check security is unavailable')
+    if(claim.data!==true)return {orderId:payment.order_id,state:payment.state==='paid'?'verified':payment.state==='review'?'review':'pending'}
+  }
   const charge=await config.api<VerifiedCharge>(`/transaction/verify/${encodeURIComponent(reference)}`)
   if(charge.status==='reversed'){
     const held=await service.rpc('cm_paystack_hold',{p_reference:reference});if(held.error)throw held.error
@@ -76,10 +81,18 @@ export async function processRefund(id:string,maxLookupPages=10){
 export async function reconcilePayments(){
   const service=paymentService(),config=paymentConfig()
   const deadline=Date.now()+40000
-  const pending=await service.from('paystack_payments').select('reference,expires_at').eq('mode',config.mode).in('state',['created','pending','expired']).order('last_checked_at',{nullsFirst:true}).limit(2)
+  // Release due reservations in a bounded database-only batch before provider I/O.
+  // A later successful charge follows the existing late-payment refund path.
+  const expiration=await service.rpc('cm_expire_reservations',{p_mode:config.mode,p_limit:50})
+  if(expiration.error)throw new Error('Reservation expiration unavailable')
+  const pending=await service.from('paystack_payments').select('reference,expires_at').eq('mode',config.mode).in('state',['created','pending']).order('last_checked_at',{nullsFirst:true}).limit(2)
   if(pending.error)throw new Error('Payment queue unavailable')
+  // Historical expired payments cannot starve active payments. Recheck recent
+  // expirations separately, no more than once an hour per reference.
+  const expired=await service.from('paystack_payments').select('reference,expires_at').eq('mode',config.mode).eq('state','expired').gte('created_at',new Date(Date.now()-7*86400000).toISOString()).or('last_checked_at.is.null,last_checked_at.lt.'+new Date(Date.now()-3600000).toISOString()).order('last_checked_at',{nullsFirst:true}).limit(1)
+  if(expired.error)throw new Error('Expired payment review unavailable')
   let checked=0,failed=0
-  for(const payment of pending.data??[]){
+  for(const payment of [...(pending.data??[]),...(expired.data??[])]){
     if(Date.now()>=deadline)return {checked,failed}
     try{
       const verified=await verifyPayment(payment.reference)

@@ -8,6 +8,10 @@ export const adminSession = cache(async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login?redirectTo=%2Fadmin')
   const { data, error } = await supabase.rpc('is_admin')
-  if (error || data !== true) notFound()
+  if (error || data !== true) {
+    const membership=await supabase.rpc('cm_admin_membership')
+    if(membership.data===true)redirect('/admin-security')
+    notFound()
+  }
   return { supabase, user }
 })

@@ -16,7 +16,7 @@ export async function GET(request:Request){
   try{
     const payment=await paymentService().from('paystack_payments').select('order_id').eq('reference',reference).eq('user_id',user.id).maybeSingle()
     orderId=payment.data?.order_id
-    if(orderId)await verifyPayment(reference)
+    if(orderId)await verifyPayment(reference,{throttle:true})
   }catch{/* The owned order page offers a retry; a callback never proves payment. */}
   return NextResponse.redirect(new URL(orderId?`/orders/${orderId}?payment=check`:'/orders',origin))
 }

@@ -9,7 +9,7 @@ function isUnder(path: string, route: string) {
   return path === route || path.startsWith(route + "/")
 }
 
-const PROTECTED_ROUTES = ["/checkout", "/orders", "/profile", "/settings", "/wishlist", "/saved", "/messages", "/notifications", "/consent", "/guardian-permission", "/start-selling", "/vendor", "/admin"]
+const PROTECTED_ROUTES = ["/checkout", "/orders", "/profile", "/settings", "/wishlist", "/saved", "/messages", "/notifications", "/consent", "/guardian-permission", "/start-selling", "/vendor", "/admin", "/admin-security"]
 const AUTH_PAGES = ["/login", "/register"]
 
 export async function updateSession(request: NextRequest) {
@@ -79,7 +79,11 @@ export async function updateSession(request: NextRequest) {
   // Gate 3: /admin needs a row in the locked public.admins table
   if (user && isUnder(path, "/admin")) {
     const { data: isAdmin } = await supabase.rpc("is_admin")
-    if (isAdmin !== true) return redirectTo("/")
+    if (isAdmin !== true) {
+      const membership=await supabase.rpc('cm_admin_membership')
+      if(membership.data===true)return redirectTo('/admin-security')
+      return redirectTo('/')
+    }
   }
 
   // Logged-in people have no reason to see the login or register pages

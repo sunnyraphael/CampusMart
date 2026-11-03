@@ -1,3 +1,4 @@
+import AdminSecuritySkeleton from '@/app/(store)/admin-security/loading'
 import OperationsSkeleton from '@/app/admin/operations/loading'
 import StoresSkeleton from '@/app/admin/stores/loading'
 import StoreDetailSkeleton from '@/app/admin/stores/[id]/loading'
@@ -14,6 +15,7 @@ import { EarningsSkeleton, GuideSkeleton, ListingFormSkeleton, OnboardingSkeleto
 
 export default function PageSkeleton({ kind }: { kind: SkeletonKind }) {
   switch (kind) {
+    case 'admin-security': return <AdminSecuritySkeleton/>
     case 'admin-operations': return <OperationsSkeleton/>
     case 'admin-stores': return <StoresSkeleton/>
     case 'admin-store-details': return <StoreDetailSkeleton/>
