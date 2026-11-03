@@ -92,7 +92,7 @@ for (const theme of ['light', 'dark']) for (const width of [320, 1280]) test(`tr
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message))
   for (const path of [`/orders/${ids.order}`, `/vendor/orders/${ids.order}`, '/admin/deliveries']) {
     await page.goto(path)
-    await expect(page.locator('main h1, .ad-body h1').first()).toBeVisible()
+    await expect(page.locator('main h1, .admin-content-area h1').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true)
     if (width === 320) await page.screenshot({ path: `test-results/previews/tracking-${path.split('/')[1]}-${theme}.png`, fullPage: true })
   }

@@ -17,3 +17,11 @@ The reported Netlify blank-content symptom could not be reproduced with healthy 
 The deployed public homepage, categories, login, robots and sitemap returned 200. Signed-out admin access still redirects to login. Login password visibility and signup age selection hydrated correctly; the 390px homepage fit without horizontal overflow, with no runtime/CSP errors during the smoke check. A sampled optimized catalogue photo returned 10,284 bytes with a one-hour public cache; raw logo caching was one day, and a sampled JavaScript asset had nosniff and a one-year immutable cache. The optimized logo loaded successfully. No signed-in real admin session was used.
 
 Validation passed: 137 automated tests, the 15-case production audit/payment/admin suite, and the 16-case Google/mobile/audit suite (some audit cases overlap). Production build and type checking passed. Lint reported zero errors and 21 existing warnings.
+
+## Admin blank-panel reproduction and fix
+
+The follow-up screenshot led to a reproducible cosmetic-filter collision: EasyList's maintained easylist_general_hide.txt contains ##.ad-body, and the admin main element used that exact class. Applying .ad-body{display:none!important} reproduced the visible sidebar/header and completely blank content, even with healthy authenticated data. The old production build failed the visibility regression. Renamed the ordinary admin content and wrapper classes to admin-content-area and admin-workspace and updated every dependent selector. The all-tabs production regression now keeps the EasyList rule active on every document navigation. Users do not need to disable ad blockers. The earlier clean-browser checks did not simulate this extension behavior.
+
+Source: https://raw.githubusercontent.com/easylist/easylist/master/easylist/easylist_general_hide.txt
+
+Validation of the naming fix: the production build passed, and all six targeted browser checks passed, including every admin tab with the EasyList rule active and light/dark mobile/desktop layouts.

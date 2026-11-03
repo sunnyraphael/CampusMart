@@ -128,6 +128,7 @@ test('first administrator password unlock leads to transaction PIN setup',async(
 
 
 test('password unlock renders content in every admin sidebar tab',async({page,request})=>{
+ await page.addInitScript(()=>{document.addEventListener('DOMContentLoaded',()=>{const style=document.createElement('style');style.textContent='.ad-body{display:none!important}';document.head.appendChild(style)},{once:true})})
  await request.post(backend+'/__admin',{data:{enabled:true,unlocked:false,pinConfigured:true}})
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
  await page.goto('/admin-security')
@@ -151,4 +152,15 @@ test('admin data requests time out visibly and can be recovered',async({page,req
  await request.post(backend+'/__delay',{data:{table:'cm_admin_delivery_queue',ms:0}})
  await page.getByRole('button',{name:'Try again',exact:true}).click()
  await expect(page.locator('#admin-content h1')).toHaveText('Delivery approvals')
+})
+
+
+test('admin content remains visible with the EasyList ad-body cosmetic rule enabled',async({page,request})=>{
+ await request.post(backend+'/__admin',{data:{enabled:true}})
+ await page.goto('/admin')
+ await expect(page.locator('#admin-content h1').first()).toHaveText('Your admin overview')
+ // EasyList's generic ##.ad-body rule hid the whole admin main element.
+ await page.addStyleTag({content:'.ad-body{display:none!important}'})
+ await expect(page.getByRole('navigation',{name:'Admin sections'})).toBeVisible()
+ await expect(page.locator('#admin-content')).toBeVisible()
 })

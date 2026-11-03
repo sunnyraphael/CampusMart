@@ -16,9 +16,9 @@
 @media(max-width:600px){.ot-steps{grid-template-columns:1fr;gap:0}.ot-steps li{flex-direction:row;align-items:center;gap:10px;padding:6px 0;font-size:13px}.ot-step-dot{padding:0;border:0}.ot-admin-people,.ot-checks{grid-template-columns:1fr}.ot-code-entry input{max-width:none;width:100%}.ot-code-entry .buyer-actions{align-items:stretch}.ot-code-entry .buyer-actions>*{flex:1 1 140px}}
 
 .vs-shell :is(.od-page,.vo-page) .vx-actions{max-width:100%;min-width:0;flex-shrink:1}
-.ad-shell:has(.ot-admin){background:var(--page-bg);color:var(--vx-text)}
-.ad-shell:has(.ot-admin) .ad-top{background:var(--vx-card);border-color:var(--vx-border)}
-.ad-shell:has(.ot-admin) .ad-brand{color:var(--vx-text)}
+.admin-workspace:has(.ot-admin){background:var(--page-bg);color:var(--vx-text)}
+.admin-workspace:has(.ot-admin) .ad-top{background:var(--vx-card);border-color:var(--vx-border)}
+.admin-workspace:has(.ot-admin) .ad-brand{color:var(--vx-text)}
 .ot-admin :is(a,button,summary):focus-visible{outline:2px solid var(--vx-link);outline-offset:3px}
 .ot-checks span{min-width:0;overflow-wrap:anywhere}
 
