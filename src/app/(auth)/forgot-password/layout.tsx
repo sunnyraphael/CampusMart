@@ -1,0 +1,3 @@
+import {pageMetadata} from '@/lib/seo/metadata'
+export const metadata=pageMetadata("Reset your password",'Manage your CampusMart account access.',"/forgot-password",false)
+export default function Layout({children}:{children:React.ReactNode}){return children}

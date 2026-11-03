@@ -1,3 +1,5 @@
+import {cache} from 'react'
+import {pageMetadata} from '@/lib/seo/metadata'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BadgeCheck, Store } from 'lucide-react'
@@ -10,12 +12,21 @@ import StartChatButton from '@/components/buyer/StartChatButton'
 import ProductCard, { type ProductCardData } from '@/components/store/ProductCard'
 import FeeDisclosure from '@/components/store/FeeDisclosure'
 
+const storeDetails=cache(async(id:string)=>{const supabase=await createClient();return supabase.from('public_vendors').select('id,store_name,description,logo_url,is_verified,campus,state').eq('id',id).abortSignal(AbortSignal.timeout(8000)).maybeSingle()})
+export async function generateMetadata({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{page?:string}>}){
+ const {id}=await params
+ if(!uuid.safeParse(id).success)return {robots:{index:false,follow:false}}
+ const {data,error}=await storeDetails(id)
+ if(error||!data)return {title:'Store unavailable',robots:{index:false,follow:false}}
+ const page=Math.max(1,parseInt((await searchParams).page??'1',10)||1)
+ return pageMetadata(data.store_name+(page>1?' - Page '+page:''),(data.description||'Browse available listings from '+data.store_name+' on CampusMart. Review item details and contact the vendor before ordering.').replace(/\s+/g,' ').slice(0,180),'/vendors/'+id+(page>1?'?page='+page:''))
+}
 export default async function VendorPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{page?:string}>}) {
   const {id}=await params
   if(!uuid.safeParse(id).success)notFound()
   const page=Math.min(10000,Math.max(1,parseInt((await searchParams).page??'1',10)||1))
   const supabase=await createClient()
-  const {data:vendor,error}=await supabase.from('public_vendors').select('id,store_name,description,logo_url,is_verified,campus,state').eq('id',id).maybeSingle()
+  const {data:vendor,error}=await storeDetails(id)
   if(error)return <DataError/>
   if(!vendor)notFound()
   const products=await supabase.from('products').select(CARD_SELECT).eq('seller_id',id).eq('status','active').gt('stock_quantity',0).order('created_at',{ascending:false}).order('id').range((page-1)*24,page*24)

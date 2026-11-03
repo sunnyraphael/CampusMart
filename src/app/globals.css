@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "tailwindcss" source("../");
 
 /* Tailwind v4 ignores tailwind.config.ts, so dark: classes followed the phone or PC setting instead of our toggle. This line ties dark: to the .dark class that ThemeProvider sets. */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -292,7 +292,7 @@ a.pl-btn:hover { background: var(--vx-hover); }
 /* Category browsing follows the homepage surfaces and blue icon treatment. */
 .cat-page { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .cat-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: clamp(16px, 3vw, 28px); background: var(--vx-hero); border: 1px solid var(--vx-border); border-radius: 16px; }
-.cat-head h1 { margin: 0 0 6px; font-family: var(--font-sora), sans-serif; font-size: clamp(22px, 4vw, 30px); font-weight: 700; letter-spacing: -.03em; color: var(--vx-text); }
+.cat-head :is(h1,.sk-title) { margin: 0 0 6px; font-family: var(--font-sora), sans-serif; font-size: clamp(22px, 4vw, 30px); font-weight: 700; letter-spacing: -.03em; color: var(--vx-text); }
 .cat-head p { margin: 0; font-size: 14px; color: var(--vx-text-soft); }
 .cat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .cat-tile { display: flex; flex-direction: column; align-items: stretch; gap: 10px; min-width: 0; padding: clamp(12px, 2vw, 18px); border: 1px solid var(--vx-border); border-radius: 12px; background: var(--vx-card); color: var(--vx-text); text-decoration: none; overflow-wrap: anywhere; }

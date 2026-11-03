@@ -1,3 +1,5 @@
+import {cache} from 'react'
+import {pageMetadata} from '@/lib/seo/metadata'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Star, Store, BadgeCheck, ChevronRight, MessageCircle } from 'lucide-react'
@@ -20,11 +22,19 @@ import FeeDisclosure from '@/components/store/FeeDisclosure'
 type Detail=ProductFull & {sellers:ProductFull['sellers'] & {id:string;description:string|null}}
 type Review={id:string;user_id:string;rating:number;comment:string|null;created_at:string|null}
 
+const productDetails=cache(async(id:string)=>{const supabase=await createClient();return supabase.from('products').select('id,seller_id,category_id,title,description,price,images,avg_rating,total_reviews,stock_quantity,status,created_at,compare_at_price,sale_ends_at,condition,availability,delivery_days,sellers:public_vendors(id,store_name,logo_url,is_verified,description),categories(name,slug)').eq('id',id).eq('status','active').abortSignal(AbortSignal.timeout(8000)).maybeSingle()})
+export async function generateMetadata({params}:{params:Promise<{id:string}>}){
+ const {id}=await params
+ if(!uuid.safeParse(id).success)return {robots:{index:false,follow:false}}
+ const {data,error}=await productDetails(id)
+ if(error||!data)return {title:'Listing unavailable',robots:{index:false,follow:false}}
+ return pageMetadata(data.title,(data.description||'View item details, condition and vendor information for '+data.title+' on CampusMart.').replace(/\s+/g,' ').slice(0,180),'/products/'+id)
+}
 export default async function ProductPage({params}:{params:Promise<{id:string}>}) {
   const {id}=await params
   if(!uuid.safeParse(id).success)notFound()
   const supabase=await createClient()
-  const {data,error}=await supabase.from('products').select('id,seller_id,category_id,title,description,price,images,avg_rating,total_reviews,stock_quantity,status,created_at,compare_at_price,sale_ends_at,condition,availability,delivery_days,sellers:public_vendors(id,store_name,logo_url,is_verified,description),categories(name,slug)').eq('id',id).eq('status','active').maybeSingle()
+  const {data,error}=await productDetails(id)
   if(error)return <DataError/>
   if(!data)notFound()
   const product=data as unknown as Detail

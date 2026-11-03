@@ -11,3 +11,6 @@
 @media(max-width:639px){.sk-gallery-main{aspect-ratio:4/3;border-radius:16px}.sk-gallery-thumbs>.sk-block{width:56px!important;height:56px!important}}
 @media(max-width:639px){[data-page-skeleton] .cat-description,[data-page-skeleton] .cat-arrow{display:none}}
 @media(prefers-reduced-motion:reduce){.sk-block,.sk-surface,.sk-ink{animation:none}}
+
+/* Visual loading titles share the real heading selectors without adding H1s. */
+.sk-title{display:block}

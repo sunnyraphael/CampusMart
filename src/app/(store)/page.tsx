@@ -1,3 +1,4 @@
+import {pageMetadata} from '@/lib/seo/metadata'
 import PublicPhoto from '@/components/store/PublicPhoto'
 import Link from 'next/link'
 import { ArrowRight, ChevronRight, Grid2X2, MessageCircle, PackageCheck, ShoppingBag, Store, FlaskConical } from 'lucide-react'
@@ -9,6 +10,8 @@ import { retryCatalogRead } from '@/lib/buyer/catalog-read'
 import { listingImages } from '@/lib/buyer/images'
 import { trialCheckoutEnabled } from '@/lib/orders/trial'
 import RetryListingsButton from '@/components/store/RetryListingsButton'
+
+export const metadata=pageMetadata('CampusMart - Your campus marketplace','Find books, electronics and everyday essentials from campus vendors. Compare listings, review checkout charges and follow your CampusMart orders.','/')
 
 const steps=[
   {n:'01',title:'Find your next campus essential',text:'Compare the item, condition and vendor delivery estimate. Message the vendor if you need more details.'},
@@ -24,7 +27,7 @@ export default async function HomePage() {
   if(result.error)console.error('[home] Listing query failed',{status:result.status,code:result.error.code,message:result.error.message,details:result.error.details})
   return <div className="hm sh-home">
     <section className="sh-hero" aria-labelledby="hm-h1"><div className="sh-hero-copy"><span className="sh-eyebrow">Made for campus life</span><h1 id="hm-h1">Your campus.<br/><span>Your next find.</span></h1><p>Useful things, campus vendors and a simpler way to shop. Find what you need for class, your room and everything in between.</p><div className="hm-btns"><Link href="/products" className="hm-btn hm-btn-primary">Browse listings <ArrowRight size={16} aria-hidden/></Link><Link href="/categories" className="hm-btn hm-btn-ghost">Explore categories</Link></div><Link className="sh-text-link" href="/how-it-works">New here? See how CampusMart works <ChevronRight size={14} aria-hidden/></Link></div>
-      <aside className="sh-hero-aside">{mosaic.length===4?<div className="sh-mosaic">{mosaic.map(({item,src})=><Link href={`/products/${item.id}`} key={item.id} aria-label={item.title}><PublicPhoto src={src} alt=""/></Link>)}</div>:<div className="sh-campus-mark"><ShoppingBag size={58} strokeWidth={1.2} aria-hidden/><span>Find it on campus.</span><p>Explore listings. Ask the vendor.<br/>Keep your order in one place.</p></div>}<div className="sh-aside-foot"><Store size={17} aria-hidden/><span>Something to sell?</span><Link href="/start-selling">Open a store <ArrowRight size={14} aria-hidden/></Link></div></aside>
+      <aside className="sh-hero-aside">{mosaic.length===4?<div className="sh-mosaic">{mosaic.map(({item,src},index)=><Link href={`/products/${item.id}`} key={item.id} aria-label={item.title}><PublicPhoto src={src} alt="" priority={index===0}/></Link>)}</div>:<div className="sh-campus-mark"><ShoppingBag size={58} strokeWidth={1.2} aria-hidden/><span>Find it on campus.</span><p>Explore listings. Ask the vendor.<br/>Keep your order in one place.</p></div>}<div className="sh-aside-foot"><Store size={17} aria-hidden/><span>Something to sell?</span><Link href="/start-selling">Open a store <ArrowRight size={14} aria-hidden/></Link></div></aside>
     </section>
     <nav className="sh-shortcuts" aria-label="Shopping shortcuts">{[{href:'/categories',icon:Grid2X2,title:'Browse categories',text:'Start with what you need'},{href:'/orders',icon:PackageCheck,title:'Track your orders',text:'Follow delivery updates'},{href:'/messages',icon:MessageCircle,title:'Your conversations',text:'Talk with campus vendors'}].map(({href,icon:Icon,title,text})=><Link href={href} key={href}><span className="sh-shortcut-icon"><Icon size={21} strokeWidth={1.6} aria-hidden/></span><span><strong>{title}</strong><small>{text}</small></span><ChevronRight size={16} aria-hidden/></Link>)}</nav>
     <p className="sh-checkout-status"><FlaskConical size={17} aria-hidden/><span>{trial?'Trial checkout is available for testing. Trial orders collect no payment and create no real vendor earnings.':'Online payments are not live yet. You can browse, save items and contact vendors; no payment is collected on CampusMart.'}</span></p>

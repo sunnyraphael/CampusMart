@@ -5,7 +5,7 @@
 
         /* Hero */
         .hm-hero { display: grid; gap: 24px; padding: clamp(20px, 5vw, 48px); background: var(--vx-hero); border: 1px solid var(--vx-border); border-radius: 16px; }
-        .hm-h1 { font-family: var(--font-sora), Sora, sans-serif; font-size: clamp(28px, 6vw, 44px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; color: var(--vx-text); margin: 0 0 12px; max-width: 18ch; }
+        .hm-:is(h1,.sk-title) { font-family: var(--font-sora), Sora, sans-serif; font-size: clamp(28px, 6vw, 44px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; color: var(--vx-text); margin: 0 0 12px; max-width: 18ch; }
         .hm-sub { font-size: clamp(14px, 2.4vw, 16px); line-height: 1.55; color: var(--vx-text-soft); margin: 0 0 24px; max-width: 46ch; }
         .hm-btns { display: flex; flex-wrap: wrap; gap: 10px; }
         .hm-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; transition: background-color .15s ease-out, border-color .15s ease-out; }

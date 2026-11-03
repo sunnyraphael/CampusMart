@@ -1,4 +1,6 @@
+import {connection} from 'next/server'
 import type { Metadata } from 'next'
+import {siteOrigin} from '@/lib/seo/metadata'
 import { Sora, DM_Sans } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
@@ -26,12 +28,14 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteOrigin()),
   icons: {icon:'/brand/campusmart-symbol.png',apple:'/brand/campusmart-symbol.png'},
   title: 'CampusMart - Student Marketplace',
   description: 'Buy, sell and connect with students on campus.',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  await connection()
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${sora.variable} ${dmSans.variable} font-sans antialiased`}>

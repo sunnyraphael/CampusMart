@@ -1,3 +1,4 @@
+import {adminReadFetch} from '@/lib/admin/read-fetch'
 import Link from 'next/link'
 import {notFound} from 'next/navigation'
 import {z} from 'zod'
@@ -8,7 +9,7 @@ import StoreControls from '@/components/vendor/StoreControls'
 export default async function StorePage({params}:{params:Promise<{id:string}>}){
   const {supabase}=await adminSession(),{id}=await params
   if(!z.uuid().safeParse(id).success)notFound()
-  const service=paymentService(),result=await service.from('sellers').select('id,user_id,store_name,description,logo_url,campus,state,phone,whatsapp,kyc_status,wallet_balance,total_earned,store_closed_at,owner_paused,admin_paused,admin_closed').eq('id',id).maybeSingle()
+  const service=paymentService(adminReadFetch),result=await service.from('sellers').select('id,user_id,store_name,description,logo_url,campus,state,phone,whatsapp,kyc_status,wallet_balance,total_earned,store_closed_at,owner_paused,admin_paused,admin_closed').eq('id',id).maybeSingle()
   if(result.error)throw new Error('Store details could not load.')
   if(!result.data)notFound()
   const s=result.data

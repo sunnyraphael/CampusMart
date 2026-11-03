@@ -50,6 +50,8 @@ export async function updateSession(request: NextRequest) {
       for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value)
     }
     const response = NextResponse.redirect(url)
+    response.headers.set('Cache-Control','private, no-store')
+    response.headers.set('Netlify-CDN-Cache-Control','no-store')
     supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
     return response
   }

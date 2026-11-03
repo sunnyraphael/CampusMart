@@ -10,7 +10,7 @@ test.beforeEach(async({context,request})=>{
 async function begin(page:Page,request:APIRequestContext){
   await page.route('https://checkout.paystack.com/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Paystack fixture checkout</h1>'}))
   await page.goto('/products');const add=page.locator('.pc-add').first();await add.click();await expect(add).toHaveAttribute('title','Added to cart')
-  await page.goto('/checkout');await expect(page.getByText('Paystack TEST checkout.',{exact:false})).toBeVisible()
+  await page.goto('/checkout');await expect(page.getByText('Paystack TEST checkout.',{exact:false}).filter({visible:true})).toBeVisible()
   await expect(page.getByRole('region',{name:'Order summary'}).getByText(/CampusMart service fee.*retained/)).toBeVisible()
   await page.getByLabel('Contact phone',{exact:true}).fill('08012345678')
   await page.getByRole('checkbox',{name:/I have reviewed/}).check()
@@ -124,4 +124,31 @@ test('first administrator password unlock leads to transaction PIN setup',async(
  await page.getByRole('button',{name:'Unlock admin workspace',exact:true}).click()
  await page.getByLabel('New transaction PIN',{exact:true}).fill('246810');await page.getByLabel('Confirm transaction PIN',{exact:true}).fill('246810')
  await page.getByRole('button',{name:'Save PIN and open workspace',exact:true}).click();await expect(page).toHaveURL(/\/admin$/)
+})
+
+
+test('password unlock renders content in every admin sidebar tab',async({page,request})=>{
+ await request.post(backend+'/__admin',{data:{enabled:true,unlocked:false,pinConfigured:true}})
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
+ await page.goto('/admin-security')
+ await page.getByLabel('CampusMart password',{exact:true}).fill('FixtureExistingPassword123!')
+ await page.getByRole('button',{name:'Unlock admin workspace',exact:true}).click()
+ await expect(page.locator('#admin-content h1').first()).toHaveText('Your admin overview')
+ for(const [label,title]of [['System health','System health'],['Vendor stores','Vendor stores'],['Deliveries','Delivery approvals'],['Payments & refunds','Payments & refunds'],['Verifications','Verifications'],['Disputes','Disputes'],['Support','Support requests'],['Account requests','Privacy and account requests'],['Guardian permissions','Guardian permissions'],['Overview','Your admin overview']]){
+  await page.getByRole('navigation',{name:'Admin sections'}).getByRole('link',{name:label,exact:true}).click()
+  await expect(page.locator('#admin-content h1').first()).toHaveText(title,{timeout:20000})
+  await expect(page.locator('#admin-content')).toBeVisible()
+ }
+ expect(errors).toEqual([])
+})
+
+
+test('admin data requests time out visibly and can be recovered',async({page,request})=>{
+ await request.post(backend+'/__admin',{data:{enabled:true}})
+ await request.post(backend+'/__delay',{data:{table:'cm_admin_delivery_queue',ms:14000}})
+ await page.goto('/admin/deliveries')
+ await expect(page.getByRole('heading',{name:'We could not load this information.',exact:true})).toBeVisible({timeout:18000})
+ await request.post(backend+'/__delay',{data:{table:'cm_admin_delivery_queue',ms:0}})
+ await page.getByRole('button',{name:'Try again',exact:true}).click()
+ await expect(page.locator('#admin-content h1')).toHaveText('Delivery approvals')
 })

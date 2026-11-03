@@ -1,3 +1,4 @@
+import {adminReadFetch} from '@/lib/admin/read-fetch'
 import Link from 'next/link'
 import {adminSession} from '@/lib/admin/server'
 import {paymentService} from '@/lib/paystack/config'
@@ -6,7 +7,7 @@ export default async function StoresPage({searchParams}:{searchParams:Promise<{q
   await adminSession()
   const params=await searchParams
   const q=typeof params.q==='string'?params.q.trim().slice(0,80):'',page=Math.max(1,Math.min(100000,Number.parseInt(params.page??'1')||1)),offset=(page-1)*20
-  let query=paymentService().from('sellers').select('id,store_name,logo_url,campus,store_closed_at,owner_paused,admin_paused,admin_closed',{count:'exact'}).order('store_name').order('id').range(offset,offset+19)
+  let query=paymentService(adminReadFetch).from('sellers').select('id,store_name,logo_url,campus,store_closed_at,owner_paused,admin_paused,admin_closed',{count:'exact'}).order('store_name').order('id').range(offset,offset+19)
   if(q)query=query.ilike('store_name','%'+q.replace(/[\\%_]/g,'\\$&')+'%')
   const stores=await query
   const failed=stores.error

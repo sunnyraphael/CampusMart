@@ -209,7 +209,7 @@
 
 /* VendorOrdersClient.tsx */
 .vo-page{max-width:980px;margin:0 auto;padding:32px 20px 96px;color:var(--vx-text);font-family:'DM Sans',sans-serif}
-.vo-head h1{font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.vo-head :is(h1,.sk-title){font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 .vo-head p{margin:0 0 24px;opacity:.7;font-size:.95rem;max-width:56ch}
 .vo-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;border-bottom:1px solid var(--vx-border)}
 .vo-tab{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:none;border:0;border-bottom:2px solid transparent;color:inherit;opacity:.65;font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
@@ -266,7 +266,7 @@
 .od-back{display:inline-flex;align-items:center;gap:6px;color:var(--vx-link);text-decoration:none;font-size:.88rem;margin-bottom:18px}
 .od-back:hover{text-decoration:underline}
 .od-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-.od-head h1{font-family:'Sora',sans-serif;font-size:1.6rem;margin:0 0 4px;letter-spacing:-.02em}
+.od-head :is(h1,.sk-title){font-family:'Sora',sans-serif;font-size:1.6rem;margin:0 0 4px;letter-spacing:-.02em}
 .od-head p{margin:0;opacity:.65;font-size:.9rem}
 .od-ghost{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--vx-border);border-radius:8px;color:var(--vx-text-soft);text-decoration:none;font-size:.85rem}
 .od-ghost:hover{background:var(--vx-surface);border-color:#2563eb}
@@ -302,7 +302,7 @@
 
 /* EarningsClient.tsx */
 .er-page{max-width:980px;margin:0 auto;padding:32px 20px 96px;color:var(--vx-text);font-family:'DM Sans',sans-serif}
-.er-head h1{font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.er-head :is(h1,.sk-title){font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 .er-head p{margin:0 0 24px;opacity:.7;font-size:.95rem;max-width:56ch}
 .er-label{font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;opacity:.7}
 .er-hint{font-size:.82rem;opacity:.65;line-height:1.4}
@@ -356,7 +356,7 @@
 
 /* SettingsClient.tsx */
 .ss-page{max-width:760px;margin:0 auto;padding:32px 20px 96px;color:var(--vx-text);font-family:'DM Sans',sans-serif}
-.ss-head h1{font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.ss-head :is(h1,.sk-title){font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 .ss-head p{margin:0 0 24px;opacity:.7;font-size:.95rem;max-width:56ch}
 .ss-card{background:var(--vx-card);border:1px solid var(--vx-border);border-radius:16px;padding:20px;margin-bottom:16px;color:var(--vx-text);min-width:0}
 .ss-title{display:flex;align-items:center;gap:8px;margin:0 0 16px;font-family:'Sora',sans-serif;font-size:1rem;font-weight:600}
@@ -408,7 +408,7 @@
 
 /* VerifyClient.tsx */
 .vf-page{max-width:680px;margin:0 auto;padding:32px 20px 96px;color:var(--vx-text);font-family:'DM Sans',sans-serif}
-.vf-head h1{font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
+.vf-head :is(h1,.sk-title){font-family:'Sora',sans-serif;font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin:0 0 6px}
 .vf-head p{margin:0 0 24px;opacity:.7;font-size:.95rem;max-width:56ch}
 .vf-banner{display:flex;gap:14px;align-items:flex-start;padding:18px;margin-bottom:16px;background:var(--vx-card);border:1px solid var(--vx-border);border-radius:16px;color:var(--vx-text)}
 .vf-banner>svg{flex:none;color:var(--vx-link);margin-top:2px}

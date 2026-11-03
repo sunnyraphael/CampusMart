@@ -1,3 +1,4 @@
+import {adminReadFetch} from '@/lib/admin/read-fetch'
 import { adminSession } from '@/lib/admin/server'
 import { paymentConfig,paymentService } from '@/lib/paystack/config'
 import { AdminHeading } from '@/components/admin/Workspace'
@@ -9,16 +10,18 @@ export default async function PaymentsPage({searchParams}:{searchParams:Promise<
   const reference=/^(cm-[a-f0-9]{32}|[a-f0-9-]{36})$/.test(rawReference)?rawReference:''
   let mode:string
   try{mode=paymentConfig().mode}catch{return <section><AdminHeading title="Payments & refunds" description="Paystack setup is incomplete."/><p className="buyer-notice">Set the server-only Paystack key, payment mode, site URL and reconciliation secret, then apply the payment migrations. Do not paste keys into support messages.</p></section>}
-  const service=paymentService()
+  const service=paymentService(adminReadFetch)
   let paymentQuery=service.from('paystack_payments').select('order_id,reference,amount_kobo,provider_fee_kobo,mode,state,created_at').eq('mode',mode).order('created_at',{ascending:false}).limit(10)
   if(reference)paymentQuery=paymentQuery.eq(reference.startsWith('cm-')?'reference':'order_id',reference)
   const payments=await paymentQuery
   const ids=(payments.data??[]).map(p=>p.order_id)
   // Ten orders contain at most 500 items and 510 durable refund jobs. Load every
   // refund for these orders so the preview includes all previous deductions.
-  const refunds=ids.length?await service.from('paystack_refunds').select('id,order_id,item_id,amount_kobo,processing_fee_retained_kobo,state,note,created_at').in('order_id',ids).order('created_at',{ascending:false}):{data:[],error:null}
-  const transfers=await service.from('paystack_transfers').select('id,item_id,reference,mode,amount_kobo,account_name,bank_name,last_four,state,created_at').eq('mode',mode).order('created_at',{ascending:false}).limit(60)
-  const items=ids.length?await service.from('order_items').select('id,order_id,seller_id,subtotal,payout_amount,fulfillment_status,released_at,products(title),sellers(store_name)').in('order_id',ids):{data:[],error:null}
+  const [refunds,transfers,items]=await Promise.all([
+    ids.length?service.from('paystack_refunds').select('id,order_id,item_id,amount_kobo,processing_fee_retained_kobo,state,note,created_at').in('order_id',ids).order('created_at',{ascending:false}):{data:[],error:null},
+    service.from('paystack_transfers').select('id,item_id,reference,mode,amount_kobo,account_name,bank_name,last_four,state,created_at').eq('mode',mode).order('created_at',{ascending:false}).limit(60),
+    ids.length?service.from('order_items').select('id,order_id,seller_id,subtotal,payout_amount,fulfillment_status,released_at,products(title),sellers(store_name)').in('order_id',ids):{data:[],error:null}
+  ])
   // A reference search may select an older payment. Its transfer must still
   // suppress the approval button even when outside the latest 60 jobs.
   const itemIds=(items.data??[]).map(item=>item.id)

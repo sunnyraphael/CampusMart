@@ -1,3 +1,4 @@
+import {pageMetadata} from '@/lib/seo/metadata'
 import {publicCategories} from '@/lib/catalog/categories'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -22,6 +23,13 @@ const SELECT = `
   sellers:public_vendors ( store_name, is_verified )
 `
 
+export async function generateMetadata({searchParams}:{searchParams:SearchParams}){
+ const sp=await searchParams,q=cleanSearch(first(sp.q)),category=first(sp.category)?.trim().toLowerCase(),page=Math.min(10000,Math.max(1,parseInt(first(sp.page)??'1',10)||1))
+ const {data}=await publicCategories(),name=data?.find(c=>c.slug===category)?.name
+ const title=q?'Search results for '+q:name?name+' listings':'Browse campus listings'
+ const params=new URLSearchParams();if(category)params.set('category',category);if(page>1)params.set('page',String(page))
+ return pageMetadata(title+(page>1?' - Page '+page:''),'Browse '+(name?name.toLowerCase()+' listings':'books, electronics and campus essentials')+' from CampusMart vendors. Compare item details, prices and delivery estimates before ordering.','/products'+(params.size?'?'+params:''),!q&&(!category||!!name))
+}
 export default async function ProductsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams
   const categorySlug = first(sp.category)?.trim().toLowerCase() || null

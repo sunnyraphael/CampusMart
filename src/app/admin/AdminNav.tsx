@@ -1,5 +1,4 @@
 'use client'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import { LayoutDashboard, PackageCheck, ShieldCheck, ShieldAlert, LifeBuoy, UserRoundCheck, UserRoundCog,Wallet,ShoppingBag } from 'lucide-react'
@@ -26,6 +25,6 @@ export default function AdminNav() {
   },[pathname])
   return <nav ref={ref} className="aw-nav" aria-label="Admin sections">{adminSections.map(({ href, label, icon: Icon }) => {
     const active = href === '/admin' ? pathname === href : pathname === href || pathname.startsWith(href + '/')
-    return <Link key={href} href={href} className={`aw-nav-item${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined}><Icon size={19} aria-hidden /><span>{label}</span></Link>
+    return <a key={href} href={href} className={`aw-nav-item${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined}><Icon size={19} aria-hidden /><span>{label}</span></a>
   })}</nav>
 }
