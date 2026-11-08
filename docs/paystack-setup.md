@@ -26,7 +26,7 @@ This uses server-only Paystack APIs and hosted checkout. No browser payment SDK 
 
 ## Payment and refund behavior
 
-- The server prices orders and shows every charge before payment: buyer service fee 2% below NGN 20,000 item subtotal, waived at/above that threshold; vendor commission 5%. Checkout acceptance records payment terms `2026-11-01-payments-v1`.
+- The server prices orders and shows every charge before payment: buyer service fee 2% below NGN 20,000 item subtotal, waived at/above that threshold; vendor commission 0% for a limited time on new orders after the launch-offer migration (older orders retain their recorded rate). Checkout acceptance records payment terms `2026-11-01-payments-v1`.
 - Only an exact provider match for reference, payer email, amount, NGN and test/live environment confirms payment. A redirect alone never confirms it. Retries reuse the original order/request; a lost initialization response is reviewed rather than blindly charged again.
 - Stock reservations expire after 30 minutes. The worker releases inventory once, including during provider outages. Late successful charges queue full refunds instead of fulfilling expired reservations.
 - Voluntary cancellation within 30 minutes, before dispatch/ready-for-pickup, retains only the disclosed CampusMart service fee. The dialog shows the exact refund; a waived fee retains zero. Paystack's processing fee is **not additionally deducted** on this route. The retained fee may not cover the operator's processing cost.

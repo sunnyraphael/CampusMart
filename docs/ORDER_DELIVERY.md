@@ -22,7 +22,7 @@ Order notification links use the recipient's relationship to the individual orde
 
 ## Admin
 
-Open **Admin → Deliveries** (`/admin/deliveries`). Views: awaiting review, on hold, approved. The queue shows a vendor's individual item amount, the exact 5% commission and net credit, buyer details, tracking information, handover verification, receipt confirmation, payment verification and decision history. Review after 72 hours is a follow-up flag, never an automatic approval. Hold and resume actions require a recorded note. Buyer disputes go to the existing Disputes page.
+Open **Admin → Deliveries** (`/admin/deliveries`). Views: awaiting review, on hold, approved. The queue shows a vendor's individual item amount, the commission recorded for that order and net credit, buyer details, tracking information, handover verification, receipt confirmation, payment verification and decision history. Review after 72 hours is a follow-up flag, never an automatic approval. Hold and resume actions require a recorded note. Buyer disputes go to the existing Disputes page.
 
 Approval requires all of the following, checked again in the database under row locks:
 

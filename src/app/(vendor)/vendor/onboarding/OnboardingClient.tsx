@@ -305,7 +305,7 @@ export default function VendorOnboardingPage() {
             <>
               <h2 className="ob-card-title">Payout information</h2>
               <p className="ob-card-sub">You can open your store without providing a bank account today.</p>
-              <div className="ob-info-box"><div className="ob-info-row"><CreditCard size={18} aria-hidden/><div><p>When Paystack is configured, add a resolved payout account from your earnings page before an administrator sends approved earnings. You can open the store without collecting bank details here. Do not send bank credentials, PINs or card details.</p><p>For real sales, vendor credit requires verified payment, a delivery code, buyer receipt confirmation and a separate admin approval.</p><p>CampusMart deducts a <strong>5% commission</strong> from the item subtotal on an approved completed real sale. Trial orders do not create real earnings.</p></div></div></div>
+              <div className="ob-info-box"><div className="ob-info-row"><CreditCard size={18} aria-hidden/><div><p>When Paystack is configured, add a resolved payout account from your earnings page before an administrator sends approved earnings. You can open the store without collecting bank details here. Do not send bank credentials, PINs or card details.</p><p>For real sales, vendor credit requires verified payment, a delivery code, buyer receipt confirmation and a separate admin approval.</p><p>Launch offer: <strong>0% vendor commission for a limited time</strong> on new orders. We will announce any future commission before it applies. Trial orders do not create real earnings.</p></div></div></div>
               <p className="ob-hint">Your bank details are not collected in this setup. <Link href="/vendor-terms">Review vendor terms</Link> and the <Link href="/refunds">refund policy</Link> before you continue.</p>
             </>
           )}
@@ -320,7 +320,7 @@ export default function VendorOnboardingPage() {
               {[
                 {field:'items_genuine' as const,label:<>I will list products that are <strong>genuine, accurately described and legally obtained</strong>, and will not list counterfeit, stolen or prohibited items.</>},
                 {field:'agree_terms' as const,label:<>I have read and agree to the <Link href="/vendor-terms">vendor terms</Link>, the <Link href="/refunds">refund policy</Link> and the <Link href="/privacy">privacy policy</Link>.</>},
-                {field:'agree_commission' as const,label:<>I understand the <strong>5% sales commission</strong> and that vendor credit requires delivery review and admin approval. Trial orders never create real earnings.</>},
+                {field:'agree_commission' as const,label:<>I understand the <strong>limited-time 0% vendor commission launch offer</strong> and that vendor credit requires delivery review and admin approval. Trial orders never create real earnings.</>},
               ].map(({field,label})=><label key={field} className={`ob-check-row${form[field]?' checked':''}`}><input type="checkbox" checked={form[field]} onChange={e=>update(field,e.target.checked)}/><span className="ob-check-label">{label}</span></label>)}
             </>
           )}

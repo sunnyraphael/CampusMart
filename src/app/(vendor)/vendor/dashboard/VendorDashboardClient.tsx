@@ -1,4 +1,5 @@
 'use client'
+import {VENDOR_LAUNCH_OFFER} from '@/lib/vendor/commission'
 
 import Link from 'next/link'
 import {publicThumbnail} from '@/lib/media/paths'
@@ -24,7 +25,7 @@ export default function VendorDashboardClient({ overview, sellerId, vendorName, 
   ]
   const completed = steps.filter(s => s.done).length
   return <div className="vx-page">
-    <PageHeading eyebrow="Your store, at a glance" title={`Welcome back, ${vendorName.split(' ')[0]}.`} description="A little progress today. A stronger campus business tomorrow." actions={<><ShareStoreButton sellerId={sellerId} /><Link className="vx-btn" href="/vendor/listings/new"><Plus size={17} />New listing</Link></>} />
+    <PageHeading eyebrow="Your store, at a glance" title={`Welcome back, ${vendorName.split(' ')[0]}.`} description={VENDOR_LAUNCH_OFFER} actions={<><ShareStoreButton sellerId={sellerId} /><Link className="vx-btn" href="/vendor/listings/new"><Plus size={17} />New listing</Link></>} />
     <section className="vx-stats" aria-label="Store performance">
       <button className="vx-stat vx-stat-button" onClick={() => setExact(!exact)} aria-pressed={exact} aria-label="Toggle exact total sales"><span className="vx-stat-top">Total sales <Wallet size={18} /></span><strong>{(exact ? fmt : compact)(stats.totalSales)}</strong><span>Paid orders, excluding refunds <span className="vx-text-link">{exact ? 'Compact view' : 'Exact amount'}</span></span></button>
       {[{ label: 'Paid orders', value: stats.totalOrders, text: 'Across your store', icon: ShoppingBag }, { label: 'Units sold', value: stats.unitsSold, text: 'Excluding refunded items', icon: TrendingUp }, { label: 'Active listings', value: stats.activeListings, text: 'Currently published', icon: Package }].map(({ label, value, text, icon: Icon }) => <div className="vx-stat" key={label}><span className="vx-stat-top">{label}<Icon size={18} /></span><strong>{value}</strong><span>{text}</span></div>)}

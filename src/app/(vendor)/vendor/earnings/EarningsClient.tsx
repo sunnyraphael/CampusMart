@@ -102,7 +102,7 @@ export default function EarningsClient({
         <div className="er-hero-body">
           <span className="er-label">Available in wallet</span>
           <strong className="er-hero-amount">{naira(balance)}</strong>
-          <span className="er-hint">Funds released to your CampusMart wallet, after the 5% commission.</span>
+          <span className="er-hint">Funds released to your CampusMart wallet after the commission recorded on each order. New orders have 0% vendor commission for a limited time.</span>
         </div>
       </section>
 

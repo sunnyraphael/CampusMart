@@ -567,4 +567,47 @@ test('Paystack payment, refund and payout migrations preserve financial invarian
     await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({...claims,amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)-400}]})]);await as(admin,()=>assert.rejects(rpc('cm_unlock_admin'),/password/))
   })
 
+  await t.test('launch commission is snapshotted at zero without changing old orders, buyer fees or PIN-protected payouts',async()=>{
+    const legacy=await create('live');await verify(legacy)
+    const legacyId=(await db.query('select id from order_items where order_id=$1',[legacy.order_id])).rows[0].id
+    const reliability=await readFile(new URL('../supabase/migrations/202611020002_reliability.sql',import.meta.url),'utf8')
+    const start=reliability.indexOf('create function public.cm_vendor_pending_earnings()'),end=reliability.indexOf('end $$;',start)+7
+    await db.exec(reliability.slice(start,end))
+    await db.exec('revoke all on function public.cm_vendor_pending_earnings() from public,anon;grant execute on function public.cm_vendor_pending_earnings() to authenticated')
+    const beforeBalance=Number((await db.query('select wallet_balance from sellers where id=$1',[seller])).rows[0].wallet_balance)
+    await db.exec(await readFile(new URL('../supabase/migrations/202611050001_vendor_launch_commission.sql',import.meta.url),'utf8'))
+    assert.equal(Number((await db.query('select wallet_balance from sellers where id=$1',[seller])).rows[0].wallet_balance),beforeBalance)
+    await db.exec('set role anon');const policy=await rpc('cm_vendor_commission_policy');assert.equal(policy.rate,0);assert.equal(policy.ends_at,null);await assert.rejects(db.query('select * from vendor_commission_settings'),/permission denied/);await db.exec('reset role')
+    await as(vendor,()=>assert.rejects(db.exec('update vendor_commission_settings set rate=0.05'),/permission denied/))
+    assert.equal(Number((await db.query('select vendor_commission_rate from order_items where id=$1',[legacyId])).rows[0].vendor_commission_rate),0.05)
+    const launched=await create('live');await verify(launched)
+    assert.equal(Number(launched.amount_kobo),1020000)
+    const launchedItem=(await db.query('select * from order_items where order_id=$1',[launched.order_id])).rows[0]
+    assert.equal(Number(launchedItem.vendor_commission_rate),0);assert.equal(Number(launchedItem.commission_amount),0);assert.equal(Number(launchedItem.payout_amount),10000)
+    await assert.rejects(db.query('update order_items set vendor_commission_rate=0.05 where id=$1',[launchedItem.id]),/cannot be changed/)
+    // Simulate a later rate change only in this isolated database. Pending launch orders keep zero.
+    await db.exec("update vendor_commission_settings set rate=0.05,terms_version='future-test-version'")
+    const later=await create('live');const laterItem=(await db.query('select * from order_items where order_id=$1',[later.order_id])).rows[0]
+    assert.equal(Number(laterItem.vendor_commission_rate),0.05);assert.equal(Number(laterItem.payout_amount),9500)
+    const claims={session_id:crypto.randomUUID(),amr:[{method:'password',timestamp:Math.floor(Date.now()/1000)}]};await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify(claims)]);await as(admin,()=>rpc('cm_unlock_admin'))
+    for(const id of [legacyId,launchedItem.id]){await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'confirmed']));await as(vendor,()=>rpc('cm_vendor_update_delivery',[id,'shipped']));await handedOver(id)}
+    const pending=await as(vendor,()=>rpc('cm_vendor_pending_earnings'));assert.equal(Number(pending.releasing.find(row=>row.id===launchedItem.id).amount),10000)
+    const previews=[];for(let page=1;page<=5;page++)previews.push(...await as(admin,()=>rpc('cm_admin_delivery_queue',['pending',page])))
+    assert.equal(Number(previews.find(row=>row.item_id===launchedItem.id).commission_amount),0);assert.equal(Number(previews.find(row=>row.item_id===launchedItem.id).payout_amount),10000)
+    assert.equal(Number(previews.find(row=>row.item_id===legacyId).commission_amount),500)
+    for(const[id,expected]of [[legacyId,950000],[launchedItem.id,1000000]]){
+      const balance=Math.round(Number((await db.query('select wallet_balance from sellers where id=$1',[seller])).rows[0].wallet_balance)*100)
+      await as(admin,()=>assert.rejects(rpc('cm_admin_approve_delivery',[id,'Reviewed actual handover and payment.']),/transaction PIN/))
+      const payload={p_item_id:id,p_note:'Verified payment, handover and receipt for the recorded fee.'}
+      assert.equal((await as(admin,()=>rpc('cm_admin_finance_decision',['approve_delivery',payload,'864209']))).ok,true)
+      assert.equal(Math.round(Number((await db.query('select wallet_balance from sellers where id=$1',[seller])).rows[0].wallet_balance)*100)-balance,expected)
+      await as(admin,()=>assert.rejects(rpc('cm_admin_finance_decision',['approve_delivery',payload,'864209']),/already/))
+    }
+    const stamp=(await db.query("select updated_at::text stamp from paystack_recipients where seller_id=$1 and mode='live'",[seller])).rows[0].stamp
+    const payload={p_item_id:launchedItem.id,p_note:'Reviewed the zero-commission vendor transfer.',p_confirmed:true,p_recipient_updated_at:stamp,p_expected_amount:1000000}
+    const transfer=await as(admin,()=>rpc('cm_admin_finance_decision',['transfer',payload,'864209']));assert.equal(transfer.ok,true)
+    assert.equal(Number((await db.query('select amount_kobo from paystack_transfers where id=$1',[transfer.result])).rows[0].amount_kobo),1000000)
+    assert.equal((await as(admin,()=>rpc('cm_admin_finance_decision',['transfer',payload,'864209']))).result,transfer.result)
+  })
+
 })

@@ -1,4 +1,5 @@
 'use client'
+import {recordedVendorPayout} from '@/lib/vendor/commission'
 
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -201,7 +202,7 @@ export default function VendorOrdersClient({
                     const p = productById.get(it.product_id)
                     const img = Array.isArray(p?.images) ? p?.images[0] : pick(p, ['image_url', 'image'])
                     const sub = itemSubtotal(it)
-                    const payout = Number(it.payout_amount ?? sub * 0.95)
+                    const payout = recordedVendorPayout({...it,subtotal:sub})
                     const status: string = it.fulfillment_status
                     const step = nextDeliveryStep[status]
                     const stepIndex = STEPS.indexOf(status as (typeof STEPS)[number])

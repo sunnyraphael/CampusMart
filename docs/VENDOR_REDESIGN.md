@@ -34,7 +34,7 @@ The vendor workspace keeps CampusMart’s blue, navy, light theme, and dark them
 
 - No new database migration is required for this redesign. Existing CampusMart database tables, RPCs, policies, and the earlier migrations remain prerequisites.
 - Sales totals, chart values, and bestseller rankings exclude refunded and cancelled items and use paid orders only. Historical paid-order counts still include refunded orders so the order record is visible.
-- Pending earnings use a recorded payout amount when present, otherwise the existing 95% calculation.
+- Pending earnings use a recorded payout amount when present, otherwise the rate snapshotted on that order (legacy rows without a snapshot retain their historical 5% estimate).
 - Checkout/payment verification and bank withdrawal processing are separate work. This redesign does not enable payment collection or pretend that a transfer occurred.
 - Existing owner-scoped deletion and queued, shared-image-safe cleanup are retained.
 - Changes are local and are not committed, pushed, or deployed automatically.

@@ -1,3 +1,4 @@
+import {recordedVendorPayout} from '@/lib/vendor/commission'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft, FileText, Package, ShieldAlert, MapPin, Phone, User, StickyNote } from 'lucide-react'
@@ -74,7 +75,7 @@ export default async function VendorOrderDetailPage({ params }: { params: Promis
             const p = productById.get(it.product_id)
             const img = Array.isArray(p?.images) ? p?.images[0] : pick(p, ['image_url', 'image'])
             const sub = itemSubtotal(it)
-            const payout = Number(it.payout_amount ?? sub * 0.95)
+            const payout = recordedVendorPayout({...it,subtotal:sub})
             const status: string = it.fulfillment_status
             const tracked = tracking.find(t => t.item_id === it.id)
             return (

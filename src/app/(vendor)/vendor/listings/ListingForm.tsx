@@ -1,4 +1,5 @@
 'use client'
+import {VENDOR_COMMISSION_RATE} from '@/lib/vendor/commission'
 
 import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
@@ -42,7 +43,7 @@ type PhotoSlot =
   | { kind: 'existing'; url: string }
   | { kind: 'new'; file: File; previewUrl: string }
 
-const COMMISSION_RATE = 0.05
+const COMMISSION_RATE = VENDOR_COMMISSION_RATE
 const MAX_IMAGES = 5
 const MAX_FILE_SIZE_MB = 5
 const BUCKET = 'product-images'
@@ -492,7 +493,7 @@ export default function ListingForm({ mode, sellerId, categories, initial }: Pro
               </div>
               {promoActive && <span className="lf-preview-old">₦{fmt(compareNumber)}</span>}
               <div className="lf-earn">
-                <span>You receive after the 5% commission</span>
+                <span>Your item earnings (0% launch commission)<small style={{display:'block'}}>For a limited time. Future commission will be announced in advance.</small></span>
                 <strong>₦{fmt(vendorEarnings)}</strong>
               </div>
             </div>
